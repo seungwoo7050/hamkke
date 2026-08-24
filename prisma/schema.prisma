@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +8,77 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum SpaceStatus {
+  pending
+  active
+}
+
+model Space {
+  id        String      @id @default(cuid())
+  status    SpaceStatus @default(pending)
+  createdAt DateTime    @default(now())
+
+  // 초대코드 페어링(docs/ARCHITECTURE.md §3) — 24시간 TTL
+  inviteCode          String   @unique
+  inviteCodeExpiresAt DateTime
+
+  members User[]
+}
+
+// Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
+// 그대로 쿼리하는 이름이라 임의로 바꾸지 않는다(PRD.md의 avatarUrl → image로
+// 대응, docs/COMMIT_PLAN.md Phase 1 각주 참고).
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  timezone String?
+
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id])
+
+  accounts Account[]
+  sessions Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
