@@ -2,119 +2,157 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * docs/DESIGN.md 토큰 이식. 이 파일에 없는 색상/폰트/이징 곡선을 임의로
+ * 추가하지 않는다 — 필요하면 DESIGN.md를 먼저 갱신한 뒤 여기에 반영한다.
+ * 다크모드는 시스템 설정(prefers-color-scheme)만 따른다 — 수동 토글(.dark
+ * 클래스) 없음, DESIGN.md §3.1 원본 스니펫과 동일한 전략.
+ */
 
 @theme inline {
+  /* Brand */
+  --color-ember: var(--color-ember);
+  --color-dusk: var(--color-dusk);
+  --color-glow: var(--color-glow);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-sans);
+  --font-handwritten: var(--font-handwritten);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-elevated: var(--shadow-elevated);
+
+  --ease-standard: var(--ease-standard);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Brand (DESIGN.md §3.1) */
+  --color-ember: #f2653a; /* Primary — CTA, 활성 상태 */
+  --color-dusk: #4b4468; /* Secondary — 밤/시차/거리 테마 */
+  --color-glow: #ffd166; /* Accent — 터치·스트릭 하이라이트 전용 */
+
+  /* Neutral — Tailwind zinc 스케일 고정값(v4 기본 oklch 팔레트와 미세하게
+     달라 DESIGN.md가 지정한 정확한 hex로 오버라이드) */
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-600: #52525b;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+
+  /* Semantic */
+  --color-success: #4caf7d;
+  --color-danger: #e5484d;
+
+  --background: var(--color-zinc-50);
+  --foreground: var(--color-zinc-900);
+
+  --card: var(--color-zinc-50);
+  --card-foreground: var(--color-zinc-900);
+  --popover: var(--color-zinc-50);
+  --popover-foreground: var(--color-zinc-900);
+
+  --primary: var(--color-ember);
+  /* ember 배경 위 흰 텍스트는 대비 3.1:1로 WCAG AA 미달(DESIGN.md §7 경고) —
+     zinc-900 텍스트로 대비 5.6:1 확보 */
+  --primary-foreground: var(--color-zinc-900);
+
+  --secondary: var(--color-dusk);
+  --secondary-foreground: var(--color-zinc-50);
+
+  --muted: var(--color-zinc-100);
+  --muted-foreground: var(--color-zinc-600);
+
+  --accent: var(--color-glow);
+  --accent-foreground: var(--color-zinc-900);
+
+  --destructive: var(--color-danger);
+  /* 위 ember와 동일한 이유로 zinc-900 사용(흰 텍스트는 대비 3.9:1로 미달) */
+  --destructive-foreground: var(--color-zinc-900);
+
+  --border: var(--color-zinc-200);
+  --input: var(--color-zinc-200);
+  --ring: var(--color-ember);
+
+  /* Typography (DESIGN.md §3.2) */
+  --font-sans: "Pretendard", -apple-system, sans-serif;
+  --font-handwritten: "Gaegu", cursive;
+
+  /* Spacing (DESIGN.md §3.3) — Tailwind 기본 spacing 스케일(1=4px)과 이미
+     일치하므로 여기 값은 raw CSS에서 참조할 때만 사용, 유틸리티는 p-4 등
+     Tailwind 기본값을 그대로 쓴다 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadow — dusk 색조가 섞인 부드러운 그림자, 순수 black 그림자 금지 */
+  --shadow-soft: 0 4px 16px rgba(75, 68, 104, 0.08);
+  --shadow-elevated: 0 8px 32px rgba(75, 68, 104, 0.12);
+
+  /* Motion (DESIGN.md §3.4) */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--color-zinc-900);
+    --foreground: var(--color-zinc-50);
+
+    --card: var(--color-zinc-900);
+    --card-foreground: var(--color-zinc-50);
+    --popover: var(--color-zinc-900);
+    --popover-foreground: var(--color-zinc-50);
+
+    --secondary-foreground: var(--color-zinc-50);
+
+    --muted: var(--color-zinc-800);
+    --muted-foreground: var(--color-zinc-400);
+
+    --border: var(--color-zinc-800);
+    --input: var(--color-zinc-800);
+  }
 }
 
 @layer base {
