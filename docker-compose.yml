@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hamkke
+      POSTGRES_PASSWORD: hamkke
+      POSTGRES_DB: hamkke
+    ports:
+      - "5432:5432"
+    volumes:
+      - hamkke-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  hamkke-postgres-data:
