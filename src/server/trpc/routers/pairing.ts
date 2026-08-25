@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { prisma } from "@/lib/prisma";
 import { generateInviteCode, inviteCodeExpiryDate } from "@/server/pairing/invite-code";
@@ -67,4 +68,43 @@ export const pairingRouter = router({
 
     return { inviteCode: space.inviteCode, inviteCodeExpiresAt: space.inviteCodeExpiresAt };
   }),
+
+  redeemInviteCode: protectedProcedure
+    .input(z.object({ code: z.string().length(6) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // 이미 Space가 있는 사용자(코드 생성자 본인 포함)는 재입력 불가
+      if (ctx.session.user.spaceId) {
+        throw new TRPCError({ code: "CONFLICT", message: "이미 Space에 속해 있습니다." });
+      }
+
+      const space = await prisma.space.findUnique({
+        where: { inviteCode: input.code.toUpperCase() },
+      });
+      if (!space) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "유효하지 않은 초대코드입니다." });
+      }
+      if (space.status !== "pending") {
+        throw new TRPCError({ code: "CONFLICT", message: "이미 사용된 초대코드입니다." });
+      }
+      if (space.inviteCodeExpiresAt < new Date()) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "만료된 초대코드입니다." });
+      }
+
+      const spaceId = await prisma.$transaction(async (tx) => {
+        // status가 여전히 pending일 때만 active로 전환 — 동시 입력 레이스 방지
+        const { count } = await tx.space.updateMany({
+          where: { id: space.id, status: "pending" },
+          data: { status: "active" },
+        });
+        if (count === 0) {
+          throw new TRPCError({ code: "CONFLICT", message: "이미 사용된 초대코드입니다." });
+        }
+        await tx.user.update({ where: { id: userId }, data: { spaceId: space.id } });
+        return space.id;
+      });
+
+      return { spaceId };
+    }),
 });
