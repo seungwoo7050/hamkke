@@ -1,11 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { createTRPCContext } from "@/server/trpc/context";
-import { createCallerFactory } from "@/server/trpc/init";
-import { appRouter } from "@/server/trpc/routers/_app";
+import { getCurrentPairingStatus } from "@/server/pairing/current-status";
 import { PairingPanel } from "./pairing-panel";
-
-const createCaller = createCallerFactory(appRouter);
 
 export default async function OnboardingPage() {
   const session = await auth();
@@ -13,8 +9,7 @@ export default async function OnboardingPage() {
     redirect("/login");
   }
 
-  const caller = createCaller(await createTRPCContext());
-  const status = await caller.pairing.getStatus();
+  const status = await getCurrentPairingStatus();
   if (status.status === "active") {
     redirect("/home");
   }

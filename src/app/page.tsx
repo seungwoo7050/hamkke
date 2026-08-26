@@ -1,6 +1,16 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
+import { getCurrentPairingStatus } from "@/server/pairing/current-status";
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+  if (session?.user) {
+    const status = await getCurrentPairingStatus();
+    redirect(status.status === "active" ? "/home" : "/onboarding");
+  }
+
   return (
     <main className="flex flex-1 flex-col justify-center gap-8 px-6 py-16">
       <div className="flex flex-col gap-3">
@@ -10,7 +20,9 @@ export default function Home() {
           장거리 연애 커플 두 사람만을 위한 프라이빗 공간.
         </p>
       </div>
-      <Button className="w-fit">시작하기</Button>
+      <Button asChild className="w-fit">
+        <Link href="/login">시작하기</Link>
+      </Button>
     </main>
   );
 }
