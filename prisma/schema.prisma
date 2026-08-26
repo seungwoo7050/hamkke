@@ -24,7 +24,8 @@ model Space {
   inviteCode          String   @unique
   inviteCodeExpiresAt DateTime
 
-  members User[]
+  members  User[]
+  messages Message[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -43,8 +44,9 @@ model User {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id])
 
-  accounts Account[]
-  sessions Session[]
+  accounts     Account[]
+  sessions     Session[]
+  sentMessages Message[]
 }
 
 model Account {
@@ -81,4 +83,27 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum MessageType {
+  text
+  image
+  voice
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  spaceId   String
+  senderId  String
+  type      MessageType @default(text)
+  // text 타입은 본문, image/voice 타입은 R2에 업로드된 미디어의 signed URL 경로.
+  content   String
+  createdAt DateTime    @default(now())
+  // 상대방이 읽은 시각. 2인 전용 Space라 수신자가 항상 1명이라 단일 필드로 충분.
+  readAt    DateTime?
+
+  space  Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id])
+
+  @@index([spaceId, createdAt])
 }
