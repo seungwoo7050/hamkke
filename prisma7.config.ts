@@ -9,6 +9,13 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
+    // Prisma 7.10.0의 datasource 설정은 directUrl을 지원하지 않는다(문서에는
+    // 있으나 실제 @prisma/config 타입엔 없음 — 빌드 시 TS2353로 확인).
+    // DATABASE_URL은 항상 Supabase direct 연결(포트 5432, pgbouncer 아님)을
+    // 쓴다: Supavisor 풀링(6543, ?pgbouncer=true)은 Prisma 7 schema-engine의
+    // CLI 연결 체크가 무한 대기하는 문제가 있었고(마이그레이션 관련),
+    // Hamkke는 2인 전용 앱이라 동접 규모가 원천적으로 작아(docs/ARCHITECTURE.md
+    // §8) 커넥션 풀링 자체가 실익이 크지 않다고 판단했다.
     url: env("DATABASE_URL"),
   },
 });
