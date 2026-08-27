@@ -51,4 +51,23 @@ export const chatRouter = router({
       // 화면에는 오래된 → 최신 순으로 표시.
       return { messages: rows.reverse(), nextCursor };
     }),
+
+  // 상대가 보낸, 아직 안 읽은 메시지를 전부 읽음 처리하고 상대 화면에
+  // "읽음" 표시가 즉시 뜨도록 브로드캐스트한다.
+  markRead: spaceProcedure.mutation(async ({ ctx }) => {
+    const readAt = new Date();
+    await prisma.message.updateMany({
+      where: { spaceId: ctx.space.id, senderId: { not: ctx.session.user.id }, readAt: null },
+      data: { readAt },
+    });
+
+    const supabase = createSupabaseServerClient();
+    await supabase.channel(spaceChannelName(ctx.space.id)).send({
+      type: "broadcast",
+      event: "read",
+      payload: { readAt: readAt.toISOString(), readBy: ctx.session.user.id },
+    });
+
+    return { readAt };
+  }),
 });

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { inferRouterOutputs } from "@trpc/server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,9 @@ import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 
 type ChatMessage = inferRouterOutputs<AppRouter>["chat"]["list"]["messages"][number];
+
+const TYPING_THROTTLE_MS = 2000;
+const TYPING_CLEAR_MS = 3000;
 
 function mergeById(existing: ChatMessage[], incoming: ChatMessage[]) {
   const map = new Map(existing.map((m) => [m.id, m]));
@@ -46,23 +50,57 @@ export function ChatView({
   const [olderCursor, setOlderCursor] = useState(initialNextCursor);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [draft, setDraft] = useState("");
+  const [partnerTyping, setPartnerTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const lastTypingSentAt = useRef(0);
+  const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markReadMutation = useMutation(trpc.chat.markRead.mutationOptions());
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     const channel = supabase.channel(spaceChannelName(spaceId));
+    channelRef.current = channel;
+
     channel
       .on("broadcast", { event: "message" }, (msg) => {
+        const message = normalizeBroadcastMessage(msg.payload as ChatMessage);
+        setMessages((prev) => mergeById(prev, [message]));
+        if (message.senderId !== currentUserId) {
+          markReadMutation.mutate();
+        }
+      })
+      .on("broadcast", { event: "read" }, (msg) => {
+        const { readAt } = msg.payload as { readAt: string; readBy: string };
+        const readAtDate = new Date(readAt);
         setMessages((prev) =>
-          mergeById(prev, [normalizeBroadcastMessage(msg.payload as ChatMessage)]),
+          prev.map((m) =>
+            m.senderId === currentUserId && new Date(m.createdAt) <= readAtDate && !m.readAt
+              ? { ...m, readAt: readAtDate }
+              : m,
+          ),
         );
       })
-      .subscribe();
+      .on("broadcast", { event: "typing" }, (msg) => {
+        const { userId } = msg.payload as { userId: string };
+        if (userId === currentUserId) return;
+        setPartnerTyping(true);
+        if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+        typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          markReadMutation.mutate();
+        }
+      });
 
     return () => {
+      if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
       supabase.removeChannel(channel);
     };
-  }, [spaceId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spaceId, currentUserId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -77,6 +115,19 @@ export function ChatView({
     }),
   );
 
+  function handleDraftChange(value: string) {
+    setDraft(value);
+    const now = Date.now();
+    if (now - lastTypingSentAt.current > TYPING_THROTTLE_MS) {
+      lastTypingSentAt.current = now;
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "typing",
+        payload: { userId: currentUserId },
+      });
+    }
+  }
+
   async function loadOlder() {
     if (!olderCursor) return;
     setLoadingOlder(true);
@@ -88,6 +139,10 @@ export function ChatView({
       setLoadingOlder(false);
     }
   }
+
+  const lastReadMineId = [...messages]
+    .reverse()
+    .find((m) => m.senderId === currentUserId && m.readAt)?.id;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -108,16 +163,22 @@ export function ChatView({
           return (
             <div
               key={message.id}
-              className={`flex max-w-[75%] flex-col gap-1 rounded-lg px-3 py-2 ${
-                isMine
-                  ? "bg-primary text-primary-foreground self-end"
-                  : "bg-muted text-foreground self-start"
-              }`}
+              className={`flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}
             >
-              <p className="text-sm">{message.content}</p>
+              <div
+                className={`flex max-w-[75%] flex-col gap-1 rounded-lg px-3 py-2 ${
+                  isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                }`}
+              >
+                <p className="text-sm">{message.content}</p>
+              </div>
+              {isMine && message.id === lastReadMineId && (
+                <span className="text-muted-foreground text-xs">읽음</span>
+              )}
             </div>
           );
         })}
+        {partnerTyping && <p className="text-muted-foreground text-xs">상대가 입력 중...</p>}
         <div ref={bottomRef} />
       </div>
 
@@ -131,7 +192,7 @@ export function ChatView({
       >
         <Input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => handleDraftChange(e.target.value)}
           placeholder="메시지 보내기"
         />
         <Button type="submit" disabled={sendMutation.isPending || !draft.trim()}>

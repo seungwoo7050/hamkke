@@ -92,4 +92,22 @@ describe("chat 라우터 (통합)", () => {
     expect(page2.messages).toHaveLength(2);
     expect(page2.messages[0].id).not.toBe(page1.messages[0].id);
   });
+
+  it("markRead는 상대가 보낸 미읽음 메시지만 읽음 처리한다", async () => {
+    const callerA = await callerFor(userAId);
+    const callerB = await callerFor(userBId);
+
+    const fromA = await callerA.chat.send({ content: "A가 보냄" });
+    const fromB = await callerB.chat.send({ content: "B가 보냄" });
+
+    await callerA.chat.markRead();
+
+    const { messages } = await callerA.chat.list({});
+    const updatedFromA = messages.find((m) => m.id === fromA.id)!;
+    const updatedFromB = messages.find((m) => m.id === fromB.id)!;
+
+    // A가 markRead를 호출했으므로 "B가 보낸" 메시지만 읽음 처리된다.
+    expect(updatedFromA.readAt).toBeNull();
+    expect(updatedFromB.readAt).not.toBeNull();
+  });
 });
