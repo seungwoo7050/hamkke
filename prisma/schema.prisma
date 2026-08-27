@@ -26,6 +26,7 @@ model Space {
 
   members  User[]
   messages Message[]
+  touches  Touch[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -47,6 +48,7 @@ model User {
   accounts     Account[]
   sessions     Session[]
   sentMessages Message[]
+  sentTouches  Touch[]
 }
 
 model Account {
@@ -101,6 +103,19 @@ model Message {
   createdAt DateTime    @default(now())
   // 상대방이 읽은 시각. 2인 전용 Space라 수신자가 항상 1명이라 단일 필드로 충분.
   readAt    DateTime?
+
+  space  Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id])
+
+  @@index([spaceId, createdAt])
+}
+
+// "생각하고 있어" 원탭 알림(PRD.md §3.2). 내용 없이 보낸 시각만 있으면 된다.
+model Touch {
+  id        String   @id @default(cuid())
+  spaceId   String
+  senderId  String
+  createdAt DateTime @default(now())
 
   space  Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   sender User  @relation(fields: [senderId], references: [id])
