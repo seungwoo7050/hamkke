@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { inferRouterOutputs } from "@trpc/server";
+import { Heart } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -89,6 +91,11 @@ export function ChatView({
         if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
         typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
       })
+      .on("broadcast", { event: "touch" }, (msg) => {
+        const { senderId } = msg.payload as { senderId: string };
+        if (senderId === currentUserId) return;
+        toast("상대방이 생각하고 있어요");
+      })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           markReadMutation.mutate();
@@ -112,6 +119,12 @@ export function ChatView({
         setMessages((prev) => mergeById(prev, [message]));
         setDraft("");
       },
+    }),
+  );
+
+  const sendTouchMutation = useMutation(
+    trpc.touch.send.mutationOptions({
+      onSuccess: () => toast("상대방에게 전송했어요"),
     }),
   );
 
@@ -195,6 +208,16 @@ export function ChatView({
           onChange={(e) => handleDraftChange(e.target.value)}
           placeholder="메시지 보내기"
         />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="생각하고 있어 보내기"
+          disabled={sendTouchMutation.isPending}
+          onClick={() => sendTouchMutation.mutate()}
+        >
+          <Heart />
+        </Button>
         <Button type="submit" disabled={sendMutation.isPending || !draft.trim()}>
           전송
         </Button>

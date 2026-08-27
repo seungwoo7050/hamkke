@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Gaegu } from "next/font/google";
 import "pretendard/dist/web/static/pretendard-dynamic-subset.css";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 import { TRPCClientProvider } from "@/trpc/client";
 
 // 감성 포인트 전용(DESIGN.md §3.2) — 본문/버튼/내비게이션에는 사용하지 않는다.
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ko" className={`${gaegu.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         <TRPCClientProvider>{children}</TRPCClientProvider>
+        <Toaster />
       </body>
     </html>
   );
