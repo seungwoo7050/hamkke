@@ -5,8 +5,10 @@ import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
+import type { TRPCContext } from "../context";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+const ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/ogg", "audio/mpeg"] as const;
 
 // image/voice 메시지는 content에 R2 오브젝트 키를 저장하고, 표시할 때만
 // 짧게 유효한 signed URL로 즉석 변환한다(ARCHITECTURE.md §10 — 영구 public
@@ -16,8 +18,25 @@ async function resolveContent(message: { type: string; content: string }) {
   return createDownloadUrl(message.content);
 }
 
+type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
+
+async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
+  const message = await prisma.message.create({
+    data: { spaceId: ctx.space.id, senderId: ctx.session.user.id, type, content: key },
+  });
+  const content = await resolveContent(message);
+
+  const supabase = createSupabaseServerClient();
+  await supabase.channel(spaceChannelName(ctx.space.id)).send({
+    type: "broadcast",
+    event: "message",
+    payload: { ...message, content },
+  });
+
+  return { ...message, content };
+}
+
 export const chatRouter = router({
-  // 음성 메시지는 별도 커밋에서 추가한다.
   send: spaceProcedure
     .input(z.object({ content: z.string().min(1).max(4000) }))
     .mutation(async ({ ctx, input }) => {
@@ -52,25 +71,19 @@ export const chatRouter = router({
 
   sendImage: spaceProcedure
     .input(z.object({ key: z.string().min(1) }))
+    .mutation(({ ctx, input }) => createAndBroadcastMediaMessage(ctx, "image", input.key)),
+
+  createVoiceUploadUrl: spaceProcedure
+    .input(z.object({ contentType: z.enum(ALLOWED_AUDIO_TYPES) }))
     .mutation(async ({ ctx, input }) => {
-      const message = await prisma.message.create({
-        data: {
-          spaceId: ctx.space.id,
-          senderId: ctx.session.user.id,
-          type: "image",
-          content: input.key,
-        },
-      });
-
-      const supabase = createSupabaseServerClient();
-      await supabase.channel(spaceChannelName(ctx.space.id)).send({
-        type: "broadcast",
-        event: "message",
-        payload: { ...message, content: await resolveContent(message) },
-      });
-
-      return { ...message, content: await resolveContent(message) };
+      const key = `messages/${ctx.space.id}/${randomUUID()}`;
+      const uploadUrl = await createUploadUrl(key, input.contentType);
+      return { uploadUrl, key };
     }),
+
+  sendVoice: spaceProcedure
+    .input(z.object({ key: z.string().min(1) }))
+    .mutation(({ ctx, input }) => createAndBroadcastMediaMessage(ctx, "voice", input.key)),
 
   list: spaceProcedure
     .input(

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useMutation } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { inferRouterOutputs } from "@trpc/server";
-import { Heart, ImagePlus } from "lucide-react";
+import { Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,21 @@ const TYPING_THROTTLE_MS = 2000;
 const TYPING_CLEAR_MS = 3000;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
+const ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/ogg", "audio/mpeg"] as const;
+type AllowedAudioType = (typeof ALLOWED_AUDIO_TYPES)[number];
+// 브라우저마다 지원하는 녹음 포맷이 달라 우선순위대로 확인한다(Chrome은 webm,
+// Safari는 mp4 계열을 주로 지원).
+const AUDIO_MIME_CANDIDATES = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/mp4",
+  "audio/ogg;codecs=opus",
+];
+
+function pickSupportedAudioMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  return AUDIO_MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type));
+}
 
 function mergeById(existing: ChatMessage[], incoming: ChatMessage[]) {
   const map = new Map(existing.map((m) => [m.id, m]));
@@ -59,6 +74,8 @@ export function ChatView({
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const lastTypingSentAt = useRef(0);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -171,6 +188,68 @@ export function ChatView({
     }
   }
 
+  const createVoiceUploadUrlMutation = useMutation(
+    trpc.chat.createVoiceUploadUrl.mutationOptions(),
+  );
+  const sendVoiceMutation = useMutation(
+    trpc.chat.sendVoice.mutationOptions({
+      onSuccess: (message) => setMessages((prev) => mergeById(prev, [message])),
+    }),
+  );
+  const [isRecording, setIsRecording] = useState(false);
+  const [uploadingVoice, setUploadingVoice] = useState(false);
+
+  async function handleVoiceRecorded(blob: Blob) {
+    setUploadingVoice(true);
+    try {
+      const contentType = blob.type.split(";")[0] as AllowedAudioType;
+      if (!ALLOWED_AUDIO_TYPES.includes(contentType)) {
+        throw new Error(`지원하지 않는 오디오 형식: ${blob.type}`);
+      }
+      const { uploadUrl, key } = await createVoiceUploadUrlMutation.mutateAsync({ contentType });
+      const res = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": contentType },
+        body: blob,
+      });
+      if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
+      await sendVoiceMutation.mutateAsync({ key });
+    } catch {
+      toast.error("음성 메시지 전송에 실패했어요");
+    } finally {
+      setUploadingVoice(false);
+    }
+  }
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = pickSupportedAudioMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
+        void handleVoiceRecorded(blob);
+      };
+
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch {
+      toast.error("마이크 권한이 필요해요");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  }
+
   function handleDraftChange(value: string) {
     setDraft(value);
     const now = Date.now();
@@ -230,6 +309,8 @@ export function ChatView({
                   unoptimized
                   className="h-60 w-60 rounded-lg object-cover"
                 />
+              ) : message.type === "voice" ? (
+                <audio controls src={message.content} className="h-10 max-w-[75%]" />
               ) : (
                 <div
                   className={`flex max-w-[75%] flex-col gap-1 rounded-lg px-3 py-2 ${
@@ -273,6 +354,16 @@ export function ChatView({
           onClick={() => fileInputRef.current?.click()}
         >
           <ImagePlus />
+        </Button>
+        <Button
+          type="button"
+          variant={isRecording ? "default" : "outline"}
+          size="icon"
+          aria-label={isRecording ? "녹음 중지 및 보내기" : "음성 메시지 녹음"}
+          disabled={uploadingVoice}
+          onClick={() => (isRecording ? stopRecording() : startRecording())}
+        >
+          {isRecording ? <Square /> : <Mic />}
         </Button>
         <Input
           value={draft}
