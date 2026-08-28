@@ -49,6 +49,7 @@ model User {
   sessions     Session[]
   sentMessages Message[]
   sentTouches  Touch[]
+  pushTokens   PushToken[]
 }
 
 model Account {
@@ -121,4 +122,16 @@ model Touch {
   sender User  @relation(fields: [senderId], references: [id])
 
   @@index([spaceId, createdAt])
+}
+
+// 한 사용자가 여러 브라우저/기기에서 알림을 받을 수 있어 User 필드가 아니라
+// 별도 모델로 둔다. 토큰은 FCM이 주기적으로 갱신하므로 만료된 토큰은 발송
+// 실패 시(messaging/registration-token-not-registered) 삭제한다.
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

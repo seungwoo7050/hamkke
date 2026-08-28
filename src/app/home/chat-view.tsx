@@ -9,6 +9,7 @@ import { Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { onForegroundMessage, requestPushToken } from "@/lib/firebase-client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -133,6 +134,32 @@ export function ChatView({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
+
+  const registerPushTokenMutation = useMutation(trpc.push.registerToken.mutationOptions());
+
+  useEffect(() => {
+    let unsubscribeForeground: (() => void) | undefined;
+
+    requestPushToken()
+      .then((token) => {
+        if (token) registerPushTokenMutation.mutate({ token });
+      })
+      .catch(() => {});
+
+    // 탭이 열려 있을 땐 시스템 알림 대신 토스트로 보여준다(포그라운드에서는
+    // FCM이 시스템 알림을 자동으로 띄우지 않는다).
+    onForegroundMessage((payload) => {
+      const body = payload.notification?.body ?? payload.notification?.title;
+      if (body) toast(body);
+    })
+      .then((unsub) => {
+        unsubscribeForeground = unsub;
+      })
+      .catch(() => {});
+
+    return () => unsubscribeForeground?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sendMutation = useMutation(
     trpc.chat.send.mutationOptions({

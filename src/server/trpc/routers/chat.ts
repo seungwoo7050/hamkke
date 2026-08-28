@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { sendPushToSpacePartner } from "@/lib/push";
 import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -20,6 +21,11 @@ async function resolveContent(message: { type: string; content: string }) {
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
 
+const PUSH_BODY_BY_TYPE: Record<"image" | "voice", string> = {
+  image: "사진을 보냈어요",
+  voice: "음성 메시지를 보냈어요",
+};
+
 async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
   const message = await prisma.message.create({
     data: { spaceId: ctx.space.id, senderId: ctx.session.user.id, type, content: key },
@@ -32,6 +38,12 @@ async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "vo
     event: "message",
     payload: { ...message, content },
   });
+
+  // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
+  await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+    title: "Hamkke",
+    body: PUSH_BODY_BY_TYPE[type],
+  }).catch(() => {});
 
   return { ...message, content };
 }
@@ -55,6 +67,12 @@ export const chatRouter = router({
         event: "message",
         payload: message,
       });
+
+      // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
+      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+        title: "Hamkke",
+        body: input.content.length > 40 ? `${input.content.slice(0, 40)}…` : input.content,
+      }).catch(() => {});
 
       return message;
     }),
