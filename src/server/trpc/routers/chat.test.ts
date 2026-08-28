@@ -110,4 +110,44 @@ describe("chat 라우터 (통합)", () => {
     expect(updatedFromA.readAt).toBeNull();
     expect(updatedFromB.readAt).not.toBeNull();
   });
+
+  it("이미지 업로드 URL로 실제 R2에 업로드하고, sendImage/list가 접근 가능한 signed URL을 돌려준다", async () => {
+    const caller = await callerFor(userAId);
+
+    const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
+      contentType: "image/png",
+    });
+
+    const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "image/png" },
+      body: fakeImageBytes,
+    });
+    expect(uploadRes.ok).toBe(true);
+
+    const message = await caller.chat.sendImage({ key });
+    expect(message.type).toBe("image");
+    // content가 R2 키가 아니라 실제로 열리는 signed URL로 바뀌어 있어야 한다.
+    expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+
+    const downloadRes = await fetch(message.content);
+    expect(downloadRes.ok).toBe(true);
+    expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeImageBytes);
+
+    const { messages } = await caller.chat.list({});
+    const listed = messages.find((m) => m.id === message.id)!;
+    expect(listed.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+
+    const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+    const s3 = new S3Client({
+      region: "auto",
+      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      },
+    });
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
+  });
 });

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useMutation } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { inferRouterOutputs } from "@trpc/server";
-import { Heart } from "lucide-react";
+import { Heart, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,8 @@ type ChatMessage = inferRouterOutputs<AppRouter>["chat"]["list"]["messages"][num
 
 const TYPING_THROTTLE_MS = 2000;
 const TYPING_CLEAR_MS = 3000;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
 
 function mergeById(existing: ChatMessage[], incoming: ChatMessage[]) {
   const map = new Map(existing.map((m) => [m.id, m]));
@@ -55,6 +58,7 @@ export function ChatView({
   const [partnerTyping, setPartnerTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTypingSentAt = useRef(0);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -128,6 +132,45 @@ export function ChatView({
     }),
   );
 
+  const createImageUploadUrlMutation = useMutation(
+    trpc.chat.createImageUploadUrl.mutationOptions(),
+  );
+  const sendImageMutation = useMutation(
+    trpc.chat.sendImage.mutationOptions({
+      onSuccess: (message) => setMessages((prev) => mergeById(prev, [message])),
+    }),
+  );
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type as AllowedImageType)) {
+      toast.error("jpg, png, webp, gif 이미지만 보낼 수 있어요");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const { uploadUrl, key } = await createImageUploadUrlMutation.mutateAsync({
+        contentType: file.type as AllowedImageType,
+      });
+      const res = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
+      await sendImageMutation.mutateAsync({ key });
+    } catch {
+      toast.error("이미지 전송에 실패했어요");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   function handleDraftChange(value: string) {
     setDraft(value);
     const now = Date.now();
@@ -178,13 +221,24 @@ export function ChatView({
               key={message.id}
               className={`flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}
             >
-              <div
-                className={`flex max-w-[75%] flex-col gap-1 rounded-lg px-3 py-2 ${
-                  isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                }`}
-              >
-                <p className="text-sm">{message.content}</p>
-              </div>
+              {message.type === "image" ? (
+                <Image
+                  src={message.content}
+                  alt="공유한 사진"
+                  width={240}
+                  height={240}
+                  unoptimized
+                  className="h-60 w-60 rounded-lg object-cover"
+                />
+              ) : (
+                <div
+                  className={`flex max-w-[75%] flex-col gap-1 rounded-lg px-3 py-2 ${
+                    isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                  }`}
+                >
+                  <p className="text-sm">{message.content}</p>
+                </div>
+              )}
               {isMine && message.id === lastReadMineId && (
                 <span className="text-muted-foreground text-xs">읽음</span>
               )}
@@ -203,6 +257,23 @@ export function ChatView({
           sendMutation.mutate({ content: draft.trim() });
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ALLOWED_IMAGE_TYPES.join(",")}
+          className="hidden"
+          onChange={handleImageSelect}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="사진 보내기"
+          disabled={uploadingImage}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <ImagePlus />
+        </Button>
         <Input
           value={draft}
           onChange={(e) => handleDraftChange(e.target.value)}

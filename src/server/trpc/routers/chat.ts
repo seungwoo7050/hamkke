@@ -1,11 +1,23 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+
+// image/voice 메시지는 content에 R2 오브젝트 키를 저장하고, 표시할 때만
+// 짧게 유효한 signed URL로 즉석 변환한다(ARCHITECTURE.md §10 — 영구 public
+// URL 금지).
+async function resolveContent(message: { type: string; content: string }) {
+  if (message.type === "text") return message.content;
+  return createDownloadUrl(message.content);
+}
+
 export const chatRouter = router({
-  // 이미지/음성 메시지는 R2 업로드 연동이 생기는 다음 커밋들에서 별도로 추가한다.
+  // 음성 메시지는 별도 커밋에서 추가한다.
   send: spaceProcedure
     .input(z.object({ content: z.string().min(1).max(4000) }))
     .mutation(async ({ ctx, input }) => {
@@ -28,6 +40,38 @@ export const chatRouter = router({
       return message;
     }),
 
+  // R2에 직접 업로드할 presigned PUT URL 발급. 서버는 파일 바이트를
+  // 거치지 않는다 — 클라이언트가 이 URL로 R2에 바로 PUT한다.
+  createImageUploadUrl: spaceProcedure
+    .input(z.object({ contentType: z.enum(ALLOWED_IMAGE_TYPES) }))
+    .mutation(async ({ ctx, input }) => {
+      const key = `messages/${ctx.space.id}/${randomUUID()}`;
+      const uploadUrl = await createUploadUrl(key, input.contentType);
+      return { uploadUrl, key };
+    }),
+
+  sendImage: spaceProcedure
+    .input(z.object({ key: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const message = await prisma.message.create({
+        data: {
+          spaceId: ctx.space.id,
+          senderId: ctx.session.user.id,
+          type: "image",
+          content: input.key,
+        },
+      });
+
+      const supabase = createSupabaseServerClient();
+      await supabase.channel(spaceChannelName(ctx.space.id)).send({
+        type: "broadcast",
+        event: "message",
+        payload: { ...message, content: await resolveContent(message) },
+      });
+
+      return { ...message, content: await resolveContent(message) };
+    }),
+
   list: spaceProcedure
     .input(
       z.object({
@@ -48,8 +92,12 @@ export const chatRouter = router({
         nextCursor = rows.pop()!.id;
       }
 
+      const messages = await Promise.all(
+        rows.map(async (row) => ({ ...row, content: await resolveContent(row) })),
+      );
+
       // 화면에는 오래된 → 최신 순으로 표시.
-      return { messages: rows.reverse(), nextCursor };
+      return { messages: messages.reverse(), nextCursor };
     }),
 
   // 상대가 보낸, 아직 안 읽은 메시지를 전부 읽음 처리하고 상대 화면에
