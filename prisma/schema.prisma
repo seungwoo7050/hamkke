@@ -45,11 +45,12 @@ model User {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id])
 
-  accounts     Account[]
-  sessions     Session[]
-  sentMessages Message[]
-  sentTouches  Touch[]
-  pushTokens   PushToken[]
+  accounts      Account[]
+  sessions      Session[]
+  sentMessages  Message[]
+  sentTouches   Touch[]
+  pushTokens    PushToken[]
+  locationPings LocationPing[]
 }
 
 model Account {
@@ -134,4 +135,20 @@ model PushToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// 위치공유(PRD.md §3.3)는 옵트인 기능이라 매번 최신 좌표만 갱신하지 않고
+// 스로틀링된 스냅샷을 계속 쌓는다(ARCHITECTURE.md §4 — 만남 지도 등 히스토리
+// 활용을 염두에 둠). 최신 위치는 userId+capturedAt으로 정렬해 조회한다.
+model LocationPing {
+  id         String   @id @default(cuid())
+  userId     String
+  lat        Float
+  lng        Float
+  accuracy   Float?
+  capturedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, capturedAt])
 }
