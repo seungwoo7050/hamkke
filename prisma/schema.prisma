@@ -24,9 +24,10 @@ model Space {
   inviteCode          String   @unique
   inviteCodeExpiresAt DateTime
 
-  members  User[]
-  messages Message[]
-  touches  Touch[]
+  members   User[]
+  messages  Message[]
+  touches   Touch[]
+  geofences Geofence[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -55,6 +56,7 @@ model User {
   sentTouches   Touch[]
   pushTokens    PushToken[]
   locationPings LocationPing[]
+  geofences     Geofence[]
 }
 
 model Account {
@@ -155,4 +157,25 @@ model LocationPing {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, capturedAt])
+}
+
+// 사용자가 등록한 "집/회사/공항" 같은 의미 있는 장소(PRD.md §3.3). 본인이
+// 이 지점 반경 안에 들어오면 상대에게 도착 알림이 간다. isInside는 마지막
+// 확인 시점 상태를 저장해 "안→밖→안" 재진입 때만 다시 알리고 반경 안에
+// 머무는 동안 중복 알림을 보내지 않기 위한 것.
+model Geofence {
+  id        String   @id @default(cuid())
+  spaceId   String
+  userId    String
+  label     String
+  lat       Float
+  lng       Float
+  radiusM   Int      @default(200)
+  isInside  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
 }
