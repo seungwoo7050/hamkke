@@ -3,6 +3,7 @@ import { chatRouter } from "./chat";
 import { healthRouter } from "./health";
 import { locationRouter } from "./location";
 import { pairingRouter } from "./pairing";
+import { profileRouter } from "./profile";
 import { pushRouter } from "./push";
 import { touchRouter } from "./touch";
 
@@ -13,6 +14,7 @@ export const appRouter = router({
   touch: touchRouter,
   push: pushRouter,
   location: locationRouter,
+  profile: profileRouter,
 });
 
 export type AppRouter = typeof appRouter;

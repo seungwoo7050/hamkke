@@ -7,6 +7,7 @@ import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
 import { ChatView } from "./chat-view";
 import { LocationPanel } from "./location-panel";
+import { TimezoneWidget } from "./timezone-widget";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -25,6 +26,7 @@ export default async function HomePage() {
   const { messages, nextCursor } = await caller.chat.list({});
   const mySharing = await caller.location.mySharing();
   const partnerStatus = await caller.location.partnerStatus();
+  const timezones = await caller.profile.timezones();
 
   async function handleSignOut() {
     "use server";
@@ -41,6 +43,7 @@ export default async function HomePage() {
           </Button>
         </form>
       </header>
+      <TimezoneWidget initialMe={timezones.me} initialPartner={timezones.partner} />
       <LocationPanel
         spaceId={status.spaceId}
         currentUserId={session.user.id}
