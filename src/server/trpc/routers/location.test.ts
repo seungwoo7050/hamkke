@@ -44,6 +44,7 @@ describe("location 라우터 (통합)", () => {
   });
 
   afterEach(async () => {
+    await prisma.geofence.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.locationPing.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
     await prisma.space.delete({ where: { id: spaceId } });
@@ -84,6 +85,31 @@ describe("location 라우터 (통합)", () => {
     const onlineStatus = await callerB.location.partnerStatus();
     expect(onlineStatus?.sharing).toBe(true);
     expect(onlineStatus?.location?.lat).toBeCloseTo(35.1796);
+  });
+
+  it("등록된 지오펜스 반경에 진입하면 isInside가 true로 바뀐다", async () => {
+    const caller = await callerFor(userAId);
+    await caller.location.setSharing({ enabled: true });
+
+    const fence = await caller.geofence.create({
+      label: "집",
+      lat: 37.5665,
+      lng: 126.978,
+      radiusM: 500,
+    });
+    expect(fence.isInside).toBe(false);
+
+    // 반경 밖(약 300km 떨어진 부산) → 상태 변화 없음.
+    await caller.location.send({ lat: 35.1796, lng: 129.0756 });
+    expect((await prisma.geofence.findUniqueOrThrow({ where: { id: fence.id } })).isInside).toBe(
+      false,
+    );
+
+    // 반경 안(거의 같은 좌표) → 진입으로 전이.
+    await caller.location.send({ lat: 37.5666, lng: 126.9781 });
+    expect((await prisma.geofence.findUniqueOrThrow({ where: { id: fence.id } })).isInside).toBe(
+      true,
+    );
   });
 
   it("스페이스 멤버가 아니면 호출할 수 없다(spaceProcedure)", async () => {

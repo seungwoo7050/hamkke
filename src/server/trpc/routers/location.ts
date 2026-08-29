@@ -1,9 +1,34 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { distanceKm } from "@/lib/geo";
 import { prisma } from "@/lib/prisma";
+import { sendPushToSpacePartner } from "@/lib/push";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
+import type { TRPCContext } from "../context";
+
+type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
+
+// 반경 재진입(밖→안) 때만 알림을 보내고, 반경 안에 머무는 동안은
+// isInside=true로 남겨둬 중복 알림을 막는다.
+async function checkGeofenceArrivals(ctx: SpaceCtx, position: { lat: number; lng: number }) {
+  const fences = await prisma.geofence.findMany({ where: { userId: ctx.session.user.id } });
+
+  for (const fence of fences) {
+    const withinRadius = distanceKm(position, fence) * 1000 <= fence.radiusM;
+    if (withinRadius === fence.isInside) continue;
+
+    await prisma.geofence.update({ where: { id: fence.id }, data: { isInside: withinRadius } });
+
+    if (withinRadius) {
+      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+        title: "Hamkke",
+        body: `상대방이 "${fence.label}"에 도착했어요`,
+      }).catch(() => {});
+    }
+  }
+}
 
 export const locationRouter = router({
   // 위치공유는 반드시 사용자가 명시적으로 켜야 한다(ARCHITECTURE.md §5).
@@ -66,6 +91,8 @@ export const locationRouter = router({
         event: "location",
         payload: ping,
       });
+
+      await checkGeofenceArrivals(ctx, input);
 
       return ping;
     }),

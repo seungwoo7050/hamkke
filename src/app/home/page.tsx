@@ -6,6 +6,7 @@ import { createTRPCContext } from "@/server/trpc/context";
 import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
 import { ChatView } from "./chat-view";
+import { GeofenceManager } from "./geofence-manager";
 import { LocationPanel } from "./location-panel";
 import { TimezoneWidget } from "./timezone-widget";
 import { WeatherWidget } from "./weather-widget";
@@ -53,6 +54,7 @@ export default async function HomePage() {
         initialSharing={mySharing}
         initialPartnerStatus={partnerStatus}
       />
+      <GeofenceManager />
       <ChatView
         spaceId={status.spaceId}
         currentUserId={session.user.id}
