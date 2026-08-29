@@ -11,7 +11,15 @@ import { useTRPC } from "@/trpc/client";
 // adaptive 전송은 과해서, 고정 간격 스로틀로 단순화했다.
 const SEND_THROTTLE_MS = 15000;
 
-export function LocationShareToggle({ initialSharing }: { initialSharing: boolean }) {
+export function LocationShareToggle({
+  initialSharing,
+  onMyPosition,
+}: {
+  initialSharing: boolean;
+  // 지도(LocationStatus)에 "내 위치" 마커를 그리기 위해 전송에 성공한 좌표를
+  // 그대로 올려보낸다 — 별도로 위치를 다시 조회하지 않는다.
+  onMyPosition?: (position: { lat: number; lng: number }) => void;
+}) {
   const trpc = useTRPC();
   const [sharing, setSharing] = useState(initialSharing);
   const watchIdRef = useRef<number | null>(null);
@@ -27,14 +35,14 @@ export function LocationShareToggle({ initialSharing }: { initialSharing: boolea
     // 띄운다 — 별도 권한 요청 API가 없다.
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        onMyPosition?.({ lat, lng });
+
         const now = Date.now();
         if (now - lastSentAt.current < SEND_THROTTLE_MS) return;
         lastSentAt.current = now;
-        sendMutation.mutate({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        });
+        sendMutation.mutate({ lat, lng, accuracy: position.coords.accuracy });
       },
       () => {
         toast.error("위치를 가져오지 못했어요. 브라우저 위치 권한을 확인해주세요");

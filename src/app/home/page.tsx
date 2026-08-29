@@ -6,8 +6,7 @@ import { createTRPCContext } from "@/server/trpc/context";
 import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
 import { ChatView } from "./chat-view";
-import { LocationShareToggle } from "./location-toggle";
-import { LocationStatus } from "./location-status";
+import { LocationPanel } from "./location-panel";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -36,19 +35,17 @@ export default async function HomePage() {
     <div className="flex flex-1 flex-col">
       <header className="border-border flex items-center justify-between border-b px-6 py-4">
         <h1 className="text-foreground text-lg font-semibold tracking-tight">Hamkke</h1>
-        <div className="flex items-center gap-2">
-          <LocationShareToggle initialSharing={mySharing} />
-          <form action={handleSignOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              로그아웃
-            </Button>
-          </form>
-        </div>
+        <form action={handleSignOut}>
+          <Button type="submit" variant="ghost" size="sm">
+            로그아웃
+          </Button>
+        </form>
       </header>
-      <LocationStatus
+      <LocationPanel
         spaceId={status.spaceId}
         currentUserId={session.user.id}
-        initialStatus={partnerStatus}
+        initialSharing={mySharing}
+        initialPartnerStatus={partnerStatus}
       />
       <ChatView
         spaceId={status.spaceId}
