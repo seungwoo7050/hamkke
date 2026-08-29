@@ -7,6 +7,7 @@ import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
 import { ChatView } from "./chat-view";
 import { LocationShareToggle } from "./location-toggle";
+import { LocationStatus } from "./location-status";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -24,6 +25,7 @@ export default async function HomePage() {
   const caller = createCaller(await createTRPCContext());
   const { messages, nextCursor } = await caller.chat.list({});
   const mySharing = await caller.location.mySharing();
+  const partnerStatus = await caller.location.partnerStatus();
 
   async function handleSignOut() {
     "use server";
@@ -43,6 +45,11 @@ export default async function HomePage() {
           </form>
         </div>
       </header>
+      <LocationStatus
+        spaceId={status.spaceId}
+        currentUserId={session.user.id}
+        initialStatus={partnerStatus}
+      />
       <ChatView
         spaceId={status.spaceId}
         currentUserId={session.user.id}
