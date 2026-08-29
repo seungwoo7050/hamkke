@@ -6,6 +6,7 @@ import { pairingRouter } from "./pairing";
 import { profileRouter } from "./profile";
 import { pushRouter } from "./push";
 import { touchRouter } from "./touch";
+import { weatherRouter } from "./weather";
 
 export const appRouter = router({
   health: healthRouter,
@@ -15,6 +16,7 @@ export const appRouter = router({
   push: pushRouter,
   location: locationRouter,
   profile: profileRouter,
+  weather: weatherRouter,
 });
 
 export type AppRouter = typeof appRouter;
