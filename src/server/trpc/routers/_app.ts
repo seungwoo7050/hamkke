@@ -3,6 +3,7 @@ import { chatRouter } from "./chat";
 import { geofenceRouter } from "./geofence";
 import { healthRouter } from "./health";
 import { locationRouter } from "./location";
+import { meetupRouter } from "./meetup";
 import { pairingRouter } from "./pairing";
 import { profileRouter } from "./profile";
 import { pushRouter } from "./push";
@@ -19,6 +20,7 @@ export const appRouter = router({
   profile: profileRouter,
   weather: weatherRouter,
   geofence: geofenceRouter,
+  meetup: meetupRouter,
 });
 
 export type AppRouter = typeof appRouter;

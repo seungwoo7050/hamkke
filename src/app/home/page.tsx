@@ -8,6 +8,7 @@ import { appRouter } from "@/server/trpc/routers/_app";
 import { ChatView } from "./chat-view";
 import { GeofenceManager } from "./geofence-manager";
 import { LocationPanel } from "./location-panel";
+import { MeetupTimeline } from "./meetup-timeline";
 import { TimezoneWidget } from "./timezone-widget";
 import { WeatherWidget } from "./weather-widget";
 
@@ -55,6 +56,7 @@ export default async function HomePage() {
         initialPartnerStatus={partnerStatus}
       />
       <GeofenceManager />
+      <MeetupTimeline />
       <ChatView
         spaceId={status.spaceId}
         currentUserId={session.user.id}
