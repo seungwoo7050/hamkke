@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { inferRouterOutputs } from "@trpc/server";
-import { distanceKm, formatDistanceKm } from "@/lib/geo";
+import { distanceKm, formatDistanceKm, isMeetingSoon } from "@/lib/geo";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -67,10 +67,30 @@ export function LocationPanel({
 
   const partnerPoint =
     sharing && partnerLocation ? { lat: partnerLocation.lat, lng: partnerLocation.lng } : null;
-  const distance = me && partnerPoint ? formatDistanceKm(distanceKm(me, partnerPoint)) : null;
+  const distanceKmValue = me && partnerPoint ? distanceKm(me, partnerPoint) : null;
+  const distance = distanceKmValue !== null ? formatDistanceKm(distanceKmValue) : null;
+
+  // "이동 패턴 감지"는 속도/경로 예측 없이, 직전 측정 대비 거리가 좁혀지는
+  // 추세만 본다(src/lib/geo.ts 각주 참고).
+  const prevDistanceRef = useRef<number | null>(null);
+  const [approaching, setApproaching] = useState(false);
+  useEffect(() => {
+    const prev = prevDistanceRef.current;
+    if (distanceKmValue !== null && prev !== null) {
+      setApproaching(distanceKmValue < prev);
+    }
+    prevDistanceRef.current = distanceKmValue;
+  }, [distanceKmValue]);
+
+  const meetingSoon = distanceKmValue !== null && isMeetingSoon(distanceKmValue);
 
   return (
     <div className="border-border border-b">
+      {meetingSoon && (
+        <div className="bg-primary/10 text-primary px-6 py-2 text-xs font-medium">
+          {approaching ? "곧 만나요! 점점 가까워지고 있어요" : "곧 만나요! 가까이 있어요"}
+        </div>
+      )}
       <div className="flex items-center justify-between px-6 py-2">
         <div className="text-muted-foreground flex flex-col text-xs">
           <span>

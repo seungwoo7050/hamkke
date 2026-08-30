@@ -20,3 +20,11 @@ export function formatDistanceKm(km: number) {
   if (km < 1) return `${Math.round(km * 1000)}m`;
   return `${km.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}km`;
 }
+
+// "이동 패턴 감지"는 속도/경로 예측 없이, 거리 임계값 + 직전 측정 대비
+// 좁혀지는 추세만 본다(PRD.md §3.3 범위, 과한 엔지니어링 방지).
+export const MEETING_SOON_THRESHOLD_KM = 3;
+
+export function isMeetingSoon(distance: number, threshold = MEETING_SOON_THRESHOLD_KM) {
+  return distance <= threshold;
+}
