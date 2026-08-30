@@ -24,10 +24,11 @@ model Space {
   inviteCode          String   @unique
   inviteCodeExpiresAt DateTime
 
-  members   User[]
-  messages  Message[]
-  touches   Touch[]
-  geofences Geofence[]
+  members    User[]
+  messages   Message[]
+  touches    Touch[]
+  geofences  Geofence[]
+  meetupPins MeetupPin[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -178,4 +179,21 @@ model Geofence {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([spaceId])
+}
+
+// 실제로 같이 만났던 장소를 기록하는 타임라인 핀(PRD.md §3.3). date는 기록
+// 시각(createdAt)과 달리 "실제로 만난 날짜"라 나중에 지난 만남을 소급
+// 기록할 수도 있다.
+model MeetupPin {
+  id        String   @id @default(cuid())
+  spaceId   String
+  lat       Float
+  lng       Float
+  label     String
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId, date])
 }
