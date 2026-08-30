@@ -24,11 +24,12 @@ model Space {
   inviteCode          String   @unique
   inviteCodeExpiresAt DateTime
 
-  members    User[]
-  messages   Message[]
-  touches    Touch[]
-  geofences  Geofence[]
-  meetupPins MeetupPin[]
+  members        User[]
+  messages       Message[]
+  touches        Touch[]
+  geofences      Geofence[]
+  meetupPins     MeetupPin[]
+  calendarEvents CalendarEvent[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -58,6 +59,7 @@ model User {
   pushTokens    PushToken[]
   locationPings LocationPing[]
   geofences     Geofence[]
+  createdEvents CalendarEvent[]
 }
 
 model Account {
@@ -196,4 +198,24 @@ model MeetupPin {
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   @@index([spaceId, date])
+}
+
+// 공유 캘린더(PRD.md §3.4). startAt/endAt은 UTC로 저장하고, 생성 시점의
+// 작성자 timezone을 함께 남겨 "어느 기준 시간대로 입력했는지"를 보존한다
+// (조회 시 각자 User.timezone으로 다시 변환해서 보여준다 — §5 시차 위젯과
+// 동일한 IANA 타임존 유틸 재사용).
+model CalendarEvent {
+  id        String   @id @default(cuid())
+  spaceId   String
+  createdBy String
+  title     String
+  startAt   DateTime
+  endAt     DateTime
+  timezone  String
+  createdAt DateTime @default(now())
+
+  space   Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  creator User  @relation(fields: [createdBy], references: [id])
+
+  @@index([spaceId, startAt])
 }
