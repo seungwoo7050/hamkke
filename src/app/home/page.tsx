@@ -5,6 +5,7 @@ import { getCurrentPairingStatus } from "@/server/pairing/current-status";
 import { createTRPCContext } from "@/server/trpc/context";
 import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
+import { CalendarView } from "./calendar-view";
 import { ChatView } from "./chat-view";
 import { GeofenceManager } from "./geofence-manager";
 import { LocationPanel } from "./location-panel";
@@ -57,6 +58,7 @@ export default async function HomePage() {
       />
       <GeofenceManager />
       <MeetupTimeline />
+      <CalendarView />
       <ChatView
         spaceId={status.spaceId}
         currentUserId={session.user.id}
