@@ -10,6 +10,7 @@ import { ChatView } from "./chat-view";
 import { GeofenceManager } from "./geofence-manager";
 import { LocationPanel } from "./location-panel";
 import { MeetupTimeline } from "./meetup-timeline";
+import { MomentFeed } from "./moment-feed";
 import { TimezoneWidget } from "./timezone-widget";
 import { WeatherWidget } from "./weather-widget";
 
@@ -59,6 +60,7 @@ export default async function HomePage() {
       <GeofenceManager />
       <MeetupTimeline />
       <CalendarView />
+      <MomentFeed currentUserId={session.user.id} />
       <ChatView
         spaceId={status.spaceId}
         currentUserId={session.user.id}
