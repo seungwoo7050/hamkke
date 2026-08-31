@@ -30,6 +30,7 @@ model Space {
   geofences      Geofence[]
   meetupPins     MeetupPin[]
   calendarEvents CalendarEvent[]
+  moments        Moment[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -52,14 +53,15 @@ model User {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id])
 
-  accounts      Account[]
-  sessions      Session[]
-  sentMessages  Message[]
-  sentTouches   Touch[]
-  pushTokens    PushToken[]
-  locationPings LocationPing[]
-  geofences     Geofence[]
-  createdEvents CalendarEvent[]
+  accounts        Account[]
+  sessions        Session[]
+  sentMessages    Message[]
+  sentTouches     Touch[]
+  pushTokens      PushToken[]
+  locationPings   LocationPing[]
+  geofences       Geofence[]
+  createdEvents   CalendarEvent[]
+  uploadedMoments Moment[]
 }
 
 model Account {
@@ -218,4 +220,21 @@ model CalendarEvent {
   creator User  @relation(fields: [createdBy], references: [id])
 
   @@index([spaceId, startAt])
+}
+
+// "오늘의 사진" 피드(PRD.md §3.4). mediaUrl은 PRD 명명 그대로 두지만 실제
+// 값은 Message의 image 타입과 동일하게 R2 오브젝트 키다 — 응답 시점에만
+// presigned GET URL로 변환한다(ARCHITECTURE.md §10, 영구 public URL 금지).
+model Moment {
+  id         String   @id @default(cuid())
+  spaceId    String
+  uploaderId String
+  mediaUrl   String
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  space    Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploaderId], references: [id])
+
+  @@index([spaceId, createdAt])
 }
