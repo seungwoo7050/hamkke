@@ -106,6 +106,30 @@ describe("chat 라우터 (통합)", () => {
     expect(page2.messages[0].id).not.toBe(page1.messages[0].id);
   });
 
+  // cursor로 pop()한(=아직 안 보여준 다음 페이지 첫 항목) id를 그대로 쓰면
+  // skip:1이 그 항목 자체를 건너뛰어버려 페이지마다 1개씩 유실된다 —
+  // 실제로 이 버그가 있었어서(2026-09-26 수정) 전체 페이지를 순회해
+  // 원본 집합과 정확히 일치하는지까지 확인한다.
+  it("여러 페이지를 끝까지 순회하면 메시지가 하나도 유실되지 않는다", async () => {
+    const caller = await callerFor(userAId);
+    const sent = [];
+    for (let i = 0; i < 5; i++) {
+      sent.push(await caller.chat.send({ content: `메시지 ${i}` }));
+    }
+
+    const collected: string[] = [];
+    let cursor: string | undefined;
+    for (let guard = 0; guard < 10; guard++) {
+      const page = await caller.chat.list({ limit: 2, cursor });
+      collected.push(...page.messages.map((m) => m.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+
+    expect(new Set(collected)).toEqual(new Set(sent.map((m) => m.id)));
+    expect(collected).toHaveLength(5);
+  });
+
   it("markRead는 상대가 보낸 미읽음 메시지만 읽음 처리한다", async () => {
     const callerA = await callerFor(userAId);
     const callerB = await callerFor(userBId);

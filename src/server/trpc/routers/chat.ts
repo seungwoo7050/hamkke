@@ -113,14 +113,21 @@ export const chatRouter = router({
     .query(async ({ ctx, input }) => {
       const rows = await prisma.message.findMany({
         where: { spaceId: ctx.space.id },
-        orderBy: { createdAt: "desc" },
+        // createdAt이 같은 밀리초에 여러 개 생성되면 커서 페이지네이션이
+        // 불안정해지므로 id(cuid, 생성 순 오름차순)를 tie-breaker로 둔다.
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: input.limit + 1,
         ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
       });
 
+      // take(limit+1)개를 가져와 초과분이 있으면 그건 버리고, "마지막으로
+      // 반환하는 항목"의 id를 다음 cursor로 쓴다. 초과분(아직 안 보여준
+      // 다음 페이지의 첫 항목)의 id를 cursor로 쓰면 skip:1이 그 항목 자체를
+      // 건너뛰어버려서 페이지마다 1개씩 유실된다.
       let nextCursor: string | undefined;
       if (rows.length > input.limit) {
-        nextCursor = rows.pop()!.id;
+        rows.pop();
+        nextCursor = rows[rows.length - 1]?.id;
       }
 
       const messages = await Promise.all(
