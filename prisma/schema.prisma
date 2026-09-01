@@ -33,6 +33,7 @@ model Space {
   moments        Moment[]
   anniversaries  Anniversary[]
   countdowns     Countdown[]
+  capsules       Capsule[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -64,6 +65,7 @@ model User {
   geofences       Geofence[]
   createdEvents   CalendarEvent[]
   uploadedMoments Moment[]
+  sentCapsules    Capsule[]
 }
 
 model Account {
@@ -270,4 +272,24 @@ model Countdown {
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   @@index([spaceId])
+}
+
+// 예약 메시지/캡슐 노트(PRD.md §3.4). deliverAt이 지나기 전에는 상대에게
+// content를 숨긴다("아직 도착하지 않았어요"만 보여줌). deliveredAt은
+// 상대가 실제로 처음 열람한 시각 — 정확한 시각 push는 스케줄러가 없어
+// 지원하지 않고(Phase 4 각주), 상대가 조회할 때 deliverAt을 지났는지만
+// 확인하는 pull 방식이다.
+model Capsule {
+  id          String    @id @default(cuid())
+  spaceId     String
+  senderId    String
+  content     String
+  deliverAt   DateTime
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  space  Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id])
+
+  @@index([spaceId, deliverAt])
 }
