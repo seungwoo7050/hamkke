@@ -7,6 +7,7 @@ import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
 import { AnniversaryTracker } from "./anniversary-tracker";
 import { CalendarView } from "./calendar-view";
+import { CapsuleNotes } from "./capsule-notes";
 import { ChatView } from "./chat-view";
 import { CountdownTracker } from "./countdown-tracker";
 import { GeofenceManager } from "./geofence-manager";
@@ -65,6 +66,7 @@ export default async function HomePage() {
       <AnniversaryTracker />
       <CountdownTracker />
       <MomentFeed currentUserId={session.user.id} />
+      <CapsuleNotes currentUserId={session.user.id} />
       <ChatView
         spaceId={status.spaceId}
         currentUserId={session.user.id}
