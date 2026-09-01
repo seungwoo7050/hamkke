@@ -8,6 +8,7 @@ import { appRouter } from "@/server/trpc/routers/_app";
 import { AnniversaryTracker } from "./anniversary-tracker";
 import { CalendarView } from "./calendar-view";
 import { ChatView } from "./chat-view";
+import { CountdownTracker } from "./countdown-tracker";
 import { GeofenceManager } from "./geofence-manager";
 import { LocationPanel } from "./location-panel";
 import { MeetupTimeline } from "./meetup-timeline";
@@ -62,6 +63,7 @@ export default async function HomePage() {
       <MeetupTimeline />
       <CalendarView />
       <AnniversaryTracker />
+      <CountdownTracker />
       <MomentFeed currentUserId={session.user.id} />
       <ChatView
         spaceId={status.spaceId}

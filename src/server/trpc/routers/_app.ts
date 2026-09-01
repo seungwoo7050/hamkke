@@ -2,6 +2,7 @@ import { router } from "../init";
 import { anniversaryRouter } from "./anniversary";
 import { calendarRouter } from "./calendar";
 import { chatRouter } from "./chat";
+import { countdownRouter } from "./countdown";
 import { geofenceRouter } from "./geofence";
 import { healthRouter } from "./health";
 import { locationRouter } from "./location";
@@ -27,6 +28,7 @@ export const appRouter = router({
   calendar: calendarRouter,
   moment: momentRouter,
   anniversary: anniversaryRouter,
+  countdown: countdownRouter,
 });
 
 export type AppRouter = typeof appRouter;
