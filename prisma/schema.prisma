@@ -32,6 +32,7 @@ model Space {
   calendarEvents CalendarEvent[]
   moments        Moment[]
   anniversaries  Anniversary[]
+  countdowns     Countdown[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -251,6 +252,20 @@ model Anniversary {
   date      DateTime
   recurring Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
+}
+
+// 다음 만남까지 카운트다운(PRD.md §3.4). Anniversary와 달리 반복 개념
+// 없이 targetDate 하나만 가진 1회성 목표일이다("다음 여행" 같은).
+model Countdown {
+  id         String   @id @default(cuid())
+  spaceId    String
+  title      String
+  targetDate DateTime
+  createdAt  DateTime @default(now())
 
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
