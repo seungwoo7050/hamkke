@@ -34,6 +34,7 @@ model Space {
   anniversaries  Anniversary[]
   countdowns     Countdown[]
   capsules       Capsule[]
+  subscription   Subscription?
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -292,4 +293,22 @@ model Capsule {
   sender User  @relation(fields: [senderId], references: [id])
 
   @@index([spaceId, deliverAt])
+}
+
+// 구독 주체는 User가 아니라 Space(ARCHITECTURE.md §6) — 한쪽이 결제하면
+// 둘 다 프리미엄 혜택을 받는다. status는 Stripe subscription status를
+// 그대로 저장한다(active/past_due/canceled/trialing 등, Stripe가 값을
+// 늘려도 깨지지 않게 Prisma enum이 아닌 문자열로 둔다).
+model Subscription {
+  id                   String   @id @default(cuid())
+  spaceId              String   @unique
+  stripeCustomerId     String   @unique
+  stripeSubscriptionId String   @unique
+  plan                 String
+  status               String
+  currentPeriodEnd     DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 }
