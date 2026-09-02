@@ -12,6 +12,7 @@ import { momentRouter } from "./moment";
 import { pairingRouter } from "./pairing";
 import { profileRouter } from "./profile";
 import { pushRouter } from "./push";
+import { streakRouter } from "./streak";
 import { touchRouter } from "./touch";
 import { weatherRouter } from "./weather";
 
@@ -31,6 +32,7 @@ export const appRouter = router({
   anniversary: anniversaryRouter,
   countdown: countdownRouter,
   capsule: capsuleRouter,
+  streak: streakRouter,
 });
 
 export type AppRouter = typeof appRouter;

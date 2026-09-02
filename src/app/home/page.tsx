@@ -14,6 +14,7 @@ import { GeofenceManager } from "./geofence-manager";
 import { LocationPanel } from "./location-panel";
 import { MeetupTimeline } from "./meetup-timeline";
 import { MomentFeed } from "./moment-feed";
+import { StreakBadge } from "./streak-badge";
 import { TimezoneWidget } from "./timezone-widget";
 import { WeatherWidget } from "./weather-widget";
 
@@ -45,7 +46,10 @@ export default async function HomePage() {
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-border flex items-center justify-between border-b px-6 py-4">
-        <h1 className="text-foreground text-lg font-semibold tracking-tight">Hamkke</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-foreground text-lg font-semibold tracking-tight">Hamkke</h1>
+          <StreakBadge />
+        </div>
         <form action={handleSignOut}>
           <Button type="submit" variant="ghost" size="sm">
             로그아웃
