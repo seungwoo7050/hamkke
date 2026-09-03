@@ -81,6 +81,33 @@ describe("billing 라우터 (통합)", () => {
     });
   });
 
+  it("구독 내역이 없으면 Portal 세션을 만들 수 없다", async () => {
+    const caller = await callerFor(userAId);
+    await expect(caller.billing.createPortalSession()).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("구독 중이면 실제 Stripe Customer Portal Session URL을 발급받는다", async () => {
+    const customer = await stripe.customers.create({ metadata: { spaceId } });
+    createdCustomerIds.push(customer.id);
+
+    await prisma.subscription.create({
+      data: {
+        spaceId,
+        stripeCustomerId: customer.id,
+        stripeSubscriptionId: `sub_fake_${randomUUID()}`,
+        plan: "premium",
+        status: "active",
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const caller = await callerFor(userAId);
+    const { url } = await caller.billing.createPortalSession();
+    expect(url).toMatch(/^https:\/\/billing\.stripe\.com\//);
+  });
+
   it("스페이스 멤버가 아니면 호출할 수 없다(spaceProcedure)", async () => {
     const outsider = await prisma.user.create({
       data: { email: `test-billing-b-${randomUUID()}@example.com` },

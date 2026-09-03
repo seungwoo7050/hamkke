@@ -37,4 +37,22 @@ export const billingRouter = router({
 
     return { url: session.url! };
   }),
+
+  // 해지/결제수단 변경은 자체 UI로 구현하지 않고 Stripe Customer Portal로
+  // 위임한다(ARCHITECTURE.md §6).
+  createPortalSession: spaceProcedure.mutation(async ({ ctx }) => {
+    const subscription = await prisma.subscription.findUnique({
+      where: { spaceId: ctx.space.id },
+    });
+    if (!subscription) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "구독 내역이 없어요." });
+    }
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: subscription.stripeCustomerId,
+      return_url: `${ctx.baseUrl}/home`,
+    });
+
+    return { url: session.url };
+  }),
 });
