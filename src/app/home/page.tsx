@@ -6,6 +6,7 @@ import { createTRPCContext } from "@/server/trpc/context";
 import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
 import { AnniversaryTracker } from "./anniversary-tracker";
+import { BillingSection } from "./billing-section";
 import { CalendarView } from "./calendar-view";
 import { CapsuleNotes } from "./capsule-notes";
 import { ChatView } from "./chat-view";
@@ -56,6 +57,7 @@ export default async function HomePage() {
           </Button>
         </form>
       </header>
+      <BillingSection />
       <TimezoneWidget initialMe={timezones.me} initialPartner={timezones.partner} />
       <WeatherWidget me={weather.me} partner={weather.partner} />
       <LocationPanel

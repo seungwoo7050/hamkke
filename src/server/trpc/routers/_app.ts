@@ -1,5 +1,6 @@
 import { router } from "../init";
 import { anniversaryRouter } from "./anniversary";
+import { billingRouter } from "./billing";
 import { calendarRouter } from "./calendar";
 import { capsuleRouter } from "./capsule";
 import { chatRouter } from "./chat";
@@ -33,6 +34,7 @@ export const appRouter = router({
   countdown: countdownRouter,
   capsule: capsuleRouter,
   streak: streakRouter,
+  billing: billingRouter,
 });
 
 export type AppRouter = typeof appRouter;

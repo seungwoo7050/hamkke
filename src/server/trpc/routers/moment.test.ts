@@ -15,6 +15,7 @@ async function callerFor(userId: string) {
       user: { id: user.id, spaceId: user.spaceId, name: null, email: null, image: null },
       expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     },
+    baseUrl: "http://localhost:3000",
   });
 }
 
