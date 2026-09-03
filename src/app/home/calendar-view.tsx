@@ -120,12 +120,11 @@ export function CalendarView() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="size-6"
+                size="icon-sm"
                 aria-label={`${event.title} 삭제`}
                 onClick={() => deleteMutation.mutate({ id: event.id })}
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-4" />
               </Button>
             </li>
           ))}

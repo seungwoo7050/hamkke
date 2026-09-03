@@ -103,12 +103,11 @@ export function AnniversaryTracker() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="size-6"
+                size="icon-sm"
                 aria-label={`${a.title} 삭제`}
                 onClick={() => deleteMutation.mutate({ id: a.id })}
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-4" />
               </Button>
             </li>
           ))}

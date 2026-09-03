@@ -95,12 +95,11 @@ export function CountdownTracker() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="size-6"
+                size="icon-sm"
                 aria-label={`${c.title} 삭제`}
                 onClick={() => deleteMutation.mutate({ id: c.id })}
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-4" />
               </Button>
             </li>
           ))}

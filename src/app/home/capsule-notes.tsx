@@ -92,12 +92,11 @@ export function CapsuleNotes({ currentUserId }: { currentUserId: string }) {
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
-                      className="size-6"
+                      size="icon-sm"
                       aria-label="캡슐 삭제"
                       onClick={() => deleteMutation.mutate({ id: capsule.id })}
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-4" />
                     </Button>
                   )}
                 </div>

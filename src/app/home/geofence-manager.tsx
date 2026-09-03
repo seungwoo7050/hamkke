@@ -82,12 +82,11 @@ export function GeofenceManager() {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="size-6"
+                size="icon-sm"
                 aria-label={`${fence.label} 삭제`}
                 onClick={() => deleteMutation.mutate({ id: fence.id })}
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-4" />
               </Button>
             </li>
           ))}

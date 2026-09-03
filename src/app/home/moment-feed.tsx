@@ -111,12 +111,12 @@ export function MomentFeed({ currentUserId }: { currentUserId: string }) {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  className="absolute top-1 right-1 size-6 opacity-0 transition-opacity group-hover:opacity-100"
+                  size="icon-sm"
+                  className="bg-background/80 absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100"
                   aria-label="사진 삭제"
                   onClick={() => deleteMutation.mutate({ id: moment.id })}
                 >
-                  <Trash2 className="size-3.5" />
+                  <Trash2 className="size-4" />
                 </Button>
               )}
             </div>
