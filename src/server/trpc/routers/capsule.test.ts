@@ -116,4 +116,30 @@ describe("capsule 라우터 (통합)", () => {
       await prisma.user.delete({ where: { id: outsider.id } });
     }
   });
+
+  it("무료 티어는 예약 중인(미배달) 캡슐 개수 한도를 넘으면 거부하지만, 이미 배달된 캡슐은 세지 않는다", async () => {
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const caller = await callerFor(userAId);
+
+    // 이미 배달된 것 — 한도에 포함되면 안 된다.
+    await prisma.capsule.create({
+      data: {
+        spaceId,
+        senderId: userAId,
+        content: "지난 캡슐",
+        deliverAt: new Date(0),
+        deliveredAt: new Date(),
+      },
+    });
+    // 미배달 3개(한도)까지는 정상 생성.
+    for (let i = 0; i < 3; i++) {
+      await caller.capsule.create({ content: `예약 ${i}`, deliverAt: future });
+    }
+
+    await expect(
+      caller.capsule.create({ content: "한도 초과", deliverAt: future }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
 });

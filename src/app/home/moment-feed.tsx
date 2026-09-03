@@ -56,8 +56,9 @@ export function MomentFeed({ currentUserId }: { currentUserId: string }) {
       });
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await createMutation.mutateAsync({ key, caption: caption.trim() || undefined });
-    } catch {
-      toast.error("사진 업로드에 실패했어요");
+    } catch (err) {
+      // 무료 티어 한도 초과 같은 안내는 그대로 보여준다(src/lib/plan.ts).
+      toast.error(err instanceof Error ? err.message : "사진 업로드에 실패했어요");
     } finally {
       setUploading(false);
     }

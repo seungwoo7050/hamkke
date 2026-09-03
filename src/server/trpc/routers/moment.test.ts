@@ -141,4 +141,48 @@ describe("moment 라우터 (통합)", () => {
       await prisma.user.delete({ where: { id: outsider.id } });
     }
   });
+
+  it("무료 티어는 사진 개수 한도를 넘으면 업로드 URL 발급 자체를 거부한다", async () => {
+    // 실제 R2 업로드 없이 개수만 채운다 — createUploadUrl은 count만 본다.
+    await prisma.moment.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({
+        spaceId,
+        uploaderId: userAId,
+        mediaUrl: `moments/${spaceId}/fake-${i}`,
+      })),
+    });
+
+    const caller = await callerFor(userAId);
+    await expect(caller.moment.createUploadUrl({ contentType: "image/png" })).rejects.toMatchObject(
+      {
+        code: "FORBIDDEN",
+      },
+    );
+  });
+
+  it("프리미엄이면 한도를 넘어도 업로드 URL을 발급받는다", async () => {
+    await prisma.moment.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({
+        spaceId,
+        uploaderId: userAId,
+        mediaUrl: `moments/${spaceId}/fake-${i}`,
+      })),
+    });
+    await prisma.subscription.create({
+      data: {
+        spaceId,
+        stripeCustomerId: `cus_fake_${randomUUID()}`,
+        stripeSubscriptionId: `sub_fake_${randomUUID()}`,
+        plan: "premium",
+        status: "active",
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const caller = await callerFor(userAId);
+    const { key } = await caller.moment.createUploadUrl({ contentType: "image/png" });
+    expect(key).toContain(spaceId);
+
+    await prisma.subscription.deleteMany({ where: { spaceId } });
+  });
 });

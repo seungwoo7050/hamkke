@@ -92,4 +92,23 @@ describe("meetup 라우터 (통합)", () => {
       await prisma.user.delete({ where: { id: outsider.id } });
     }
   });
+
+  it("무료 티어는 한도(20개)를 넘으면 생성은 막지 않되 가장 오래된 핀을 자동 정리한다", async () => {
+    const caller = await callerFor(userAId);
+
+    for (let i = 0; i < 20; i++) {
+      await prisma.meetupPin.create({
+        data: { spaceId, label: `핀 ${i}`, lat: 0, lng: 0, date: new Date(2020, 0, i + 1) },
+      });
+    }
+    expect(await caller.meetup.list()).toHaveLength(20);
+
+    // 가장 최신 날짜로 하나 더 만들면, 가장 오래된(핀 0)이 정리되어야 한다.
+    await caller.meetup.create({ label: "새 핀", lat: 0, lng: 0, date: "2026-01-01" });
+
+    const list = await caller.meetup.list();
+    expect(list).toHaveLength(20);
+    expect(list.some((p) => p.label === "핀 0")).toBe(false);
+    expect(list.some((p) => p.label === "새 핀")).toBe(true);
+  });
 });

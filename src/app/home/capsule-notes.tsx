@@ -33,7 +33,7 @@ export function CapsuleNotes({ currentUserId }: { currentUserId: string }) {
         setContent("");
         listQuery.refetch();
       },
-      onError: () => toast.error("배달 시각은 미래여야 해요"),
+      onError: (err) => toast.error(err.message),
     }),
   );
   const deleteMutation = useMutation(
