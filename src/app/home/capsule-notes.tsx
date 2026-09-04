@@ -100,7 +100,11 @@ export function CapsuleNotes({ currentUserId }: { currentUserId: string }) {
                     </Button>
                   )}
                 </div>
-                {!locked && <p className="text-foreground mt-0.5">{capsule.content}</p>}
+                {!locked && (
+                  <p className="text-foreground font-handwritten mt-0.5 text-base">
+                    {capsule.content}
+                  </p>
+                )}
               </li>
             );
           })}

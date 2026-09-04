@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Gift, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { daysUntil, nextOccurrence } from "@/lib/anniversary";
 import { useTRPC } from "@/trpc/client";
@@ -71,12 +72,8 @@ export function AnniversaryTracker() {
           onChange={(e) => setDate(e.target.value)}
           className="max-w-36"
         />
-        <label className="text-muted-foreground flex items-center gap-1 text-xs">
-          <input
-            type="checkbox"
-            checked={recurring}
-            onChange={(e) => setRecurring(e.target.checked)}
-          />
+        <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <Checkbox checked={recurring} onCheckedChange={(checked) => setRecurring(!!checked)} />
           매년 반복
         </label>
         <Button
