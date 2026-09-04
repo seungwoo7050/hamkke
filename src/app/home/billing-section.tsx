@@ -52,7 +52,6 @@ export function BillingSection() {
     <div className="border-border border-b px-6 py-3">
       <Button
         type="button"
-        variant="outline"
         size="sm"
         onClick={() => checkoutMutation.mutate()}
         disabled={checkoutMutation.isPending}
