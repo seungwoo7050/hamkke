@@ -52,7 +52,7 @@ export function CountdownTracker() {
 
   return (
     <div className="border-border border-b px-6 py-3">
-      <p className="text-foreground mb-2 text-xs font-medium">다음 만남 카운트다운</p>
+      <h2 className="text-foreground mb-2 text-xs font-medium">다음 만남 카운트다운</h2>
       {sorted[0] && (
         <p className="text-primary mb-2 text-lg font-semibold">
           {formatDday(sorted[0].days)} · {sorted[0].title}

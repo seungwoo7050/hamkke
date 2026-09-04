@@ -76,7 +76,7 @@ export function CalendarView() {
 
   return (
     <div className="border-border border-b px-6 py-3">
-      <p className="text-foreground mb-2 text-xs font-medium">공유 캘린더</p>
+      <h2 className="text-foreground mb-2 text-xs font-medium">공유 캘린더</h2>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Input
           value={title}

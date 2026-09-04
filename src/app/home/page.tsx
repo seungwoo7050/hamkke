@@ -57,28 +57,30 @@ export default async function HomePage() {
           </Button>
         </form>
       </header>
-      <BillingSection />
-      <TimezoneWidget initialMe={timezones.me} initialPartner={timezones.partner} />
-      <WeatherWidget me={weather.me} partner={weather.partner} />
-      <LocationPanel
-        spaceId={status.spaceId}
-        currentUserId={session.user.id}
-        initialSharing={mySharing}
-        initialPartnerStatus={partnerStatus}
-      />
-      <GeofenceManager />
-      <MeetupTimeline />
-      <CalendarView />
-      <AnniversaryTracker />
-      <CountdownTracker />
-      <MomentFeed currentUserId={session.user.id} />
-      <CapsuleNotes currentUserId={session.user.id} />
-      <ChatView
-        spaceId={status.spaceId}
-        currentUserId={session.user.id}
-        initialMessages={messages}
-        initialNextCursor={nextCursor}
-      />
+      <main className="flex flex-1 flex-col">
+        <BillingSection />
+        <TimezoneWidget initialMe={timezones.me} initialPartner={timezones.partner} />
+        <WeatherWidget me={weather.me} partner={weather.partner} />
+        <LocationPanel
+          spaceId={status.spaceId}
+          currentUserId={session.user.id}
+          initialSharing={mySharing}
+          initialPartnerStatus={partnerStatus}
+        />
+        <GeofenceManager />
+        <MeetupTimeline />
+        <CalendarView />
+        <AnniversaryTracker />
+        <CountdownTracker />
+        <MomentFeed currentUserId={session.user.id} />
+        <CapsuleNotes currentUserId={session.user.id} />
+        <ChatView
+          spaceId={status.spaceId}
+          currentUserId={session.user.id}
+          initialMessages={messages}
+          initialNextCursor={nextCursor}
+        />
+      </main>
     </div>
   );
 }

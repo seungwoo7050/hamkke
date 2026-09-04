@@ -53,7 +53,7 @@ export function GeofenceManager() {
 
   return (
     <div className="border-border border-b px-6 py-3">
-      <p className="text-foreground mb-2 text-xs font-medium">도착 알림 장소</p>
+      <h2 className="text-foreground mb-2 text-xs font-medium">도착 알림 장소</h2>
       <div className="mb-2 flex gap-2">
         <Input
           value={label}

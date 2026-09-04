@@ -52,6 +52,11 @@
 }
 
 :root {
+  /* 이 값이 없으면 브라우저 네이티브 컨트롤(날짜 선택기 팝업, 스크롤바 등)이
+     시스템 다크 모드에서도 항상 밝은 배경으로 렌더링돼 나머지 다크 UI와
+     충돌한다 — light dark로 시스템 설정을 그대로 따르게 한다. */
+  color-scheme: light dark;
+
   /* Brand (DESIGN.md §3.1) */
   --color-ember: #f2653a; /* Primary — CTA, 활성 상태 */
   --color-dusk: #4b4468; /* Secondary — 밤/시차/거리 테마 */

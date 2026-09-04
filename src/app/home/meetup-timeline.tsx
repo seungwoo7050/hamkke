@@ -61,7 +61,7 @@ export function MeetupTimeline() {
 
   return (
     <div className="border-border border-b px-6 py-3">
-      <p className="text-foreground mb-2 text-xs font-medium">만남 지도</p>
+      <h2 className="text-foreground mb-2 text-xs font-medium">만남 지도</h2>
       <div className="mb-2 flex flex-wrap gap-2">
         <Input
           value={label}

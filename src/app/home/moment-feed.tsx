@@ -66,7 +66,7 @@ export function MomentFeed({ currentUserId }: { currentUserId: string }) {
 
   return (
     <div className="border-border border-b px-6 py-3">
-      <p className="text-foreground mb-2 text-xs font-medium">오늘의 사진</p>
+      <h2 className="text-foreground mb-2 text-xs font-medium">오늘의 사진</h2>
       <div className="mb-3 flex items-center gap-2">
         <input
           ref={fileInputRef}
