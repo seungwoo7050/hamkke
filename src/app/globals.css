@@ -49,6 +49,16 @@
   --shadow-elevated: var(--shadow-elevated);
 
   --ease-standard: var(--ease-standard);
+
+  /* 모션 감사(2026-09-26)에서 발견: Tailwind v4의 duration-* 유틸리티는
+     --duration-*가 아니라 --transition-duration-* 네임스페이스를 읽는다
+     (ease-*가 --ease-*를 읽는 것과 다름). 이 매핑이 없어 duration-fast
+     /base/slow 유틸리티가 생성되지 않았고, 그 결과 버튼/입력창/체크박스의
+     모든 transition이 DESIGN.md §3.4 토큰이 아닌 Tailwind 기본값(150ms,
+     ease)으로 렌더링되고 있었다. */
+  --transition-duration-fast: var(--duration-fast);
+  --transition-duration-base: var(--duration-base);
+  --transition-duration-slow: var(--duration-slow);
 }
 
 :root {
