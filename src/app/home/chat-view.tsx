@@ -7,6 +7,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { inferRouterOutputs } from "@trpc/server";
 import { Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { onForegroundMessage, requestPushToken } from "@/lib/firebase-client";
@@ -309,6 +310,9 @@ export function ChatView({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-6 py-4">
+        {messages.length === 0 && (
+          <EmptyState caption="아직 나눈 이야기가 없어요" className="flex-1" />
+        )}
         {olderCursor && (
           <Button
             variant="ghost"
@@ -380,7 +384,7 @@ export function ChatView({
           disabled={uploadingImage}
           onClick={() => fileInputRef.current?.click()}
         >
-          <ImagePlus />
+          <ImagePlus className="size-5" />
         </Button>
         <Button
           type="button"
@@ -390,7 +394,7 @@ export function ChatView({
           disabled={uploadingVoice}
           onClick={() => (isRecording ? stopRecording() : startRecording())}
         >
-          {isRecording ? <Square /> : <Mic />}
+          {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
         </Button>
         <Input
           value={draft}
@@ -405,7 +409,7 @@ export function ChatView({
           disabled={sendTouchMutation.isPending}
           onClick={() => sendTouchMutation.mutate()}
         >
-          <Heart />
+          <Heart className="size-5" />
         </Button>
         <Button type="submit" disabled={sendMutation.isPending || !draft.trim()}>
           전송

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Gaegu } from "next/font/google";
+import { LucideProvider } from "lucide-react";
 import "pretendard/dist/web/static/pretendard-dynamic-subset.css";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -21,8 +22,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={`${gaegu.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
-        <TRPCClientProvider>{children}</TRPCClientProvider>
-        <Toaster />
+        {/* DESIGN.md §9: 아이콘 stroke-width 1.5 고정 — 아이콘마다 prop을
+            반복하지 않고 전역 하나로 강제한다. */}
+        <LucideProvider strokeWidth={1.5}>
+          <TRPCClientProvider>{children}</TRPCClientProvider>
+          <Toaster />
+        </LucideProvider>
       </body>
     </html>
   );
