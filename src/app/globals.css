@@ -166,3 +166,39 @@
     @apply font-sans;
   }
 }
+
+/* 시그니처 모티프(DESIGN.md §8) — 서 있는 점/기댄 점이 균형을 잡는 흔들림.
+   src/components/brand/loading-motif.tsx에서만 쓴다. */
+@keyframes motif-sway-standing {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+@keyframes motif-sway-leaning {
+  0%,
+  100% {
+    transform: rotate(20deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+}
+/* 루프 주기 2.4s는 라이브 레퍼런스 아티팩트(DESIGN.md 상단 링크)의 실제
+   구현값을 그대로 따랐다 — duration-slow(320ms)는 트랜지션 전용이라 이런
+   루프에는 안 맞는다. */
+.motif-dot-standing {
+  animation: motif-sway-standing 2.4s var(--ease-standard) infinite;
+}
+.motif-dot-leaning {
+  animation: motif-sway-leaning 2.4s var(--ease-standard) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .motif-dot-standing,
+  .motif-dot-leaning {
+    animation: none;
+  }
+}

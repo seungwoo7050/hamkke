@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
+import { LoadingMotif } from "@/components/brand/loading-motif";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -54,14 +55,17 @@ export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }
 
   if (status.status === "pending") {
     return (
-      <div className="flex flex-col gap-4">
-        <p className="text-muted-foreground">이 코드를 상대에게 공유하세요.</p>
-        <p className="text-foreground text-4xl font-semibold tracking-widest">
-          {status.inviteCode}
-        </p>
-        <p className="text-muted-foreground text-sm">
-          24시간 안에 입력해야 해요. 상대가 입력하면 자동으로 연결돼요.
-        </p>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
+          <p className="text-muted-foreground">이 코드를 상대에게 공유하세요.</p>
+          <p className="text-foreground text-4xl font-semibold tracking-widest">
+            {status.inviteCode}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            24시간 안에 입력해야 해요. 상대가 입력하면 자동으로 연결돼요.
+          </p>
+        </div>
+        <LoadingMotif label="상대를 기다리는 중…" />
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
+import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -22,6 +23,7 @@ export default async function LoginPage() {
 
   return (
     <main className="flex flex-1 flex-col justify-center gap-8 px-6 py-16">
+      <Wordmark className="mx-auto" />
       <div className="flex flex-col gap-3">
         <h1 className="text-foreground text-3xl font-semibold tracking-tight">로그인</h1>
         <p className="text-muted-foreground max-w-sm">
