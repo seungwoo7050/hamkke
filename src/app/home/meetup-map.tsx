@@ -1,19 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-
-const markerIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+import { emberMarkerIcon } from "@/lib/map-markers";
 
 const DEFAULT_CENTER: [number, number] = [36.5, 127.8];
 
@@ -41,7 +31,7 @@ export function MeetupMap({ pins }: { pins: Pin[] }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {pins.map((pin) => (
-        <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={markerIcon}>
+        <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={emberMarkerIcon}>
           <Popup>
             {pin.label} · {new Date(pin.date).toLocaleDateString("ko-KR")}
           </Popup>

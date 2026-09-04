@@ -1,21 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-
-// 번들러 환경(webpack/Turbopack)에서 Leaflet 기본 마커 이미지 경로가 깨지는
-// 잘 알려진 이슈가 있어, 설치된 leaflet 버전에 맞춘 CDN 아이콘으로 교체한다.
-const markerIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+import { duskMarkerIcon, emberMarkerIcon } from "@/lib/map-markers";
 
 type LatLng = { lat: number; lng: number };
 
@@ -46,12 +34,12 @@ export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLn
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {me && (
-        <Marker position={[me.lat, me.lng]} icon={markerIcon}>
+        <Marker position={[me.lat, me.lng]} icon={emberMarkerIcon}>
           <Popup>나</Popup>
         </Marker>
       )}
       {partner && (
-        <Marker position={[partner.lat, partner.lng]} icon={markerIcon}>
+        <Marker position={[partner.lat, partner.lng]} icon={duskMarkerIcon}>
           <Popup>상대방</Popup>
         </Marker>
       )}
