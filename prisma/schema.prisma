@@ -35,6 +35,7 @@ model Space {
   countdowns     Countdown[]
   capsules       Capsule[]
   subscription   Subscription?
+  dailyAnswers   DailyAnswer[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -67,6 +68,7 @@ model User {
   createdEvents   CalendarEvent[]
   uploadedMoments Moment[]
   sentCapsules    Capsule[]
+  dailyAnswers    DailyAnswer[]
 }
 
 model Account {
@@ -311,4 +313,24 @@ model Subscription {
   updatedAt            DateTime @updatedAt
 
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+}
+
+// 하루 한 질문 답변(PRD §3.2). 질문 본문은 DB가 아니라 앱 내장 목록
+// (src/lib/daily-question.ts)이라 questionKey로만 참조한다 — 콘텐츠 운영
+// 없이 목록 순서대로 순환한다. 두 사람이 서로 다른 시간대에 있어 "오늘"을
+// 로컬 기준으로 맞출 수 없으므로 dateKey는 UTC 날짜(YYYY-MM-DD)다.
+model DailyAnswer {
+  id          String   @id @default(cuid())
+  spaceId     String
+  userId      String
+  questionKey String
+  dateKey     String
+  content     String
+  createdAt   DateTime @default(now())
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([spaceId, userId, dateKey])
+  @@index([spaceId, dateKey])
 }
