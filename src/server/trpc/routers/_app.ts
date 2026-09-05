@@ -6,6 +6,7 @@ import { capsuleRouter } from "./capsule";
 import { chatRouter } from "./chat";
 import { countdownRouter } from "./countdown";
 import { geofenceRouter } from "./geofence";
+import { homeRouter } from "./home";
 import { healthRouter } from "./health";
 import { locationRouter } from "./location";
 import { meetupRouter } from "./meetup";
@@ -35,6 +36,7 @@ export const appRouter = router({
   capsule: capsuleRouter,
   streak: streakRouter,
   billing: billingRouter,
+  home: homeRouter,
 });
 
 export type AppRouter = typeof appRouter;
