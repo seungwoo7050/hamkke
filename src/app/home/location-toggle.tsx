@@ -5,10 +5,18 @@ import { useMutation } from "@tanstack/react-query";
 import { MapPin, MapPinOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  isNativeLocation,
+  startNativeLocationWatch,
+  stopNativeLocationWatch,
+} from "@/lib/location-native";
 import { useTRPC } from "@/trpc/client";
 
 // ARCHITECTURE.md §5: 포그라운드에서 수 초~수십 초 간격. 완전한 움직임 기반
-// adaptive 전송은 과해서, 고정 간격 스로틀로 단순화했다.
+// adaptive 전송은 과해서, 고정 간격 스로틀로 단순화했다. 네이티브(Android)
+// 에서도 포그라운드 전용으로 동작한다 — src/lib/location-native.ts 각주 참고
+// (ACCESS_BACKGROUND_LOCATION 없이는 앱이 백그라운드로 간 뒤 위치 서비스
+// 승격이 조용히 실패한다는 걸 실기기에서 확인, 배경위치는 범위 밖으로 뺌).
 const SEND_THROTTLE_MS = 15000;
 
 export function LocationShareToggle({
@@ -31,24 +39,37 @@ export function LocationShareToggle({
   useEffect(() => {
     if (!sharing) return;
 
+    function handlePosition(position: { lat: number; lng: number; accuracy?: number }) {
+      onMyPosition?.({ lat: position.lat, lng: position.lng });
+      const now = Date.now();
+      if (now - lastSentAt.current < SEND_THROTTLE_MS) return;
+      lastSentAt.current = now;
+      sendMutation.mutate({ lat: position.lat, lng: position.lng, accuracy: position.accuracy });
+    }
+
+    function handleError() {
+      toast.error("위치를 가져오지 못했어요. 위치 권한을 확인해주세요");
+      setSharing(false);
+      setSharingMutation.mutate({ enabled: false });
+    }
+
+    if (isNativeLocation()) {
+      startNativeLocationWatch(handlePosition, handleError).catch(handleError);
+      return () => {
+        void stopNativeLocationWatch();
+      };
+    }
+
     // watchPosition 최초 호출 시 브라우저가 네이티브 위치 권한 다이얼로그를
     // 띄운다 — 별도 권한 요청 API가 없다.
     const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        onMyPosition?.({ lat, lng });
-
-        const now = Date.now();
-        if (now - lastSentAt.current < SEND_THROTTLE_MS) return;
-        lastSentAt.current = now;
-        sendMutation.mutate({ lat, lng, accuracy: position.coords.accuracy });
-      },
-      () => {
-        toast.error("위치를 가져오지 못했어요. 브라우저 위치 권한을 확인해주세요");
-        setSharing(false);
-        setSharingMutation.mutate({ enabled: false });
-      },
+      (position) =>
+        handlePosition({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        }),
+      handleError,
       { enableHighAccuracy: false, maximumAge: 10000 },
     );
     watchIdRef.current = watchId;
@@ -62,7 +83,7 @@ export function LocationShareToggle({
 
   async function handleToggle() {
     const next = !sharing;
-    if (next && !("geolocation" in navigator)) {
+    if (next && !isNativeLocation() && !("geolocation" in navigator)) {
       toast.error("이 브라우저는 위치공유를 지원하지 않아요");
       return;
     }
