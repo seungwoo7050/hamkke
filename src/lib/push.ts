@@ -12,7 +12,13 @@ export async function sendPushToUser(
   const messaging = getAdminMessaging();
   const results = await Promise.allSettled(
     tokens.map((t) =>
-      messaging.send({ token: t.token, notification, webpush: { fcmOptions: { link: "/" } } }),
+      messaging.send({
+        token: t.token,
+        notification,
+        webpush: { fcmOptions: { link: "/" } },
+        // DESIGN.md §3.1 ember — 안드로이드 알림 아이콘/타이틀 강조색.
+        android: { notification: { color: "#F2653A" } },
+      }),
     ),
   );
 

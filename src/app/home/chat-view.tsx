@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { onForegroundMessage, requestPushToken } from "@/lib/firebase-client";
+import { onAnyForegroundMessage, requestAnyPushToken } from "@/lib/push-client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -141,18 +141,15 @@ export function ChatView({
   useEffect(() => {
     let unsubscribeForeground: (() => void) | undefined;
 
-    requestPushToken()
+    requestAnyPushToken()
       .then((token) => {
         if (token) registerPushTokenMutation.mutate({ token });
       })
       .catch(() => {});
 
-    // 탭이 열려 있을 땐 시스템 알림 대신 토스트로 보여준다(포그라운드에서는
+    // 앱이 열려 있을 땐 시스템 알림 대신 토스트로 보여준다(포그라운드에서는
     // FCM이 시스템 알림을 자동으로 띄우지 않는다).
-    onForegroundMessage((payload) => {
-      const body = payload.notification?.body ?? payload.notification?.title;
-      if (body) toast(body);
-    })
+    onAnyForegroundMessage((body) => toast(body))
       .then((unsub) => {
         unsubscribeForeground = unsub;
       })
