@@ -26,4 +26,13 @@ export const touchRouter = router({
 
     return touch;
   }),
+
+  // 상대가 나에게 마지막으로 보낸 터치. "우리" 장면과 Android 홈 위젯의
+  // "3시간 전에 생각해줬어요" 표시용(PRD §3.2) — 내가 보낸 터치는 제외한다.
+  latest: spaceProcedure.query(({ ctx }) =>
+    prisma.touch.findFirst({
+      where: { spaceId: ctx.space.id, senderId: { not: ctx.session.user.id } },
+      orderBy: { createdAt: "desc" },
+    }),
+  ),
 });
