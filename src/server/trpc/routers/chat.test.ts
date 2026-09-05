@@ -149,6 +149,24 @@ describe("chat 라우터 (통합)", () => {
     expect(updatedFromB.readAt).not.toBeNull();
   });
 
+  it("unreadCount는 상대가 보낸 미읽음 메시지만 세고, markRead 후 0이 된다", async () => {
+    await prisma.message.createMany({
+      data: [
+        { spaceId, senderId: userBId, content: "하나" },
+        { spaceId, senderId: userBId, content: "둘" },
+        { spaceId, senderId: userBId, content: "읽음", readAt: new Date() },
+        { spaceId, senderId: userAId, content: "내가 보낸 것" },
+      ],
+    });
+
+    const callerA = await callerFor(userAId);
+    expect(await callerA.chat.unreadCount()).toBe(2);
+    expect(await (await callerFor(userBId)).chat.unreadCount()).toBe(1);
+
+    await callerA.chat.markRead();
+    expect(await callerA.chat.unreadCount()).toBe(0);
+  });
+
   it("이미지 업로드 URL로 실제 R2에 업로드하고, sendImage/list가 접근 가능한 signed URL을 돌려준다", async () => {
     const caller = await callerFor(userAId);
 

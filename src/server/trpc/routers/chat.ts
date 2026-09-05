@@ -138,6 +138,13 @@ export const chatRouter = router({
       return { messages: messages.reverse(), nextCursor };
     }),
 
+  // "대화" 탭 배지용 — 상대가 보낸 메시지 중 아직 안 읽은 개수.
+  unreadCount: spaceProcedure.query(({ ctx }) =>
+    prisma.message.count({
+      where: { spaceId: ctx.space.id, senderId: { not: ctx.session.user.id }, readAt: null },
+    }),
+  ),
+
   // 상대가 보낸, 아직 안 읽은 메시지를 전부 읽음 처리하고 상대 화면에
   // "읽음" 표시가 즉시 뜨도록 브로드캐스트한다.
   markRead: spaceProcedure.mutation(async ({ ctx }) => {
