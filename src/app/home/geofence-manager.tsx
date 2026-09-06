@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { MapPin, Trash2 } from "lucide-react";
+import { BellRing, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useTRPC } from "@/trpc/client";
 
 // 상대가 이 장소들 중 하나의 반경 안에 들어오면 도착 알림이 간다(위치
 // 전송 때마다 서버가 확인 — src/server/trpc/routers/location.ts 참고).
+// 한 번 등록하면 거의 안 건드리는 설정이라 설정 시트 안에 둔다(DESIGN.md §4).
 export function GeofenceManager() {
   const trpc = useTRPC();
   const [label, setLabel] = useState("");
@@ -51,47 +52,52 @@ export function GeofenceManager() {
     );
   }
 
+  const fences = listQuery.data ?? [];
+
   return (
-    <div className="border-border border-b px-6 py-3">
-      <h2 className="text-foreground mb-2 text-xs font-medium">도착 알림 장소</h2>
-      <div className="mb-2 flex gap-2">
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="예: 집, 공항"
-          className="max-w-40"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleRegister}
-          disabled={!label.trim() || registering || createMutation.isPending}
-        >
-          <MapPin /> 현재 위치로 등록
-        </Button>
+    <div className="flex gap-3 py-3">
+      <BellRing className="text-dusk mt-0.5 size-5" />
+      <div className="flex flex-1 flex-col gap-2">
+        <div>
+          <p className="text-foreground text-base font-medium">도착 알림 장소</p>
+          <p className="text-muted-foreground text-sm">
+            지금 있는 곳을 등록하면, 상대가 도착했을 때 알려줘요
+          </p>
+        </div>
+        {fences.length > 0 && (
+          <ul className="flex flex-col">
+            {fences.map((fence) => (
+              <li key={fence.id} className="flex items-center justify-between text-sm">
+                <span>{fence.label}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${fence.label} 삭제`}
+                  onClick={() => deleteMutation.mutate({ id: fence.id })}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex gap-2">
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="예: 집, 공항"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleRegister}
+            disabled={!label.trim() || registering || createMutation.isPending}
+          >
+            여기로 등록
+          </Button>
+        </div>
       </div>
-      {listQuery.data && listQuery.data.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {listQuery.data.map((fence) => (
-            <li
-              key={fence.id}
-              className="text-muted-foreground flex items-center justify-between text-xs"
-            >
-              <span>{fence.label}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`${fence.label} 삭제`}
-                onClick={() => deleteMutation.mutate({ id: fence.id })}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

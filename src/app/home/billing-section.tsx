@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useTRPC } from "@/trpc/client";
 
 // 구독 시작은 Checkout, 해지/결제수단 변경은 Customer Portal로 위임한다
-// (ARCHITECTURE.md §6 — 자체 UI로 결제 로직을 구현하지 않는다).
+// (ARCHITECTURE.md §6 — 자체 UI로 결제 로직을 구현하지 않는다). 설정성
+// 기능이라 홈이 아니라 설정 시트의 한 줄로 둔다(DESIGN.md §4).
 export function BillingSection() {
   const trpc = useTRPC();
   const { data: subscription } = useQuery(trpc.billing.status.queryOptions());
@@ -28,13 +29,20 @@ export function BillingSection() {
     }),
   );
 
-  if (subscription?.status === "active") {
-    return (
-      <div className="border-border flex items-center justify-between border-b px-6 py-3 text-xs">
-        <span className="flex items-center gap-1">
-          <Crown className="text-primary size-3.5" />
-          <span className="text-foreground">Hamkke Premium 구독 중</span>
-        </span>
+  const premium = subscription?.status === "active";
+
+  return (
+    <div className="flex items-center gap-3 py-3">
+      <Crown className="text-dusk size-5" />
+      <div className="flex-1">
+        <p className="text-foreground text-base font-medium">
+          {premium ? "Hamkke Premium" : "무료 플랜"}
+        </p>
+        <p className="text-muted-foreground text-sm">
+          {premium ? "두 사람 모두 프리미엄 혜택을 받고 있어요" : "사진·캡슐·만남 지도 한도 있음"}
+        </p>
+      </div>
+      {premium ? (
         <Button
           type="button"
           variant="ghost"
@@ -44,20 +52,16 @@ export function BillingSection() {
         >
           구독 관리
         </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border-border border-b px-6 py-3">
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => checkoutMutation.mutate()}
-        disabled={checkoutMutation.isPending}
-      >
-        <Crown /> 프리미엄 구독하기
-      </Button>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => checkoutMutation.mutate()}
+          disabled={checkoutMutation.isPending}
+        >
+          프리미엄
+        </Button>
+      )}
     </div>
   );
 }
