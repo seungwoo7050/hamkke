@@ -14,6 +14,7 @@ import { momentRouter } from "./moment";
 import { pairingRouter } from "./pairing";
 import { profileRouter } from "./profile";
 import { pushRouter } from "./push";
+import { questionRouter } from "./question";
 import { streakRouter } from "./streak";
 import { touchRouter } from "./touch";
 import { weatherRouter } from "./weather";
@@ -37,6 +38,7 @@ export const appRouter = router({
   streak: streakRouter,
   billing: billingRouter,
   home: homeRouter,
+  question: questionRouter,
 });
 
 export type AppRouter = typeof appRouter;

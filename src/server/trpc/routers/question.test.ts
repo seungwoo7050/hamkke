@@ -1,0 +1,112 @@
+import { randomUUID } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { questionForDateKey, utcDateKey } from "@/lib/daily-question";
+import { prisma } from "@/lib/prisma";
+import { createCallerFactory } from "../init";
+import { appRouter } from "./_app";
+
+const createCaller = createCallerFactory(appRouter);
+
+async function callerFor(userId: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  return createCaller({
+    session: {
+      user: { id: user.id, spaceId: user.spaceId, name: null, email: null, image: null },
+      expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    },
+    baseUrl: "http://localhost:3000",
+  });
+}
+
+describe("question 라우터 (통합)", () => {
+  let userAId: string;
+  let userBId: string;
+  let spaceId: string;
+
+  beforeEach(async () => {
+    const [a, b] = await Promise.all([
+      prisma.user.create({ data: { email: `test-question-a-${randomUUID()}@example.com` } }),
+      prisma.user.create({ data: { email: `test-question-b-${randomUUID()}@example.com` } }),
+    ]);
+    userAId = a.id;
+    userBId = b.id;
+
+    const space = await prisma.space.create({
+      data: {
+        status: "active",
+        inviteCode: randomUUID().slice(0, 6).toUpperCase(),
+        inviteCodeExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    spaceId = space.id;
+    await prisma.user.updateMany({ where: { id: { in: [userAId, userBId] } }, data: { spaceId } });
+  });
+
+  afterEach(async () => {
+    await prisma.dailyAnswer.deleteMany({ where: { spaceId } });
+    await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
+    await prisma.space.delete({ where: { id: spaceId } });
+  });
+
+  it("스페이스 멤버가 아니면 조회할 수 없다", async () => {
+    const outsider = await prisma.user.create({
+      data: { email: `test-question-c-${randomUUID()}@example.com` },
+    });
+    try {
+      const caller = await callerFor(outsider.id);
+      await expect(caller.question.today()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    } finally {
+      await prisma.user.delete({ where: { id: outsider.id } });
+    }
+  });
+
+  it("오늘의 질문은 UTC 날짜로 정해진다", async () => {
+    const today = await (await callerFor(userAId)).question.today();
+    const dateKey = utcDateKey(new Date());
+    expect(today.dateKey).toBe(dateKey);
+    expect(today.question).toEqual(questionForDateKey(dateKey));
+    expect(today.myAnswer).toBeNull();
+  });
+
+  it("상대 답은 내가 답하기 전엔 숨겨지고, 답한 뒤에 공개된다", async () => {
+    const callerA = await callerFor(userAId);
+    const callerB = await callerFor(userBId);
+    await callerB.question.answer({ content: "보고 싶어" });
+
+    const before = await callerA.question.today();
+    expect(before.partnerAnswered).toBe(true);
+    expect(before.partnerAnswer).toBeNull();
+
+    await callerA.question.answer({ content: "나도" });
+    const after = await callerA.question.today();
+    expect(after.myAnswer).toBe("나도");
+    expect(after.partnerAnswer).toBe("보고 싶어");
+  });
+
+  it("같은 날 두 번 답할 수 없다", async () => {
+    const caller = await callerFor(userAId);
+    await caller.question.answer({ content: "첫 답" });
+    await expect(caller.question.answer({ content: "고친 답" })).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+  });
+
+  it("history는 내가 답한 날만 최신순으로, 그날의 상대 답과 함께 돌려준다", async () => {
+    await prisma.dailyAnswer.createMany({
+      data: [
+        { spaceId, userId: userAId, dateKey: "2026-09-01", questionKey: "q001", content: "A1" },
+        { spaceId, userId: userBId, dateKey: "2026-09-01", questionKey: "q001", content: "B1" },
+        { spaceId, userId: userAId, dateKey: "2026-09-02", questionKey: "q002", content: "A2" },
+        // A가 답하지 않은 날 — A의 history에 나오면 안 된다
+        { spaceId, userId: userBId, dateKey: "2026-09-03", questionKey: "q003", content: "B3" },
+      ],
+    });
+
+    const history = await (await callerFor(userAId)).question.history();
+
+    expect(history.map((h) => h.dateKey)).toEqual(["2026-09-02", "2026-09-01"]);
+    expect(history[0].partnerAnswer).toBeNull();
+    expect(history[1]).toMatchObject({ myAnswer: "A1", partnerAnswer: "B1" });
+    expect(history[1].question?.key).toBe("q001");
+  });
+});
