@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { spaceChannelName } from "@/lib/supabase/channels";
@@ -33,6 +34,17 @@ export const touchRouter = router({
     prisma.touch.findFirst({
       where: { spaceId: ctx.space.id, senderId: { not: ctx.session.user.id } },
       orderBy: { createdAt: "desc" },
+    }),
+  ),
+
+  // 대화 흐름 안에 "생각하고 있어요"를 끼워 넣기 위한 조회(승인 목업 ②).
+  // 채팅이 불러온 가장 오래된 메시지 시각을 since로 넘기면 그 구간의
+  // 터치만 온다 — 채팅 페이지네이션과 같은 범위를 맞춘다.
+  list: spaceProcedure.input(z.object({ since: z.coerce.date() })).query(({ ctx, input }) =>
+    prisma.touch.findMany({
+      where: { spaceId: ctx.space.id, createdAt: { gte: input.since } },
+      orderBy: { createdAt: "asc" },
+      take: 200,
     }),
   ),
 });

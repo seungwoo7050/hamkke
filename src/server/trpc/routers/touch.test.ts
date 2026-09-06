@@ -92,4 +92,18 @@ describe("touch 라우터 (통합)", () => {
     expect(latest?.id).toBe(newer.id);
     expect(latest?.id).not.toBe(older.id);
   });
+
+  it("list는 since 이후의 터치를 보낸 사람과 무관하게 시간순으로 돌려준다", async () => {
+    const since = new Date(Date.now() - 60_000);
+    await prisma.touch.create({
+      data: { spaceId, senderId: userBId, createdAt: new Date(Date.now() - 120_000) },
+    });
+    const b = await prisma.touch.create({
+      data: { spaceId, senderId: userBId, createdAt: new Date(Date.now() - 30_000) },
+    });
+    const a = await prisma.touch.create({ data: { spaceId, senderId: userAId } });
+
+    const list = await (await callerFor(userAId)).touch.list({ since });
+    expect(list.map((t) => t.id)).toEqual([b.id, a.id]);
+  });
 });
