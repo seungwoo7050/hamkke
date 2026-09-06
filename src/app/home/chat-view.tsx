@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { onAnyForegroundMessage, requestAnyPushToken } from "@/lib/push-client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -114,11 +113,6 @@ export function ChatView({
         if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
         typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
       })
-      .on("broadcast", { event: "touch" }, (msg) => {
-        const { senderId } = msg.payload as { senderId: string };
-        if (senderId === currentUserId) return;
-        toast("상대방이 생각하고 있어요");
-      })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           markReadMutation.mutate();
@@ -135,29 +129,6 @@ export function ChatView({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
-
-  const registerPushTokenMutation = useMutation(trpc.push.registerToken.mutationOptions());
-
-  useEffect(() => {
-    let unsubscribeForeground: (() => void) | undefined;
-
-    requestAnyPushToken()
-      .then((token) => {
-        if (token) registerPushTokenMutation.mutate({ token });
-      })
-      .catch(() => {});
-
-    // 앱이 열려 있을 땐 시스템 알림 대신 토스트로 보여준다(포그라운드에서는
-    // FCM이 시스템 알림을 자동으로 띄우지 않는다).
-    onAnyForegroundMessage((body) => toast(body))
-      .then((unsub) => {
-        unsubscribeForeground = unsub;
-      })
-      .catch(() => {});
-
-    return () => unsubscribeForeground?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const sendMutation = useMutation(
     trpc.chat.send.mutationOptions({

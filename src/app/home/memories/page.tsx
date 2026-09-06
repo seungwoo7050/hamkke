@@ -1,0 +1,23 @@
+import { auth } from "@/auth";
+import { AnniversaryTracker } from "../anniversary-tracker";
+import { CalendarView } from "../calendar-view";
+import { CapsuleNotes } from "../capsule-notes";
+import { CountdownTracker } from "../countdown-tracker";
+import { MeetupTimeline } from "../meetup-timeline";
+import { MomentFeed } from "../moment-feed";
+
+// "기억" 탭 — 인증·페어링 가드는 layout.tsx가 맡는다.
+export default async function MemoriesPage() {
+  const session = (await auth())!;
+
+  return (
+    <main className="flex flex-1 flex-col">
+      <MeetupTimeline />
+      <CalendarView />
+      <AnniversaryTracker />
+      <CountdownTracker />
+      <MomentFeed currentUserId={session.user.id} />
+      <CapsuleNotes currentUserId={session.user.id} />
+    </main>
+  );
+}
