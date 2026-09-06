@@ -16,6 +16,9 @@
   --color-glow: var(--color-glow);
   --color-success: var(--color-success);
   --color-danger: var(--color-danger);
+  --color-sky-day: var(--color-sky-day);
+  --color-sky-dusk: var(--color-sky-dusk);
+  --color-sky-night: var(--color-sky-night);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -85,6 +88,12 @@
   /* Semantic */
   --color-success: #4caf7d;
   --color-danger: #e5484d;
+
+  /* Sky (DESIGN.md §3.1 하늘 토큰) — "우리" 장면 배경 전용, UI 크롬에 쓰지
+     않는다. 현지 시각 기준 day 07–17시, dusk 05–07·17–20시, night 20–05시. */
+  --color-sky-day: #fff4e6;
+  --color-sky-dusk: #f9dccf;
+  --color-sky-night: #3b3556;
 
   --background: var(--color-zinc-50);
   --foreground: var(--color-zinc-900);
@@ -167,6 +176,10 @@
 
     --border: var(--color-zinc-800);
     --input: var(--color-zinc-800);
+
+    --color-sky-day: #2f2b3f;
+    --color-sky-dusk: #3a2e3a;
+    --color-sky-night: #1c1a28;
   }
 }
 
