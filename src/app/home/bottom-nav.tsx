@@ -1,9 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { BookHeart, MessageCircle, UsersRound } from "lucide-react";
 import { cn } from "cn";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { spaceChannelName } from "@/lib/supabase/channels";
+import { useTRPC } from "@/trpc/client";
+import { useSpace } from "./space-context";
 
 // Material 3 내비게이션 바 문법(DESIGN.md §2) — 활성 탭은 아이콘 뒤 pill로
 // 표시한다. "홈" 대신 범위가 분명한 이름을 쓴다(Apple HIG, DESIGN.md §4).
@@ -13,8 +19,41 @@ const TABS = [
   { href: "/home/memories", label: "기억", Icon: BookHeart },
 ] as const;
 
+// 안 읽은 메시지 배지는 새 메시지 Broadcast가 올 때와 탭을 옮길 때 다시
+// 센다. 대화 탭 안에서는 chat-view가 읽음 처리 후 이 쿼리를 무효화한다.
+function useUnreadCount(pathname: string) {
+  const trpc = useTRPC();
+  const { spaceId, currentUserId, summary } = useSpace();
+  const query = useQuery({
+    ...trpc.chat.unreadCount.queryOptions(),
+    initialData: summary.unreadCount,
+  });
+  const { refetch } = query;
+
+  useEffect(() => {
+    void refetch();
+  }, [pathname, refetch]);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel(spaceChannelName(spaceId))
+      .on("broadcast", { event: "message" }, (msg) => {
+        const { senderId } = msg.payload as { senderId: string };
+        if (senderId !== currentUserId) void refetch();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [spaceId, currentUserId, refetch]);
+
+  return query.data ?? 0;
+}
+
 export function BottomNav() {
   const pathname = usePathname();
+  const unread = useUnreadCount(pathname);
 
   return (
     <nav
@@ -28,8 +67,13 @@ export function BottomNav() {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
+            aria-label={
+              href === "/home/chat" && unread > 0
+                ? `${label}, 안 읽은 메시지 ${unread}개`
+                : undefined
+            }
             className={cn(
-              "text-muted-foreground flex flex-col items-center gap-1 text-xs font-medium",
+              "text-muted-foreground relative flex flex-col items-center gap-1 text-xs font-medium",
               active && "text-foreground font-semibold",
             )}
           >
@@ -42,6 +86,11 @@ export function BottomNav() {
               <Icon className="size-6" />
             </span>
             {label}
+            {href === "/home/chat" && !active && unread > 0 && (
+              <span className="bg-primary text-primary-foreground absolute top-0 left-1/2 ml-2.5 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-xs font-bold">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
           </Link>
         );
       })}

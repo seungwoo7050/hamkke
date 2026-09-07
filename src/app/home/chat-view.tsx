@@ -1,21 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { inferRouterOutputs } from "@trpc/server";
-import { Heart, ImagePlus, Mic, Square } from "lucide-react";
+import { ArrowUp, Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { josa } from "@/lib/josa";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
+import { ChatHeader } from "./chat-header";
+import { displayName, useSpace } from "./space-context";
 
 type ChatMessage = inferRouterOutputs<AppRouter>["chat"]["list"]["messages"][number];
+type Touch = inferRouterOutputs<AppRouter>["touch"]["list"][number];
+type TimelineItem =
+  { kind: "message"; at: Date; message: ChatMessage } | { kind: "touch"; at: Date; touch: Touch };
+
+// 메시지가 하나도 없을 때 터치를 얼마나 거슬러 보여줄지.
+const EMPTY_CHAT_TOUCH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function dayLabel(date: Date) {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "오늘";
+  if (date.toDateString() === yesterday.toDateString()) return "어제";
+  return date.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
+}
+
+function timeLabel(date: Date) {
+  return date.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+}
 
 const TYPING_THROTTLE_MS = 2000;
 const TYPING_CLEAR_MS = 3000;
@@ -67,6 +90,10 @@ export function ChatView({
 }) {
   const trpc = useTRPC();
   const trpcClient = useTRPCClient();
+  const queryClient = useQueryClient();
+  const { summary } = useSpace();
+  const hydrated = useHydrated();
+  const partnerName = displayName(summary.partner, "상대");
   const [messages, setMessages] = useState(initialMessages);
   const [olderCursor, setOlderCursor] = useState(initialNextCursor);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -80,7 +107,29 @@ export function ChatView({
   const lastTypingSentAt = useRef(0);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const markReadMutation = useMutation(trpc.chat.markRead.mutationOptions());
+  const markReadMutation = useMutation(
+    trpc.chat.markRead.mutationOptions({
+      // 대화 탭 배지(bottom-nav)가 바로 0으로 떨어지게 한다.
+      onSuccess: () => queryClient.invalidateQueries(trpc.chat.unreadCount.queryFilter()),
+    }),
+  );
+
+  // 받은/보낸 터치를 대화 흐름 안에 끼워 넣는다(승인 목업 ②). 불러온 메시지
+  // 범위와 같은 구간만 조회한다.
+  const [touchSince] = useState(() =>
+    initialMessages[0]
+      ? new Date(initialMessages[0].createdAt)
+      : new Date(Date.now() - EMPTY_CHAT_TOUCH_WINDOW_MS),
+  );
+  const touchQuery = useQuery(trpc.touch.list.queryOptions({ since: touchSince }));
+  const [liveTouches, setLiveTouches] = useState<Touch[]>([]);
+
+  // Realtime 구독 성공(SUBSCRIBED)만 기다리면 소켓이 막힌 환경에서 영영 읽음
+  // 처리가 안 된다 — 대화 탭을 연 것 자체를 "읽음"으로 본다.
+  useEffect(() => {
+    markReadMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -106,6 +155,10 @@ export function ChatView({
           ),
         );
       })
+      .on("broadcast", { event: "touch" }, (msg) => {
+        const touch = msg.payload as Touch;
+        setLiveTouches((prev) => [...prev, { ...touch, createdAt: new Date(touch.createdAt) }]);
+      })
       .on("broadcast", { event: "typing" }, (msg) => {
         const { userId } = msg.payload as { userId: string };
         if (userId === currentUserId) return;
@@ -126,9 +179,23 @@ export function ChatView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spaceId, currentUserId]);
 
+  const timeline = useMemo(() => {
+    const touches = new Map<string, Touch>();
+    for (const t of [...(touchQuery.data ?? []), ...liveTouches]) touches.set(t.id, t);
+    const items: TimelineItem[] = [
+      ...messages.map((m) => ({ kind: "message" as const, at: new Date(m.createdAt), message: m })),
+      ...[...touches.values()].map((t) => ({
+        kind: "touch" as const,
+        at: new Date(t.createdAt),
+        touch: t,
+      })),
+    ];
+    return items.sort((a, b) => a.at.getTime() - b.at.getTime());
+  }, [messages, touchQuery.data, liveTouches]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+  }, [timeline.length]);
 
   const sendMutation = useMutation(
     trpc.chat.send.mutationOptions({
@@ -141,7 +208,7 @@ export function ChatView({
 
   const sendTouchMutation = useMutation(
     trpc.touch.send.mutationOptions({
-      onSuccess: () => toast("상대방에게 전송했어요"),
+      onSuccess: (touch) => setLiveTouches((prev) => [...prev, touch]),
     }),
   );
 
@@ -276,9 +343,10 @@ export function ChatView({
     .find((m) => m.senderId === currentUserId && m.readAt)?.id;
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-6 py-4">
-        {messages.length === 0 && (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ChatHeader />
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-4">
+        {timeline.length === 0 && (
           <EmptyState caption="아직 나눈 이야기가 없어요" className="flex-1" />
         )}
         {olderCursor && (
@@ -292,45 +360,72 @@ export function ChatView({
             {loadingOlder ? "불러오는 중..." : "이전 메시지 더 보기"}
           </Button>
         )}
-        {messages.map((message) => {
+        {timeline.map((item, i) => {
+          const prev = timeline[i - 1];
+          const newDay = !prev || prev.at.toDateString() !== item.at.toDateString();
+          const divider = newDay && (
+            <p className="text-muted-foreground my-1 min-h-4 text-center text-xs">
+              {hydrated && dayLabel(item.at)}
+            </p>
+          );
+
+          if (item.kind === "touch") {
+            const fromMe = item.touch.senderId === currentUserId;
+            return (
+              <div key={`touch-${item.touch.id}`} className="contents">
+                {divider}
+                <p className="bg-glow/30 text-dusk font-handwritten flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-lg">
+                  <Heart className="size-4" />
+                  {fromMe
+                    ? "생각하고 있다고 전했어요"
+                    : `${josa(partnerName, "이/가")} 생각하고 있어요`}
+                  {hydrated && <span className="text-base">· {timeLabel(item.at)}</span>}
+                </p>
+              </div>
+            );
+          }
+
+          const message = item.message;
           const isMine = message.senderId === currentUserId;
           return (
-            <div
-              key={message.id}
-              className={`flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}
-            >
-              {message.type === "image" ? (
-                <Image
-                  src={message.content}
-                  alt="공유한 사진"
-                  width={240}
-                  height={240}
-                  unoptimized
-                  className="h-60 w-60 rounded-lg object-cover"
-                />
-              ) : message.type === "voice" ? (
-                <audio controls src={message.content} className="h-10 max-w-[75%]" />
-              ) : (
-                <div
-                  className={`flex max-w-[75%] flex-col gap-1 rounded-lg px-3 py-2 ${
-                    isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
-                </div>
-              )}
-              {isMine && message.id === lastReadMineId && (
-                <span className="text-muted-foreground text-xs">읽음</span>
-              )}
+            <div key={message.id} className="contents">
+              {divider}
+              <div className={`flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}>
+                {message.type === "image" ? (
+                  <Image
+                    src={message.content}
+                    alt="공유한 사진"
+                    width={240}
+                    height={240}
+                    unoptimized
+                    className="h-60 w-60 rounded-lg object-cover"
+                  />
+                ) : message.type === "voice" ? (
+                  <audio controls src={message.content} className="h-10 max-w-[75%]" />
+                ) : (
+                  <div
+                    className={`max-w-[75%] rounded-md px-3 py-2 ${
+                      isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                    }`}
+                  >
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  </div>
+                )}
+                {isMine && message.id === lastReadMineId && (
+                  <span className="text-muted-foreground text-xs">읽음</span>
+                )}
+              </div>
             </div>
           );
         })}
-        {partnerTyping && <p className="text-muted-foreground text-xs">상대가 입력 중...</p>}
+        {partnerTyping && (
+          <p className="text-muted-foreground text-xs">{josa(partnerName, "이/가")} 입력 중...</p>
+        )}
         <div ref={bottomRef} />
       </div>
 
       <form
-        className="border-border flex gap-2 border-t px-6 py-4"
+        className="border-border flex items-center gap-1 border-t px-3 py-2.5"
         onSubmit={(e) => {
           e.preventDefault();
           if (!draft.trim()) return;
@@ -346,9 +441,10 @@ export function ChatView({
         />
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="icon"
           aria-label="사진 보내기"
+          className="text-muted-foreground"
           disabled={uploadingImage}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -356,9 +452,10 @@ export function ChatView({
         </Button>
         <Button
           type="button"
-          variant={isRecording ? "default" : "outline"}
+          variant={isRecording ? "default" : "ghost"}
           size="icon"
           aria-label={isRecording ? "녹음 중지 및 보내기" : "음성 메시지 녹음"}
+          className={isRecording ? undefined : "text-muted-foreground"}
           disabled={uploadingVoice}
           onClick={() => (isRecording ? stopRecording() : startRecording())}
         >
@@ -367,21 +464,28 @@ export function ChatView({
         <Input
           value={draft}
           onChange={(e) => handleDraftChange(e.target.value)}
-          placeholder="메시지 보내기"
+          placeholder="메시지"
+          className="mx-1"
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          aria-label="생각하고 있어 보내기"
-          disabled={sendTouchMutation.isPending}
-          onClick={() => sendTouchMutation.mutate()}
-        >
-          <Heart className="size-5" />
-        </Button>
-        <Button type="submit" disabled={sendMutation.isPending || !draft.trim()}>
-          전송
-        </Button>
+        {/* 입력 중이 아닐 땐 전송 버튼 자리를 터치가 차지한다 — 대화 중에도
+            한 번에 "생각하고 있어요"를 보낼 수 있게(DESIGN.md §2 Kaye). */}
+        {draft.trim() ? (
+          <Button type="submit" size="icon" aria-label="보내기" disabled={sendMutation.isPending}>
+            <ArrowUp className="size-5" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="생각하고 있어요 보내기"
+            className="text-primary"
+            disabled={sendTouchMutation.isPending}
+            onClick={() => sendTouchMutation.mutate()}
+          >
+            <Heart className="size-5" />
+          </Button>
+        )}
       </form>
     </div>
   );
