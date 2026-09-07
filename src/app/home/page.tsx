@@ -1,7 +1,7 @@
 import { createTRPCContext } from "@/server/trpc/context";
 import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
-import { LocationPanel } from "./location-panel";
+import { DistanceButton } from "./distance-button";
 import { StreakBadge } from "./streak-badge";
 import { TimezoneWidget } from "./timezone-widget";
 import { TopBar } from "./top-bar";
@@ -26,7 +26,7 @@ export default async function UsPage() {
       <main className="flex flex-1 flex-col">
         <TimezoneWidget initialMe={timezones.me} initialPartner={timezones.partner} />
         <WeatherWidget me={weather.me} partner={weather.partner} />
-        <LocationPanel />
+        <DistanceButton />
       </main>
     </>
   );

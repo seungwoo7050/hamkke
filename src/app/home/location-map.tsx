@@ -40,7 +40,7 @@ export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLn
       )}
       {partner && (
         <Marker position={[partner.lat, partner.lng]} icon={duskMarkerIcon}>
-          <Popup>상대방</Popup>
+          <Popup>상대</Popup>
         </Marker>
       )}
     </MapContainer>

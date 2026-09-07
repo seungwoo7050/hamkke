@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { toast } from "sonner";
+import { distanceKm, isMeetingSoon } from "@/lib/geo";
 import {
   isNativeLocation,
   startNativeLocationWatch,
@@ -13,6 +14,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
+import { useSpace } from "./space-context";
 
 type PartnerStatus = inferRouterOutputs<AppRouter>["location"]["partnerStatus"];
 type PartnerLocation = NonNullable<PartnerStatus>["location"];
@@ -170,4 +172,33 @@ export function useLocationSharing() {
   const value = useContext(LocationContext);
   if (!value) throw new Error("useLocationSharing은 LocationProvider 안에서만 쓸 수 있어요");
   return value;
+}
+
+/**
+ * 두 사람 사이 거리. 이번 세션에서 내 좌표를 받았다면 그걸로 실시간 계산하고,
+ * 아니면(앱을 막 열었거나 내 공유가 꺼진 직후) 서버가 마지막 위치로 계산한
+ * home.summary 값을 쓴다. 상대가 공유를 끄면 거리도 숨긴다(옵트인 원칙).
+ *
+ * "이동 패턴 감지"는 속도/경로 예측 없이, 직전 측정 대비 거리가 좁혀지는
+ * 추세만 본다(src/lib/geo.ts 각주 참고).
+ */
+export function useDistance() {
+  const { summary } = useSpace();
+  const { me, sharing, partnerSharing, partnerLocation } = useLocationSharing();
+
+  const live =
+    me && partnerSharing && partnerLocation
+      ? distanceKm(me, { lat: partnerLocation.lat, lng: partnerLocation.lng })
+      : null;
+  const km = live ?? (sharing && partnerSharing ? summary.distanceKm : null);
+
+  const prevRef = useRef<number | null>(null);
+  const [approaching, setApproaching] = useState(false);
+  useEffect(() => {
+    const prev = prevRef.current;
+    if (km !== null && prev !== null && km !== prev) setApproaching(km < prev);
+    prevRef.current = km;
+  }, [km]);
+
+  return { km, approaching, meetingSoon: km !== null && isMeetingSoon(km) };
 }
