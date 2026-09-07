@@ -6,105 +6,129 @@ import { Hourglass, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { daysUntil } from "@/lib/anniversary";
+import { useHydrated } from "@/lib/use-hydrated";
 import { useTRPC } from "@/trpc/client";
+import { EmptyRow, Row, Section } from "./memories/section";
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatDday(days: number) {
+export function formatDday(days: number) {
   if (days === 0) return "오늘";
   return days > 0 ? `D-${days}` : `D+${-days}`;
 }
 
-// PRD.md §3.4 "다음 만남까지 카운트다운" — 가장 가까운 목표일을 위에 크게
-// 강조하고, 나머지는 기념일 트래커와 같은 리스트 UI로 통일한다.
+// PRD.md §3.4 "다음 만남까지 카운트다운" — 가장 가까운 목표일 하나를 크게
+// (DESIGN.md §2 M3 Expressive 크기 대비), 나머지는 작은 줄로.
 export function CountdownTracker() {
   const trpc = useTRPC();
-  const [title, setTitle] = useState("");
-  const [targetDate, setTargetDate] = useState(todayInputValue);
-
+  const hydrated = useHydrated();
   const listQuery = useQuery(trpc.countdown.list.queryOptions());
-  const createMutation = useMutation(
-    trpc.countdown.create.mutationOptions({
-      onSuccess: () => {
-        setTitle("");
-        listQuery.refetch();
-      },
-    }),
-  );
   const deleteMutation = useMutation(
     trpc.countdown.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
   );
 
-  const sorted = useMemo(() => {
+  const upcoming = useMemo(() => {
     if (!listQuery.data) return [];
     const now = new Date();
     return listQuery.data
       .map((c) => ({ ...c, days: daysUntil(new Date(c.targetDate), now) }))
+      .filter((c) => c.days >= 0)
       .sort((a, b) => a.days - b.days);
   }, [listQuery.data]);
 
-  function handleCreate() {
-    if (!title.trim()) return;
-    createMutation.mutate({ title: title.trim(), targetDate });
-  }
+  const [next, ...rest] = upcoming;
 
   return (
-    <div className="border-border border-b px-6 py-3">
-      <h2 className="text-foreground mb-2 text-xs font-medium">다음 만남 카운트다운</h2>
-      {sorted[0] && (
-        <p className="text-primary mb-2 text-lg font-semibold">
-          {formatDday(sorted[0].days)} · {sorted[0].title}
-        </p>
-      )}
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="예: 다음 만남"
-          className="max-w-40"
-        />
-        <Input
-          type="date"
-          value={targetDate}
-          onChange={(e) => setTargetDate(e.target.value)}
-          className="max-w-36"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleCreate}
-          disabled={!title.trim() || createMutation.isPending}
-        >
-          <Hourglass /> 추가
-        </Button>
-      </div>
-
-      {sorted.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {sorted.map((c) => (
-            <li
-              key={c.id}
-              className="text-muted-foreground flex items-center justify-between text-xs"
+    <Section
+      title="다음 만남"
+      addTitle="카운트다운 추가"
+      renderAdd={(close) => <CountdownForm onDone={close} onCreated={() => listQuery.refetch()} />}
+    >
+      {next && hydrated ? (
+        <div className="bg-sky-dusk rounded-xl p-5">
+          <p className="text-dusk text-sm font-medium">{next.title}</p>
+          <p className="text-foreground mt-1 text-5xl font-bold tracking-tight">
+            {formatDday(next.days)}
+          </p>
+          <div className="mt-1 flex items-center justify-between">
+            <p className="text-muted-foreground text-sm">
+              {new Date(next.targetDate).toLocaleDateString("ko-KR", {
+                month: "long",
+                day: "numeric",
+                weekday: "short",
+              })}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`${next.title} 삭제`}
+              className="text-muted-foreground"
+              onClick={() => deleteMutation.mutate({ id: next.id })}
             >
-              <span>
-                {formatDday(c.days)} · {c.title}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`${c.title} 삭제`}
-                onClick={() => deleteMutation.mutate({ id: c.id })}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <EmptyRow>다음에 만나는 날을 정해두면 여기서 세어줄게요</EmptyRow>
       )}
-    </div>
+      {hydrated &&
+        rest.map((c) => (
+          <Row
+            key={c.id}
+            icon={<Hourglass className="text-dusk size-5" />}
+            title={c.title}
+            end={
+              <>
+                <span className="text-dusk text-sm font-semibold">{formatDday(c.days)}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${c.title} 삭제`}
+                  className="text-muted-foreground"
+                  onClick={() => deleteMutation.mutate({ id: c.id })}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </>
+            }
+          />
+        ))}
+    </Section>
+  );
+}
+
+function CountdownForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
+  const trpc = useTRPC();
+  const [title, setTitle] = useState("다음 만남");
+  const [targetDate, setTargetDate] = useState(todayInputValue);
+  const createMutation = useMutation(
+    trpc.countdown.create.mutationOptions({
+      onSuccess: () => {
+        onCreated();
+        onDone();
+      },
+    }),
+  );
+
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!title.trim()) return;
+        createMutation.mutate({ title: title.trim(), targetDate });
+      }}
+    >
+      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 다음 만남" />
+      <Input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+      <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
+        추가
+      </Button>
+    </form>
   );
 }

@@ -2,40 +2,27 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Gift, Trash2 } from "lucide-react";
+import { Gift, Heart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { daysUntil, nextOccurrence } from "@/lib/anniversary";
+import { useHydrated } from "@/lib/use-hydrated";
 import { useTRPC } from "@/trpc/client";
+import { formatDday } from "./countdown-tracker";
+import { EmptyRow, Row, Section } from "./memories/section";
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatDday(days: number) {
-  if (days === 0) return "오늘";
-  return days > 0 ? `D-${days}` : `D+${-days}`;
-}
-
 // 정확한 시각 push 스케줄러가 아직 없어(docs/COMMIT_PLAN.md Phase 4 각주)
 // "다가오는 기념일"은 매 렌더링마다 클라이언트의 로컬 오늘 기준으로 다시
-// 계산한다(src/lib/anniversary.ts).
+// 계산한다(src/lib/anniversary.ts). 지난 단발 기념일은 "다가올"에서 뺀다.
 export function AnniversaryTracker() {
   const trpc = useTRPC();
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(todayInputValue);
-  const [recurring, setRecurring] = useState(true);
-
+  const hydrated = useHydrated();
   const listQuery = useQuery(trpc.anniversary.list.queryOptions());
-  const createMutation = useMutation(
-    trpc.anniversary.create.mutationOptions({
-      onSuccess: () => {
-        setTitle("");
-        listQuery.refetch();
-      },
-    }),
-  );
   const deleteMutation = useMutation(
     trpc.anniversary.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
   );
@@ -46,70 +33,89 @@ export function AnniversaryTracker() {
     return [...listQuery.data]
       .map((a) => {
         const occurrence = nextOccurrence(new Date(a.date), a.recurring, now);
-        return { ...a, days: daysUntil(occurrence, now) };
+        return { ...a, occurrence, days: daysUntil(occurrence, now) };
       })
+      .filter((a) => a.days >= 0)
       .sort((a, b) => a.days - b.days);
   }, [listQuery.data]);
 
-  function handleCreate() {
-    if (!title.trim()) return;
-    createMutation.mutate({ title: title.trim(), date, recurring });
-  }
+  return (
+    <Section
+      title="기념일"
+      addTitle="기념일 추가"
+      renderAdd={(close) => (
+        <AnniversaryForm onDone={close} onCreated={() => listQuery.refetch()} />
+      )}
+    >
+      {!hydrated ? null : sorted.length === 0 ? (
+        <EmptyRow>처음 만난 날, 생일 같은 날을 적어두세요</EmptyRow>
+      ) : (
+        sorted.map((a) => (
+          <Row
+            key={a.id}
+            icon={
+              a.recurring ? (
+                <Gift className="text-dusk size-5" />
+              ) : (
+                <Heart className="text-ember size-5" />
+              )
+            }
+            title={a.title}
+            sub={`${a.occurrence.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}${a.recurring ? " · 매년" : ""}`}
+            end={
+              <>
+                <span className="text-dusk text-sm font-semibold">{formatDday(a.days)}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${a.title} 삭제`}
+                  className="text-muted-foreground"
+                  onClick={() => deleteMutation.mutate({ id: a.id })}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </>
+            }
+          />
+        ))
+      )}
+    </Section>
+  );
+}
+
+function AnniversaryForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
+  const trpc = useTRPC();
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState(todayInputValue);
+  const [recurring, setRecurring] = useState(true);
+  const createMutation = useMutation(
+    trpc.anniversary.create.mutationOptions({
+      onSuccess: () => {
+        onCreated();
+        onDone();
+      },
+    }),
+  );
 
   return (
-    <div className="border-border border-b px-6 py-3">
-      <h2 className="text-foreground mb-2 text-xs font-medium">기념일</h2>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="예: 생일"
-          className="max-w-40"
-        />
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="max-w-36"
-        />
-        <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
-          <Checkbox checked={recurring} onCheckedChange={(checked) => setRecurring(!!checked)} />
-          매년 반복
-        </label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleCreate}
-          disabled={!title.trim() || createMutation.isPending}
-        >
-          <Gift /> 추가
-        </Button>
-      </div>
-
-      {sorted.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {sorted.map((a) => (
-            <li
-              key={a.id}
-              className="text-muted-foreground flex items-center justify-between text-xs"
-            >
-              <span>
-                {formatDday(a.days)} · {a.title}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`${a.title} 삭제`}
-                onClick={() => deleteMutation.mutate({ id: a.id })}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!title.trim()) return;
+        createMutation.mutate({ title: title.trim(), date, recurring });
+      }}
+    >
+      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 생일" />
+      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <label className="text-foreground flex items-center gap-2 text-sm">
+        <Checkbox checked={recurring} onCheckedChange={(checked) => setRecurring(!!checked)} />
+        매년 반복
+      </label>
+      <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
+        추가
+      </Button>
+    </form>
   );
 }

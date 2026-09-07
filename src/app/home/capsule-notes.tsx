@@ -2,11 +2,16 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Mail, Trash2 } from "lucide-react";
+import { Lock, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { josa } from "@/lib/josa";
+import { useHydrated } from "@/lib/use-hydrated";
+import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
+import { EmptyRow, Row, Section } from "./memories/section";
+import { displayName, useSpace } from "./space-context";
 
 function toLocalInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -19,97 +24,154 @@ function defaultDeliverAt() {
   return toLocalInputValue(d);
 }
 
-// 예약 메시지(PRD.md §3.4). deliverAt 전에는 발신자 본인만 내용을 볼 수
-// 있고, 수신자에게는 목록에서 잠긴 상태로만 보인다.
-export function CapsuleNotes({ currentUserId }: { currentUserId: string }) {
-  const trpc = useTRPC();
-  const [content, setContent] = useState("");
-  const [deliverAt, setDeliverAt] = useState(defaultDeliverAt);
+function formatDeliverAt(date: Date) {
+  return date.toLocaleString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
-  const listQuery = useQuery(trpc.capsule.list.queryOptions());
-  const createMutation = useMutation(
-    trpc.capsule.create.mutationOptions({
-      onSuccess: () => {
-        setContent("");
-        listQuery.refetch();
-      },
-      onError: (err) => toast.error(err.message),
-    }),
-  );
+// 예약 메시지(PRD.md §3.4). deliverAt 전에는 발신자 본인만 내용을 볼 수
+// 있고, 수신자에게는 잠긴 상태로만 보인다. 기억 탭에서 "다가올"(아직 안
+// 열림)과 "지나온"(열림) 두 곳에 나눠 보여주므로 같은 목록 쿼리를 공유한다.
+function useCapsules() {
+  const trpc = useTRPC();
+  return useQuery(trpc.capsule.list.queryOptions());
+}
+
+export function UpcomingCapsules() {
+  const trpc = useTRPC();
+  const hydrated = useHydrated();
+  const { currentUserId, summary } = useSpace();
+  const partnerName = displayName(summary.partner, "상대");
+  const listQuery = useCapsules();
   const deleteMutation = useMutation(
     trpc.capsule.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
   );
 
-  function handleCreate() {
-    if (!content.trim()) return;
-    createMutation.mutate({
-      content: content.trim(),
-      deliverAt: new Date(deliverAt).toISOString(),
-    });
-  }
+  const now = useNow();
+  const waiting = (listQuery.data ?? []).filter((c) => new Date(c.deliverAt) > now);
 
   return (
-    <div className="border-border border-b px-6 py-3">
-      <h2 className="text-foreground mb-2 text-xs font-medium">캡슐 노트</h2>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <Input
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="미래의 너에게"
-          className="max-w-56"
-        />
+    <Section
+      title="도착 예정 캡슐"
+      addTitle="캡슐 예약하기"
+      renderAdd={(close) => <CapsuleForm onDone={close} onCreated={() => listQuery.refetch()} />}
+    >
+      {!hydrated ? null : waiting.length === 0 ? (
+        <EmptyRow>
+          정해둔 날에 열리는 편지를 {josa(partnerName, "이/가")} 받게 할 수 있어요
+        </EmptyRow>
+      ) : (
+        waiting.map((capsule) => {
+          const mine = capsule.senderId === currentUserId;
+          return (
+            <Row
+              key={capsule.id}
+              icon={<Lock className="text-dusk size-5" />}
+              title={mine ? `${partnerName}에게 보낸 편지` : `${partnerName}의 편지`}
+              sub={`${formatDeliverAt(new Date(capsule.deliverAt))}에 열려요`}
+              end={
+                mine && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="캡슐 삭제"
+                    className="text-muted-foreground"
+                    onClick={() => deleteMutation.mutate({ id: capsule.id })}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )
+              }
+            />
+          );
+        })
+      )}
+    </Section>
+  );
+}
+
+export function OpenedCapsules() {
+  const hydrated = useHydrated();
+  const { currentUserId, summary } = useSpace();
+  const partnerName = displayName(summary.partner, "상대");
+  const listQuery = useCapsules();
+
+  const now = useNow();
+  const opened = (listQuery.data ?? [])
+    .filter((c) => new Date(c.deliverAt) <= now && c.content !== null)
+    .reverse();
+
+  if (!hydrated || opened.length === 0) return null;
+
+  return (
+    <Section title="열린 캡슐">
+      <div className="flex flex-col gap-3">
+        {opened.map((capsule) => (
+          <article key={capsule.id} className="bg-muted rounded-lg px-4 py-3">
+            <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+              <Mail className="size-4" />
+              {capsule.senderId === currentUserId
+                ? `${partnerName}에게`
+                : `${partnerName}로부터`} · {formatDeliverAt(new Date(capsule.deliverAt))}
+            </p>
+            {/* DESIGN.md §3.2: 캡슐 노트는 손글씨 폰트가 허용되는 감정적 순간 */}
+            <p className="text-foreground font-handwritten mt-1 text-lg leading-snug">
+              {capsule.content}
+            </p>
+          </article>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function CapsuleForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
+  const trpc = useTRPC();
+  const [content, setContent] = useState("");
+  const [deliverAt, setDeliverAt] = useState(defaultDeliverAt);
+  const createMutation = useMutation(
+    trpc.capsule.create.mutationOptions({
+      onSuccess: () => {
+        onCreated();
+        onDone();
+      },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!content.trim()) return;
+        createMutation.mutate({
+          content: content.trim(),
+          deliverAt: new Date(deliverAt).toISOString(),
+        });
+      }}
+    >
+      <Input
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="미래의 너에게"
+      />
+      <label className="text-muted-foreground flex flex-col gap-1 text-sm">
+        열리는 시각
         <Input
           type="datetime-local"
           value={deliverAt}
           onChange={(e) => setDeliverAt(e.target.value)}
-          className="max-w-48"
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleCreate}
-          disabled={!content.trim() || createMutation.isPending}
-        >
-          <Mail /> 예약 보내기
-        </Button>
-      </div>
-
-      {listQuery.data && listQuery.data.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {listQuery.data.map((capsule) => {
-            const mine = capsule.senderId === currentUserId;
-            const locked = capsule.content === null;
-            return (
-              <li key={capsule.id} className="text-muted-foreground text-xs">
-                <div className="flex items-center justify-between">
-                  <span>
-                    {mine ? "나 → 상대방" : "상대방 → 나"} ·{" "}
-                    {new Date(capsule.deliverAt).toLocaleString("ko-KR")}
-                    {locked && " (아직 도착 전)"}
-                  </span>
-                  {mine && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="캡슐 삭제"
-                      onClick={() => deleteMutation.mutate({ id: capsule.id })}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  )}
-                </div>
-                {!locked && (
-                  <p className="text-foreground font-handwritten mt-0.5 text-base">
-                    {capsule.content}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+      </label>
+      <Button type="submit" size="lg" disabled={!content.trim() || createMutation.isPending}>
+        예약 보내기
+      </Button>
+    </form>
   );
 }

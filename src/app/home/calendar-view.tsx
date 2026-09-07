@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CalendarPlus, Trash2 } from "lucide-react";
+import { Calendar, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useHydrated } from "@/lib/use-hydrated";
+import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
+import { EmptyRow, Row, Section } from "./memories/section";
+import { displayName, useSpace } from "./space-context";
 
 // datetime-local input은 "YYYY-MM-DDTHH:mm"를 로컬 시간 기준으로 받는다
 // (toISOString()은 UTC라 그대로 쓰면 시간대만큼 어긋난다).
@@ -15,121 +19,138 @@ function toLocalInputValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function defaultStart() {
+function hoursFromNow(h: number) {
   const d = new Date();
   d.setMinutes(0, 0, 0);
-  d.setHours(d.getHours() + 1);
+  d.setHours(d.getHours() + h);
   return toLocalInputValue(d);
 }
 
-function defaultEnd() {
-  const d = new Date();
-  d.setMinutes(0, 0, 0);
-  d.setHours(d.getHours() + 2);
-  return toLocalInputValue(d);
+function formatMine(date: Date) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
-function formatRange(startAt: Date | string, endAt: Date | string) {
-  const start = new Date(startAt);
-  const end = new Date(endAt);
-  const dateFmt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", weekday: "short" };
-  const timeFmt: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
-  const sameDay = start.toDateString() === end.toDateString();
-  const startStr = `${start.toLocaleDateString("ko-KR", dateFmt)} ${start.toLocaleTimeString("ko-KR", timeFmt)}`;
-  const endStr = sameDay
-    ? end.toLocaleTimeString("ko-KR", timeFmt)
-    : `${end.toLocaleDateString("ko-KR", dateFmt)} ${end.toLocaleTimeString("ko-KR", timeFmt)}`;
-  return `${startStr} ~ ${endStr}`;
+// 상대 쪽은 시각만 — 날짜가 내 쪽과 달라질 때만 요일을 붙인다(한 줄에 담기게).
+function formatPartner(date: Date, timeZone: string) {
+  const day = (tz?: string) =>
+    new Intl.DateTimeFormat("ko-KR", { timeZone: tz, weekday: "short" }).format(date);
+  const time = new Intl.DateTimeFormat("ko-KR", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return day() === day(timeZone) ? time : `${day(timeZone)} ${time}`;
 }
 
-// 달력 그리드 대신 다가오는 순 리스트로 단순화했다(PRD.md §3.4 범위,
-// 과한 엔지니어링 방지 — docs/COMMIT_PLAN.md Phase 4 각주 참고).
+// 달력 그리드 대신 다가오는 순 리스트로 단순화했다(PRD.md §3.4 범위).
+// 같은 일정을 두 사람 시간대로 나란히 보여준다 — "양쪽 시간대 자동 변환".
 export function CalendarView() {
   const trpc = useTRPC();
-  const [title, setTitle] = useState("");
-  const [startAt, setStartAt] = useState(defaultStart);
-  const [endAt, setEndAt] = useState(defaultEnd);
+  const hydrated = useHydrated();
+  const { summary } = useSpace();
+  const partnerTz = summary.partner?.timezone ?? null;
+  const partnerName = displayName(summary.partner, "상대");
 
   const listQuery = useQuery(trpc.calendar.list.queryOptions());
-  const createMutation = useMutation(
-    trpc.calendar.create.mutationOptions({
-      onSuccess: () => {
-        setTitle("");
-        listQuery.refetch();
-      },
-      onError: () => toast.error("일정 저장에 실패했어요(종료 시각을 확인해주세요)"),
-    }),
-  );
   const deleteMutation = useMutation(
     trpc.calendar.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
   );
 
-  function handleCreate() {
-    if (!title.trim()) return;
-    createMutation.mutate({
-      title: title.trim(),
-      startAt: new Date(startAt).toISOString(),
-      endAt: new Date(endAt).toISOString(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
-  }
+  const now = useNow();
+  const upcoming = useMemo(
+    () => (listQuery.data ?? []).filter((e) => new Date(e.endAt) >= now),
+    [listQuery.data, now],
+  );
 
   return (
-    <div className="border-border border-b px-6 py-3">
-      <h2 className="text-foreground mb-2 text-xs font-medium">공유 캘린더</h2>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="예: 영상통화"
-          className="max-w-40"
-        />
-        <Input
-          type="datetime-local"
-          value={startAt}
-          onChange={(e) => setStartAt(e.target.value)}
-          className="max-w-48"
-        />
-        <Input
-          type="datetime-local"
-          value={endAt}
-          onChange={(e) => setEndAt(e.target.value)}
-          className="max-w-48"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleCreate}
-          disabled={!title.trim() || createMutation.isPending}
-        >
-          <CalendarPlus /> 추가
-        </Button>
-      </div>
-
-      {listQuery.data && listQuery.data.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {listQuery.data.map((event) => (
-            <li
+    <Section
+      title="일정"
+      addTitle="일정 추가"
+      renderAdd={(close) => <CalendarForm onDone={close} onCreated={() => listQuery.refetch()} />}
+    >
+      {!hydrated ? null : upcoming.length === 0 ? (
+        <EmptyRow>영상통화 데이트 같은 약속을 잡아보세요</EmptyRow>
+      ) : (
+        upcoming.map((event) => {
+          const start = new Date(event.startAt);
+          const mine = formatMine(start);
+          const theirs =
+            partnerTz && partnerTz !== Intl.DateTimeFormat().resolvedOptions().timeZone
+              ? ` · ${partnerName} ${formatPartner(start, partnerTz)}`
+              : "";
+          return (
+            <Row
               key={event.id}
-              className="text-muted-foreground flex items-center justify-between text-xs"
-            >
-              <span>
-                {formatRange(event.startAt, event.endAt)} · {event.title}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`${event.title} 삭제`}
-                onClick={() => deleteMutation.mutate({ id: event.id })}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
+              icon={<Calendar className="text-dusk size-5" />}
+              title={event.title}
+              sub={`${mine}${theirs}`}
+              end={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${event.title} 삭제`}
+                  className="text-muted-foreground"
+                  onClick={() => deleteMutation.mutate({ id: event.id })}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              }
+            />
+          );
+        })
       )}
-    </div>
+    </Section>
+  );
+}
+
+function CalendarForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
+  const trpc = useTRPC();
+  const [title, setTitle] = useState("");
+  const [startAt, setStartAt] = useState(() => hoursFromNow(1));
+  const [endAt, setEndAt] = useState(() => hoursFromNow(2));
+  const createMutation = useMutation(
+    trpc.calendar.create.mutationOptions({
+      onSuccess: () => {
+        onCreated();
+        onDone();
+      },
+      onError: () => toast.error("일정 저장에 실패했어요(종료 시각을 확인해주세요)"),
+    }),
+  );
+
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!title.trim()) return;
+        createMutation.mutate({
+          title: title.trim(),
+          startAt: new Date(startAt).toISOString(),
+          endAt: new Date(endAt).toISOString(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+      }}
+    >
+      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 영상통화" />
+      <label className="text-muted-foreground flex flex-col gap-1 text-sm">
+        시작
+        <Input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+      </label>
+      <label className="text-muted-foreground flex flex-col gap-1 text-sm">
+        끝
+        <Input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
+      </label>
+      <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
+        추가
+      </Button>
+    </form>
   );
 }

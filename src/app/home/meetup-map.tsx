@@ -24,7 +24,7 @@ export function MeetupMap({ pins }: { pins: Pin[] }) {
       center={center}
       zoom={pins.length > 0 ? 8 : 6}
       scrollWheelZoom={false}
-      className="h-64 w-full"
+      className="h-48 w-full"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
