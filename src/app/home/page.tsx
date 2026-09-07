@@ -1,20 +1,10 @@
-import { createTRPCContext } from "@/server/trpc/context";
-import { createCallerFactory } from "@/server/trpc/init";
-import { appRouter } from "@/server/trpc/routers/_app";
-import { DistanceButton } from "./distance-button";
 import { StreakBadge } from "./streak-badge";
-import { TimezoneWidget } from "./timezone-widget";
 import { TopBar } from "./top-bar";
-import { WeatherWidget } from "./weather-widget";
+import { UsScene } from "./us-scene";
 
-const createCaller = createCallerFactory(appRouter);
-
-// "우리" 탭 — 인증·페어링 가드는 layout.tsx가 맡는다.
-export default async function UsPage() {
-  const caller = createCaller(await createTRPCContext());
-  const timezones = await caller.profile.timezones();
-  const weather = await caller.weather.forSpace();
-
+// "우리" 탭 — 인증·페어링 가드와 장면 첫 렌더 값(home.summary)은 layout.tsx가
+// 맡는다.
+export default function UsPage() {
   return (
     <>
       <TopBar>
@@ -23,10 +13,8 @@ export default async function UsPage() {
           <StreakBadge />
         </div>
       </TopBar>
-      <main className="flex flex-1 flex-col">
-        <TimezoneWidget initialMe={timezones.me} initialPartner={timezones.partner} />
-        <WeatherWidget me={weather.me} partner={weather.partner} />
-        <DistanceButton />
+      <main className="flex flex-1 flex-col pb-8">
+        <UsScene />
       </main>
     </>
   );
