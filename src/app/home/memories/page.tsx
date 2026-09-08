@@ -8,7 +8,9 @@ import { TopBar } from "../top-bar";
 import { MemoriesTabs } from "./memories-tabs";
 
 // "기억" 탭 — 인증·페어링 가드는 layout.tsx가 맡는다.
-export default function MemoriesPage() {
+export default async function MemoriesPage({ searchParams }: PageProps<"/home/memories">) {
+  // 상황 카드(도착한 캡슐)가 "지나온"으로 바로 데려올 수 있게.
+  const { tab } = await searchParams;
   return (
     <>
       <TopBar>
@@ -16,6 +18,7 @@ export default function MemoriesPage() {
       </TopBar>
       <main className="flex flex-1 flex-col">
         <MemoriesTabs
+          defaultTab={tab === "past" ? "past" : "upcoming"}
           upcoming={
             <>
               <CountdownTracker />

@@ -5,14 +5,16 @@ import { Tabs } from "radix-ui";
 // 기억 탭 상단 세그먼트 — 장거리 연애의 두 시간축(Stafford & Merolla 2007):
 // 기대(다가올)와 기억(지나온). DESIGN.md §4.
 export function MemoriesTabs({
+  defaultTab,
   upcoming,
   past,
 }: {
+  defaultTab: "upcoming" | "past";
   upcoming: React.ReactNode;
   past: React.ReactNode;
 }) {
   return (
-    <Tabs.Root defaultValue="upcoming" className="flex flex-col">
+    <Tabs.Root defaultValue={defaultTab} className="flex flex-col">
       <Tabs.List
         aria-label="기억 보기 방식"
         className="bg-muted mx-4 mb-5 grid grid-cols-2 rounded-md p-1"

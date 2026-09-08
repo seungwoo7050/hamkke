@@ -1,3 +1,4 @@
+import { ContextCards } from "./context-cards";
 import { StreakBadge } from "./streak-badge";
 import { TopBar } from "./top-bar";
 import { TouchHero } from "./touch-hero";
@@ -17,6 +18,7 @@ export default function UsPage() {
       <main className="flex flex-1 flex-col pb-8">
         <UsScene />
         <TouchHero />
+        <ContextCards />
       </main>
     </>
   );
