@@ -8,6 +8,7 @@ import { AppEffects } from "./app-effects";
 import { BottomNav } from "./bottom-nav";
 import { LocationProvider } from "./location-context";
 import { SpaceProvider } from "./space-context";
+import { TouchReceived } from "./touch-received";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -44,6 +45,7 @@ export default async function HomeLayout({ children }: LayoutProps<"/home">) {
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
           <BottomNav />
         </div>
+        <TouchReceived />
       </LocationProvider>
     </SpaceProvider>
   );

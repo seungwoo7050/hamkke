@@ -7,6 +7,7 @@ import { onAnyForegroundMessage, requestAnyPushToken } from "@/lib/push-client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { useTRPC } from "@/trpc/client";
+import { TOUCH_RECEIVED_EVENT } from "./touch-received";
 
 // 화면을 그리지 않고, 탭과 무관하게 앱이 열려 있는 동안 계속 살아 있어야 하는
 // 부수효과만 모은다(layout.tsx). 전에는 채팅 화면(chat-view)과 시차 위젯이
@@ -53,7 +54,7 @@ export function AppEffects({ spaceId, currentUserId }: { spaceId: string; curren
       .on("broadcast", { event: "touch" }, (msg) => {
         const { senderId } = msg.payload as { senderId: string };
         if (senderId === currentUserId) return;
-        toast("상대방이 생각하고 있어요");
+        window.dispatchEvent(new CustomEvent(TOUCH_RECEIVED_EVENT));
       })
       .subscribe();
 
