@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { EmptyState } from "@/components/brand/empty-state";
 import { formatDistanceKm } from "@/lib/geo";
 import { josa } from "@/lib/josa";
+import { relativeTime } from "@/lib/relative-time";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
 import {
@@ -28,14 +29,6 @@ const LocationMap = dynamic(() => import("./location-map").then((m) => m.Locatio
 // 꺼지면 빈 화면이 되고, 상시 렌더링은 배터리·데이터 부담이라서.
 const SNAP_POINTS = [0.4, 0.65, 1] as const;
 
-function sinceLabel(from: Date, now: Date) {
-  const minutes = Math.max(0, Math.round((now.getTime() - from.getTime()) / 60000));
-  if (minutes < 1) return "방금";
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.round(minutes / 60);
-  return hours < 24 ? `${hours}시간 전` : `${Math.round(hours / 24)}일 전`;
-}
-
 export function LocationSheet({ children }: { children: React.ReactNode }) {
   const { summary } = useSpace();
   const { me, sharing, partnerSharing, partnerLocation } = useLocationSharing();
@@ -58,7 +51,7 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
           km !== null && formatDistanceKm(km),
           partnerLocation &&
             hydrated &&
-            `마지막 위치 ${sinceLabel(new Date(partnerLocation.capturedAt), now)}`,
+            `마지막 위치 ${relativeTime(new Date(partnerLocation.capturedAt), now)}`,
         ]
           .filter(Boolean)
           .join(" · ");
