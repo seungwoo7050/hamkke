@@ -61,9 +61,34 @@ function Side({
 // 정보 — 서로의 현지 시각·날씨·수면 상태·거리 — 를 숫자 나열이 아니라 두
 // 사람이 나란히 선 한 장면으로 압축한다. 가운데 기댄 모티프(§1)가 두 영역을
 // 잇고, 누르면 위치 시트가 열린다.
+// "곧 만나요" — 거리가 임계값 안으로 들어오면(src/lib/geo.ts) 둘로 나뉜 장면
+// 대신 두 사람이 한 장면에 모인다. 상황 카드보다 우선하는 최상위 상태라
+// 카드가 아니라 장면 자체를 바꾼다(PRD §3.3 만남 모드, §3.7 우선순위).
+function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolean }) {
+  return (
+    <section aria-label="곧 만나요" className="px-4">
+      <LocationSheet>
+        <button
+          type="button"
+          className="bg-sky-dusk flex w-full flex-col items-start gap-1 rounded-xl px-5 pt-5 pb-6 text-left"
+        >
+          <Wordmark className="size-20" />
+          <span className="text-dusk mt-2 text-sm font-medium">
+            {approaching ? "점점 가까워지고 있어요" : "가까이 있어요"}
+          </span>
+          <span className="text-foreground text-3xl font-bold tracking-tight">곧 만나요</span>
+          <span className="text-foreground text-5xl font-bold tracking-tight">
+            {formatDistanceKm(km)}
+          </span>
+        </button>
+      </LocationSheet>
+    </section>
+  );
+}
+
 export function UsScene() {
   const { summary } = useSpace();
-  const { km } = useDistance();
+  const { km, approaching, meetingSoon } = useDistance();
   const hydrated = useHydrated();
   const now = useNow(30_000);
   const partnerName = displayName(summary.partner, "상대");
@@ -77,6 +102,8 @@ export function UsScene() {
     !!summary.partner?.weather &&
     isRainOrSnowCode(summary.me.weather.weatherCode) &&
     isRainOrSnowCode(summary.partner.weather.weatherCode);
+
+  if (meetingSoon && km !== null) return <MeetingSoonScene km={km} approaching={approaching} />;
 
   return (
     <section aria-label="지금 우리" className="px-4">
