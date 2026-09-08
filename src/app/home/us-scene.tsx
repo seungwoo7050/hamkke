@@ -11,6 +11,7 @@ import { useNow } from "@/lib/use-now";
 import { isRainOrSnowCode, WeatherIcon } from "@/lib/weather-codes";
 import { useDistance } from "./location-context";
 import { LocationSheet } from "./location-sheet";
+import { usePartnerPresent } from "./presence-context";
 import { displayName, useSpace, type HomeSummary } from "./space-context";
 
 type Weather = HomeSummary["me"]["weather"];
@@ -33,12 +34,15 @@ function Side({
   timeZone,
   weather,
   now,
+  present = false,
   className,
 }: {
   label: string;
   timeZone: string | null;
   weather: Weather;
   now: Date;
+  /** 상대가 지금 앱을 보고 있음(Presence) */
+  present?: boolean;
   className?: string;
 }) {
   const hydrated = useHydrated();
@@ -55,7 +59,15 @@ function Side({
         className,
       )}
     >
-      <span className="text-sm font-medium opacity-75">{label}</span>
+      <span className="flex items-center gap-1.5 text-sm font-medium">
+        <span className="opacity-75">{label}</span>
+        {present && (
+          <>
+            <span aria-hidden className="bg-success size-2 rounded-full" />
+            <span className="sr-only">지금 앱을 보고 있어요</span>
+          </>
+        )}
+      </span>
       <span className="mt-1 min-h-9 text-3xl font-bold tracking-tight">
         {timeZone && hydrated ? formatTime(timeZone, now) : null}
       </span>
@@ -106,6 +118,7 @@ function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolea
 export function UsScene() {
   const { summary } = useSpace();
   const { km, approaching, meetingSoon } = useDistance();
+  const partnerPresent = usePartnerPresent();
   const hydrated = useHydrated();
   const now = useNow(30_000);
   const partnerName = displayName(summary.partner, "상대");
@@ -131,6 +144,7 @@ export function UsScene() {
           timeZone={summary.partner?.timezone ?? null}
           weather={summary.partner?.weather ?? null}
           now={now}
+          present={partnerPresent}
         />
         <LocationSheet>
           <button
@@ -143,6 +157,9 @@ export function UsScene() {
           </button>
         </LocationSheet>
       </div>
+      {partnerPresent && (
+        <p className="text-muted-foreground mt-2 text-sm">{partnerName}도 지금 함께 보고 있어요</p>
+      )}
       {bothRainy && (
         <p className="text-muted-foreground mt-2 text-sm">둘 다 비 오는 날이에요. 우산 챙겼어요?</p>
       )}

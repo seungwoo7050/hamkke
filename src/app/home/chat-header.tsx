@@ -5,6 +5,7 @@ import { Moon } from "lucide-react";
 import { isLikelySleeping } from "@/lib/timezone";
 import { useHydrated } from "@/lib/use-hydrated";
 import { PersonAvatar } from "./person-avatar";
+import { usePartnerPresent } from "./presence-context";
 import { displayName, useSpace } from "./space-context";
 
 function localTime(timeZone: string, now: Date) {
@@ -19,6 +20,7 @@ export function ChatHeader() {
   const { summary } = useSpace();
   const partner = summary.partner;
   const hydrated = useHydrated();
+  const present = usePartnerPresent();
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function ChatHeader() {
           <p className="text-muted-foreground flex items-center gap-1 text-xs">
             {sleeping && <Moon className="size-3.5" />}
             {localTime(tz, now)}
-            {sleeping && " · 자고 있을 시간이에요"}
+            {present ? " · 지금 보고 있어요" : sleeping && " · 자고 있을 시간이에요"}
           </p>
         )}
       </div>

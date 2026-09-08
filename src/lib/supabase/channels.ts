@@ -10,3 +10,12 @@
 export function spaceChannelName(spaceId: string) {
   return `space:${spaceId}`;
 }
+
+/**
+ * 현존감(Presence, PRD §3.2) 전용 채널. Presence는 채널 생성 시점에
+ * config.presence.key를 줘야 해서 Broadcast 채널과 분리했다 — 같은 공개 채널
+ * 캡슐화 모델을 따른다.
+ */
+export function spacePresenceChannelName(spaceId: string) {
+  return `space:${spaceId}:presence`;
+}

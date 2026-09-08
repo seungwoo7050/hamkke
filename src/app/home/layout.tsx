@@ -7,6 +7,7 @@ import { appRouter } from "@/server/trpc/routers/_app";
 import { AppEffects } from "./app-effects";
 import { BottomNav } from "./bottom-nav";
 import { LocationProvider } from "./location-context";
+import { PresenceProvider } from "./presence-context";
 import { SpaceProvider } from "./space-context";
 import { TouchReceived } from "./touch-received";
 
@@ -40,12 +41,14 @@ export default async function HomeLayout({ children }: LayoutProps<"/home">) {
         initialSharing={summary.me.locationSharingEnabled}
         initialPartnerStatus={partnerStatus}
       >
-        <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
-          <AppEffects spaceId={status.spaceId} currentUserId={session.user.id} />
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-          <BottomNav />
-        </div>
-        <TouchReceived />
+        <PresenceProvider spaceId={status.spaceId} currentUserId={session.user.id}>
+          <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
+            <AppEffects spaceId={status.spaceId} currentUserId={session.user.id} />
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+            <BottomNav />
+          </div>
+          <TouchReceived />
+        </PresenceProvider>
       </LocationProvider>
     </SpaceProvider>
   );
