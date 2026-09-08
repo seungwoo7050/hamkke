@@ -33,7 +33,7 @@ export function BillingSection() {
 
   return (
     <div className="flex items-center gap-3 py-3">
-      <Crown className="text-dusk size-5" />
+      <Crown className="text-dusk-ink size-5" />
       <div className="flex-1">
         <p className="text-foreground text-base font-medium">
           {premium ? "Hamkke Premium" : "무료 플랜"}

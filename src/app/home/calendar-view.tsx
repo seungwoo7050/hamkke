@@ -87,7 +87,7 @@ export function CalendarView() {
           return (
             <Row
               key={event.id}
-              icon={<Calendar className="text-dusk size-5" />}
+              icon={<Calendar className="text-dusk-ink size-5" />}
               title={event.title}
               sub={`${mine}${theirs}`}
               end={

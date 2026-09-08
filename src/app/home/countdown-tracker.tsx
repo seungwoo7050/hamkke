@@ -48,7 +48,7 @@ export function CountdownTracker() {
     >
       {next && hydrated ? (
         <div className="bg-sky-dusk rounded-xl p-5">
-          <p className="text-dusk text-sm font-medium">{next.title}</p>
+          <p className="text-dusk-ink text-sm font-medium">{next.title}</p>
           <p className="text-foreground mt-1 text-5xl font-bold tracking-tight">
             {formatDday(next.days)}
           </p>
@@ -79,11 +79,11 @@ export function CountdownTracker() {
         rest.map((c) => (
           <Row
             key={c.id}
-            icon={<Hourglass className="text-dusk size-5" />}
+            icon={<Hourglass className="text-dusk-ink size-5" />}
             title={c.title}
             end={
               <>
-                <span className="text-dusk text-sm font-semibold">{formatDday(c.days)}</span>
+                <span className="text-dusk-ink text-sm font-semibold">{formatDday(c.days)}</span>
                 <Button
                   type="button"
                   variant="ghost"

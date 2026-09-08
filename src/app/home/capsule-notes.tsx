@@ -70,7 +70,7 @@ export function UpcomingCapsules() {
           return (
             <Row
               key={capsule.id}
-              icon={<Lock className="text-dusk size-5" />}
+              icon={<Lock className="text-dusk-ink size-5" />}
               title={mine ? `${partnerName}에게 보낸 편지` : `${partnerName}의 편지`}
               sub={`${formatDeliverAt(new Date(capsule.deliverAt))}에 열려요`}
               end={

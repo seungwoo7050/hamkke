@@ -32,7 +32,7 @@ function Card({
       href={href}
       className="bg-muted hover:bg-muted/70 duration-fast ease-standard flex items-center gap-3 rounded-lg px-4 py-3.5 transition-colors"
     >
-      <span className="text-dusk shrink-0">{icon}</span>
+      <span className="text-dusk-ink shrink-0">{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-base font-semibold">{title}</span>
         <span className="text-muted-foreground block truncate text-sm">{sub}</span>

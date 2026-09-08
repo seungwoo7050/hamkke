@@ -56,7 +56,7 @@ export function GeofenceManager() {
 
   return (
     <div className="flex gap-3 py-3">
-      <BellRing className="text-dusk mt-0.5 size-5" />
+      <BellRing className="text-dusk-ink mt-0.5 size-5" />
       <div className="flex flex-1 flex-col gap-2">
         <div>
           <p className="text-foreground text-base font-medium">도착 알림 장소</p>

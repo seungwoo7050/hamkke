@@ -44,7 +44,7 @@ export function SettingsSheet() {
 
           <div className="divide-muted flex flex-col divide-y">
             <label className="flex items-center gap-3 py-3">
-              <MapPin className="text-dusk size-5" />
+              <MapPin className="text-dusk-ink size-5" />
               <div className="flex-1">
                 <p className="text-foreground text-base font-medium">위치공유</p>
                 <p className="text-muted-foreground text-sm">

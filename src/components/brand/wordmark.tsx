@@ -18,11 +18,11 @@ export function Wordmark({ className }: { className?: string }) {
       <circle cx="42" cy="28" r="10" stroke="var(--color-ember)" strokeWidth="4" />
       <path
         d="M78 104 C78 86 66 70 54 52"
-        stroke="var(--color-dusk)"
+        stroke="var(--dusk-ink)"
         strokeWidth="4"
         strokeLinecap="round"
       />
-      <circle cx="49" cy="43" r="10" stroke="var(--color-dusk)" strokeWidth="4" />
+      <circle cx="49" cy="43" r="10" stroke="var(--dusk-ink)" strokeWidth="4" />
     </svg>
   );
 }

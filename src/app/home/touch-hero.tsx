@@ -69,7 +69,7 @@ export function TouchHero() {
         <Heart className="size-6" />
         {justSent ? `${partnerName}에게 전했어요` : "생각하고 있어요"}
       </Button>
-      <p className="font-handwritten text-dusk mt-2.5 min-h-7 text-lg">
+      <p className="font-handwritten text-dusk-ink mt-2.5 min-h-7 text-lg">
         {hydrated &&
           (lastReceivedAt
             ? `${relativeTimeAdverb(lastReceivedAt, now)} ${josa(partnerName, "이/가")} 생각해줬어요`

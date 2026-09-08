@@ -55,7 +55,7 @@ export function AnniversaryTracker() {
             key={a.id}
             icon={
               a.recurring ? (
-                <Gift className="text-dusk size-5" />
+                <Gift className="text-dusk-ink size-5" />
               ) : (
                 <Heart className="text-ember size-5" />
               )
@@ -64,7 +64,7 @@ export function AnniversaryTracker() {
             sub={`${a.occurrence.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}${a.recurring ? " · 매년" : ""}`}
             end={
               <>
-                <span className="text-dusk text-sm font-semibold">{formatDday(a.days)}</span>
+                <span className="text-dusk-ink text-sm font-semibold">{formatDday(a.days)}</span>
                 <Button
                   type="button"
                   variant="ghost"

@@ -374,7 +374,7 @@ export function ChatView({
             return (
               <div key={`touch-${item.touch.id}`} className="contents">
                 {divider}
-                <p className="bg-glow/30 text-dusk font-handwritten flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-lg">
+                <p className="bg-glow/30 text-dusk-ink font-handwritten flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-lg">
                   <Heart className="size-4" />
                   {fromMe
                     ? "생각하고 있다고 전했어요"

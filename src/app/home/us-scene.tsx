@@ -90,7 +90,7 @@ function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolea
           className="bg-sky-dusk flex w-full flex-col items-start gap-1 rounded-xl px-5 pt-5 pb-6 text-left"
         >
           <Wordmark className="size-20" />
-          <span className="text-dusk mt-2 text-sm font-medium">
+          <span className="text-dusk-ink mt-2 text-sm font-medium">
             {approaching ? "점점 가까워지고 있어요" : "가까이 있어요"}
           </span>
           <span className="text-foreground text-3xl font-bold tracking-tight">곧 만나요</span>
