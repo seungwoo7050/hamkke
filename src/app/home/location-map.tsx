@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { latLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { duskMarkerIcon, emberMarkerIcon } from "@/lib/map-markers";
@@ -12,9 +13,13 @@ const DEFAULT_CENTER: LatLng = { lat: 36.5, lng: 127.8 };
 // 2인 전용 앱이라 트래픽이 극히 적어 OpenStreetMap 공개 타일을 API 키 없이
 // 바로 쓴다. 실제 배포 후 트래픽이 늘면 상용 타일(Mapbox 등)로 전환을
 // 검토한다(docs/COMMIT_PLAN.md Phase 3 각주 참고).
+// 두 사람이 모두 있으면 둘 다 보이게 범위를 맞추고(장거리라 한쪽 중심 고정
+// 줌이면 상대가 화면 밖에 있다), 한 명뿐이면 그 사람 중심으로 가까이 본다.
 export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLng | null }) {
   const center = me ?? partner ?? DEFAULT_CENTER;
   const hasAnyPoint = me !== null || partner !== null;
+  const bounds =
+    me && partner ? latLngBounds([me.lat, me.lng], [partner.lat, partner.lng]).pad(0.3) : undefined;
 
   const key = useMemo(
     () => `${me?.lat},${me?.lng}-${partner?.lat},${partner?.lng}`,
@@ -24,8 +29,8 @@ export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLn
   return (
     <MapContainer
       key={key}
-      center={[center.lat, center.lng]}
-      zoom={hasAnyPoint ? 11 : 6}
+      // react-leaflet은 center/zoom이 있으면 bounds를 무시하므로 둘 중 하나만 준다.
+      {...(bounds ? { bounds } : { center: [center.lat, center.lng], zoom: hasAnyPoint ? 11 : 6 })}
       scrollWheelZoom={false}
       className="h-64 w-full"
     >

@@ -20,8 +20,13 @@ describe("formatDistanceKm", () => {
     expect(formatDistanceKm(0.42)).toBe("420m");
   });
 
-  it("1km 이상은 km 단위로 표시", () => {
-    expect(formatDistanceKm(325.4)).toBe("325.4km");
+  it("1km 이상 100km 미만은 소수점 한 자리까지 km로 표시", () => {
+    expect(formatDistanceKm(32.54)).toBe("32.5km");
+  });
+
+  it("100km 이상은 정수 km로 표시", () => {
+    expect(formatDistanceKm(325.4)).toBe("325km");
+    expect(formatDistanceKm(11052.6)).toBe("11,053km");
   });
 });
 

@@ -16,9 +16,11 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
+// 먼 거리(100km 이상)에서 소수점은 의미 없는 정밀도라 정수로 반올림한다 —
+// 장거리 커플에게 "11,052.6km"의 0.6은 정보가 아니라 소음이다.
 export function formatDistanceKm(km: number) {
   if (km < 1) return `${Math.round(km * 1000)}m`;
-  return `${km.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}km`;
+  return `${km.toLocaleString("ko-KR", { maximumFractionDigits: km >= 100 ? 0 : 1 })}km`;
 }
 
 // "이동 패턴 감지"는 속도/경로 예측 없이, 거리 임계값 + 직전 측정 대비
