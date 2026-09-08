@@ -4,6 +4,7 @@ import { Moon } from "lucide-react";
 import { cn } from "cn";
 import { Wordmark } from "@/components/brand/wordmark";
 import { formatDistanceKm } from "@/lib/geo";
+import { skyPhase, type SkyPhase } from "@/lib/sky";
 import { isLikelySleeping } from "@/lib/timezone";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
@@ -13,6 +14,13 @@ import { LocationSheet } from "./location-sheet";
 import { displayName, useSpace, type HomeSummary } from "./space-context";
 
 type Weather = HomeSummary["me"]["weather"];
+
+// 하늘 토큰은 장면 배경 전용(DESIGN.md §3.1). night 위 글자는 zinc-50.
+const SKY_CLASS: Record<SkyPhase, string> = {
+  day: "bg-sky-day text-foreground",
+  dusk: "bg-sky-dusk text-foreground",
+  night: "bg-sky-night text-zinc-50",
+};
 
 function formatTime(timeZone: string, now: Date) {
   return new Intl.DateTimeFormat("ko-KR", { timeZone, hour: "numeric", minute: "2-digit" }).format(
@@ -35,9 +43,18 @@ function Side({
 }) {
   const hydrated = useHydrated();
   const sleeping = timeZone ? isLikelySleeping(timeZone, now) : false;
+  // 두 사람의 하늘이 다르다는 것 자체가 시차의 시각화다(Calm Technology —
+  // 숫자를 읽지 않아도 느껴지게). 시간대를 모르거나 하이드레이션 전엔 중립색.
+  const sky = hydrated && timeZone ? SKY_CLASS[skyPhase(timeZone, now)] : "bg-muted";
 
   return (
-    <div className={cn("flex flex-col gap-1 px-4 pt-5 pb-16", className)}>
+    <div
+      className={cn(
+        "duration-slow ease-standard flex flex-col gap-1 px-4 pt-5 pb-16 transition-colors",
+        sky,
+        className,
+      )}
+    >
       <span className="text-sm font-medium opacity-75">{label}</span>
       <span className="mt-1 min-h-9 text-3xl font-bold tracking-tight">
         {timeZone && hydrated ? formatTime(timeZone, now) : null}
@@ -108,19 +125,12 @@ export function UsScene() {
   return (
     <section aria-label="지금 우리" className="px-4">
       <div className="relative grid grid-cols-2 overflow-hidden rounded-xl">
-        <Side
-          label="나"
-          timeZone={myTz}
-          weather={summary.me.weather}
-          now={now}
-          className="bg-muted"
-        />
+        <Side label="나" timeZone={myTz} weather={summary.me.weather} now={now} />
         <Side
           label={partnerName}
           timeZone={summary.partner?.timezone ?? null}
           weather={summary.partner?.weather ?? null}
           now={now}
-          className="bg-muted"
         />
         <LocationSheet>
           <button
