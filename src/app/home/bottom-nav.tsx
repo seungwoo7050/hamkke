@@ -6,9 +6,8 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { BookHeart, MessageCircle, UsersRound } from "lucide-react";
 import { cn } from "cn";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { spaceChannelName } from "@/lib/supabase/channels";
 import { useTRPC } from "@/trpc/client";
+import { useSpaceBroadcast } from "./realtime-context";
 import { useSpace } from "./space-context";
 
 // Material 3 내비게이션 바 문법(DESIGN.md §2) — 활성 탭은 아이콘 뒤 pill로
@@ -23,7 +22,7 @@ const TABS = [
 // 센다. 대화 탭 안에서는 chat-view가 읽음 처리 후 이 쿼리를 무효화한다.
 function useUnreadCount(pathname: string) {
   const trpc = useTRPC();
-  const { spaceId, currentUserId, summary } = useSpace();
+  const { currentUserId, summary } = useSpace();
   const query = useQuery({
     ...trpc.chat.unreadCount.queryOptions(),
     initialData: summary.unreadCount,
@@ -34,19 +33,9 @@ function useUnreadCount(pathname: string) {
     void refetch();
   }, [pathname, refetch]);
 
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(spaceChannelName(spaceId))
-      .on("broadcast", { event: "message" }, (msg) => {
-        const { senderId } = msg.payload as { senderId: string };
-        if (senderId !== currentUserId) void refetch();
-      })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [spaceId, currentUserId, refetch]);
+  useSpaceBroadcast<{ senderId: string }>("message", ({ senderId }) => {
+    if (senderId !== currentUserId) void refetch();
+  });
 
   return query.data ?? 0;
 }

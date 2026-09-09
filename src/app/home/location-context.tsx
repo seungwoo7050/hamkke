@@ -10,10 +10,9 @@ import {
   startNativeLocationWatch,
   stopNativeLocationWatch,
 } from "@/lib/location-native";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { spaceChannelName } from "@/lib/supabase/channels";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
+import { useSpaceBroadcast } from "./realtime-context";
 import { useSpace } from "./space-context";
 
 type PartnerStatus = inferRouterOutputs<AppRouter>["location"]["partnerStatus"];
@@ -49,13 +48,11 @@ const LocationContext = createContext<LocationContextValue | null>(null);
 // 시트가 닫혀도 계속 돌아야 한다 — 그래서 토글 UI에서 떼어 layout.tsx
 // 수준의 컨텍스트로 올렸다. 상대 위치 Broadcast 구독도 여기서 한 번만 한다.
 export function LocationProvider({
-  spaceId,
   currentUserId,
   initialSharing,
   initialPartnerStatus,
   children,
 }: {
-  spaceId: string;
   currentUserId: string;
   initialSharing: boolean;
   initialPartnerStatus: PartnerStatus;
@@ -114,28 +111,20 @@ export function LocationProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sharing]);
 
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(spaceChannelName(spaceId))
-      .on("broadcast", { event: "location" }, (msg) => {
-        const payload = msg.payload as LocationBroadcastPayload;
-        if (payload.userId === currentUserId) return;
-        setPartnerLocation({ ...payload, capturedAt: new Date(payload.capturedAt) });
-        setPartnerSharing(true);
-      })
-      .on("broadcast", { event: "location-sharing" }, (msg) => {
-        const { userId, enabled } = msg.payload as { userId: string; enabled: boolean };
-        if (userId === currentUserId) return;
-        setPartnerSharing(enabled);
-        if (!enabled) setPartnerLocation(null);
-      })
-      .subscribe();
+  useSpaceBroadcast<LocationBroadcastPayload>("location", (payload) => {
+    if (payload.userId === currentUserId) return;
+    setPartnerLocation({ ...payload, capturedAt: new Date(payload.capturedAt) });
+    setPartnerSharing(true);
+  });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [spaceId, currentUserId]);
+  useSpaceBroadcast<{ userId: string; enabled: boolean }>(
+    "location-sharing",
+    ({ userId, enabled }) => {
+      if (userId === currentUserId) return;
+      setPartnerSharing(enabled);
+      if (!enabled) setPartnerLocation(null);
+    },
+  );
 
   async function toggleSharing() {
     const next = !sharing;

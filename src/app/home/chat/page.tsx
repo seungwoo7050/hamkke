@@ -19,7 +19,6 @@ export default async function ChatPage() {
   return (
     <main className="flex min-h-0 flex-1 flex-col">
       <ChatView
-        spaceId={status.spaceId}
         currentUserId={session.user.id}
         initialMessages={messages}
         initialNextCursor={nextCursor}

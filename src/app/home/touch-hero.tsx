@@ -7,11 +7,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { josa } from "@/lib/josa";
 import { relativeTimeAdverb } from "@/lib/relative-time";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { spaceChannelName } from "@/lib/supabase/channels";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
+import { useSpaceBroadcast } from "./realtime-context";
 import { displayName, useSpace } from "./space-context";
 
 const SENT_FEEDBACK_MS = 2400;
@@ -21,7 +20,7 @@ const SENT_FEEDBACK_MS = 2400;
 // 마지막으로 받은 시각을 버튼 바로 아래 손글씨로 상시 보여준다.
 export function TouchHero() {
   const trpc = useTRPC();
-  const { spaceId, currentUserId, summary } = useSpace();
+  const { currentUserId, summary } = useSpace();
   const hydrated = useHydrated();
   const now = useNow();
   const partnerName = displayName(summary.partner, "상대");
@@ -43,19 +42,9 @@ export function TouchHero() {
     return () => clearTimeout(id);
   }, [justSent]);
 
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(spaceChannelName(spaceId))
-      .on("broadcast", { event: "touch" }, (msg) => {
-        const { senderId, createdAt } = msg.payload as { senderId: string; createdAt: string };
-        if (senderId !== currentUserId) setLastReceivedAt(new Date(createdAt));
-      })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [spaceId, currentUserId]);
+  useSpaceBroadcast<{ senderId: string; createdAt: string }>("touch", ({ senderId, createdAt }) => {
+    if (senderId !== currentUserId) setLastReceivedAt(new Date(createdAt));
+  });
 
   return (
     <section aria-label="생각하고 있어요 보내기" className="mt-6 px-4">

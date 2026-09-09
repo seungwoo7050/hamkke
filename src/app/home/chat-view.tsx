@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { inferRouterOutputs } from "@trpc/server";
 import { ArrowUp, Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
@@ -11,12 +10,11 @@ import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { josa } from "@/lib/josa";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { spaceChannelName } from "@/lib/supabase/channels";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
+import { useSpaceBroadcast, useSpaceRealtime } from "./realtime-context";
 import { displayName, useSpace } from "./space-context";
 
 type ChatMessage = inferRouterOutputs<AppRouter>["chat"]["list"]["messages"][number];
@@ -78,12 +76,10 @@ function normalizeBroadcastMessage(payload: ChatMessage): ChatMessage {
 }
 
 export function ChatView({
-  spaceId,
   currentUserId,
   initialMessages,
   initialNextCursor,
 }: {
-  spaceId: string;
   currentUserId: string;
   initialMessages: ChatMessage[];
   initialNextCursor?: string;
@@ -92,6 +88,7 @@ export function ChatView({
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const { summary } = useSpace();
+  const { send: sendRealtime, connected: realtimeConnected } = useSpaceRealtime();
   const hydrated = useHydrated();
   const partnerName = displayName(summary.partner, "상대");
   const [messages, setMessages] = useState(initialMessages);
@@ -100,7 +97,6 @@ export function ChatView({
   const [draft, setDraft] = useState("");
   const [partnerTyping, setPartnerTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<RealtimeChannel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -131,53 +127,46 @@ export function ChatView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useSpaceBroadcast<ChatMessage>("message", (payload) => {
+    const message = normalizeBroadcastMessage(payload);
+    setMessages((prev) => mergeById(prev, [message]));
+    if (message.senderId !== currentUserId) markReadMutation.mutate();
+  });
+
+  useSpaceBroadcast<{ readAt: string; readBy: string }>("read", ({ readAt }) => {
+    const readAtDate = new Date(readAt);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.senderId === currentUserId && new Date(m.createdAt) <= readAtDate && !m.readAt
+          ? { ...m, readAt: readAtDate }
+          : m,
+      ),
+    );
+  });
+
+  useSpaceBroadcast<Touch>("touch", (touch) => {
+    setLiveTouches((prev) => [...prev, { ...touch, createdAt: new Date(touch.createdAt) }]);
+  });
+
+  useSpaceBroadcast<{ userId: string }>("typing", ({ userId }) => {
+    if (userId === currentUserId) return;
+    setPartnerTyping(true);
+    if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
+  });
+
+  // 끊겼다 다시 연결되면 그사이 온 메시지가 있을 수 있어 다시 읽음 처리한다.
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase.channel(spaceChannelName(spaceId));
-    channelRef.current = channel;
-
-    channel
-      .on("broadcast", { event: "message" }, (msg) => {
-        const message = normalizeBroadcastMessage(msg.payload as ChatMessage);
-        setMessages((prev) => mergeById(prev, [message]));
-        if (message.senderId !== currentUserId) {
-          markReadMutation.mutate();
-        }
-      })
-      .on("broadcast", { event: "read" }, (msg) => {
-        const { readAt } = msg.payload as { readAt: string; readBy: string };
-        const readAtDate = new Date(readAt);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.senderId === currentUserId && new Date(m.createdAt) <= readAtDate && !m.readAt
-              ? { ...m, readAt: readAtDate }
-              : m,
-          ),
-        );
-      })
-      .on("broadcast", { event: "touch" }, (msg) => {
-        const touch = msg.payload as Touch;
-        setLiveTouches((prev) => [...prev, { ...touch, createdAt: new Date(touch.createdAt) }]);
-      })
-      .on("broadcast", { event: "typing" }, (msg) => {
-        const { userId } = msg.payload as { userId: string };
-        if (userId === currentUserId) return;
-        setPartnerTyping(true);
-        if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
-        typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          markReadMutation.mutate();
-        }
-      });
-
-    return () => {
-      if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
-      supabase.removeChannel(channel);
-    };
+    if (realtimeConnected) markReadMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId, currentUserId]);
+  }, [realtimeConnected]);
+
+  useEffect(
+    () => () => {
+      if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    },
+    [],
+  );
 
   const timeline = useMemo(() => {
     const touches = new Map<string, Touch>();
@@ -318,11 +307,7 @@ export function ChatView({
     const now = Date.now();
     if (now - lastTypingSentAt.current > TYPING_THROTTLE_MS) {
       lastTypingSentAt.current = now;
-      channelRef.current?.send({
-        type: "broadcast",
-        event: "typing",
-        payload: { userId: currentUserId },
-      });
+      sendRealtime("typing", { userId: currentUserId });
     }
   }
 

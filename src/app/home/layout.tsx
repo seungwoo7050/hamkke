@@ -8,6 +8,7 @@ import { AppEffects } from "./app-effects";
 import { BottomNav } from "./bottom-nav";
 import { LocationProvider } from "./location-context";
 import { PresenceProvider } from "./presence-context";
+import { SpaceRealtimeProvider } from "./realtime-context";
 import { SpaceProvider } from "./space-context";
 import { TouchReceived } from "./touch-received";
 
@@ -35,21 +36,22 @@ export default async function HomeLayout({ children }: LayoutProps<"/home">) {
 
   return (
     <SpaceProvider value={{ spaceId: status.spaceId, currentUserId: session.user.id, summary }}>
-      <LocationProvider
-        spaceId={status.spaceId}
-        currentUserId={session.user.id}
-        initialSharing={summary.me.locationSharingEnabled}
-        initialPartnerStatus={partnerStatus}
-      >
-        <PresenceProvider spaceId={status.spaceId} currentUserId={session.user.id}>
-          <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
-            <AppEffects spaceId={status.spaceId} currentUserId={session.user.id} />
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-            <BottomNav />
-          </div>
-          <TouchReceived />
-        </PresenceProvider>
-      </LocationProvider>
+      <SpaceRealtimeProvider spaceId={status.spaceId}>
+        <LocationProvider
+          currentUserId={session.user.id}
+          initialSharing={summary.me.locationSharingEnabled}
+          initialPartnerStatus={partnerStatus}
+        >
+          <PresenceProvider spaceId={status.spaceId} currentUserId={session.user.id}>
+            <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
+              <AppEffects currentUserId={session.user.id} />
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+              <BottomNav />
+            </div>
+            <TouchReceived />
+          </PresenceProvider>
+        </LocationProvider>
+      </SpaceRealtimeProvider>
     </SpaceProvider>
   );
 }

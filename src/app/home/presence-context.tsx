@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { isPartnerPresent, type PresenceState } from "@/lib/presence";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spacePresenceChannelName } from "@/lib/supabase/channels";
 
 const PresenceContext = createContext(false);
@@ -22,7 +22,7 @@ export function PresenceProvider({
   const [partnerPresent, setPartnerPresent] = useState(false);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
     const channel = supabase.channel(spacePresenceChannelName(spaceId), {
       config: { presence: { key: currentUserId } },
     });
@@ -41,7 +41,7 @@ export function PresenceProvider({
 
     return () => {
       document.removeEventListener("visibilitychange", trackVisibility);
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [spaceId, currentUserId]);
 
