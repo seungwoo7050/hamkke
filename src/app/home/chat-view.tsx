@@ -76,18 +76,16 @@ function normalizeBroadcastMessage(payload: ChatMessage): ChatMessage {
 }
 
 export function ChatView({
-  currentUserId,
   initialMessages,
   initialNextCursor,
 }: {
-  currentUserId: string;
   initialMessages: ChatMessage[];
   initialNextCursor?: string;
 }) {
   const trpc = useTRPC();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
-  const { summary } = useSpace();
+  const { currentUserId, summary } = useSpace();
   const { send: sendRealtime, connected: realtimeConnected } = useSpaceRealtime();
   const hydrated = useHydrated();
   const partnerName = displayName(summary.partner, "상대");
