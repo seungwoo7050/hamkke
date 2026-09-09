@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { questionByKey, questionForDateKey, utcDateKey } from "@/lib/daily-question";
 import { Prisma } from "@/generated/prisma/client";
+import { josa } from "@/lib/josa";
 import { prisma } from "@/lib/prisma";
+import { sendPushToSpacePartner } from "@/lib/push";
+import { spaceChannelName } from "@/lib/supabase/channels";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
 
 export const questionRouter = router({
@@ -31,8 +35,9 @@ export const questionRouter = router({
     .input(z.object({ content: z.string().trim().min(1).max(1000) }))
     .mutation(async ({ ctx, input }) => {
       const dateKey = utcDateKey(new Date());
+      let answer;
       try {
-        return await prisma.dailyAnswer.create({
+        answer = await prisma.dailyAnswer.create({
           data: {
             spaceId: ctx.space.id,
             userId: ctx.session.user.id,
@@ -47,6 +52,28 @@ export const questionRouter = router({
         }
         throw error;
       }
+
+      // 상대 화면의 "오늘의 질문" 카드가 바로 "답했어요"로 바뀌게 알린다(내용은
+      // 싣지 않는다 — 상대 답은 상대가 먼저 답해야 열린다, PRD §3.2).
+      const supabase = createSupabaseServerClient();
+      await supabase.channel(spaceChannelName(ctx.space.id)).send({
+        type: "broadcast",
+        event: "question-answered",
+        payload: { userId: ctx.session.user.id, dateKey },
+      });
+
+      // 질문 답변 알림(PRD §3.6). 알림 실패가 답변 저장을 막으면 안 되므로 삼킨다.
+      const me = await prisma.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { name: true },
+      });
+      const name = me?.name?.trim() || "상대방";
+      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+        title: "Hamkke",
+        body: `${josa(name, "이/가")} 오늘의 질문에 답했어요`,
+      }).catch(() => {});
+
+      return answer;
     }),
 
   // "기억 › 지나온"용 — 내가 답한 날만, 최신순. 내가 답한 날이므로 상대 답도

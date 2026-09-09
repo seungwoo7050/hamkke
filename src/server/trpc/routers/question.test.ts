@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { questionForDateKey, utcDateKey } from "@/lib/daily-question";
 import { prisma } from "@/lib/prisma";
 import { createCallerFactory } from "../init";
 import { appRouter } from "./_app";
+
+// 푸시는 실제 FCM 대신 호출 여부·문구만 확인한다(발송 자체는 push 경로의 다른
+// 기능들이 실기기로 검증됨).
+const pushMock = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@/lib/push", () => ({ sendPushToSpacePartner: pushMock }));
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -25,7 +30,9 @@ describe("question 라우터 (통합)", () => {
 
   beforeEach(async () => {
     const [a, b] = await Promise.all([
-      prisma.user.create({ data: { email: `test-question-a-${randomUUID()}@example.com` } }),
+      prisma.user.create({
+        data: { email: `test-question-a-${randomUUID()}@example.com`, name: "민준" },
+      }),
       prisma.user.create({ data: { email: `test-question-b-${randomUUID()}@example.com` } }),
     ]);
     userAId = a.id;
@@ -108,5 +115,21 @@ describe("question 라우터 (통합)", () => {
     expect(history[0].partnerAnswer).toBeNull();
     expect(history[1]).toMatchObject({ myAnswer: "A1", partnerAnswer: "B1" });
     expect(history[1].question?.key).toBe("q001");
+  });
+
+  it("답하면 상대에게 내용 없이 '답했어요' 푸시를 보낸다", async () => {
+    pushMock.mockClear();
+    await (await callerFor(userAId)).question.answer({ content: "비밀스러운 답" });
+
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    const [calledSpaceId, excludeUserId, notification] = pushMock.mock.calls[0] as unknown as [
+      string,
+      string,
+      { body: string },
+    ];
+    expect(calledSpaceId).toBe(spaceId);
+    expect(excludeUserId).toBe(userAId);
+    expect(notification.body).toBe("민준이 오늘의 질문에 답했어요");
+    expect(notification.body).not.toContain("비밀스러운 답");
   });
 });

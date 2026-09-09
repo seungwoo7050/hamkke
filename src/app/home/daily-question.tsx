@@ -16,10 +16,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { josa } from "@/lib/josa";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Section } from "./memories/section";
+import { useSpaceBroadcast } from "./realtime-context";
 import { displayName, useSpace } from "./space-context";
 
 export function useTodayQuestion() {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { currentUserId } = useSpace();
+  // 상대가 답하면 카드 문구("답했어요")와 열린 시트의 상대 답이 바로 바뀌게.
+  useSpaceBroadcast<{ userId: string }>("question-answered", ({ userId }) => {
+    if (userId === currentUserId) return;
+    void queryClient.invalidateQueries(trpc.question.today.queryFilter());
+    void queryClient.invalidateQueries(trpc.question.history.queryFilter());
+  });
   return useQuery(trpc.question.today.queryOptions());
 }
 
