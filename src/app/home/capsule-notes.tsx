@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { josa } from "@/lib/josa";
-import { useHydrated } from "@/lib/use-hydrated";
+import { formatDateTime } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
-import { displayName, useSpace } from "./space-context";
+import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
 function toLocalInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -25,15 +25,6 @@ function defaultDeliverAt() {
   return toLocalInputValue(d);
 }
 
-function formatDeliverAt(date: Date) {
-  return date.toLocaleString("ko-KR", {
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 // 예약 메시지(PRD.md §3.4). deliverAt 전에는 발신자 본인만 내용을 볼 수
 // 있고, 수신자에게는 잠긴 상태로만 보인다. 기억 탭에서 "다가올"(아직 안
 // 열림)과 "지나온"(열림) 두 곳에 나눠 보여주므로 같은 목록 쿼리를 공유한다.
@@ -44,7 +35,7 @@ function useCapsules() {
 
 export function UpcomingCapsules() {
   const trpc = useTRPC();
-  const hydrated = useHydrated();
+  const myTz = useMyTimeZone();
   const { currentUserId, summary } = useSpace();
   const partnerName = displayName(summary.partner, "상대");
   const listQuery = useCapsules();
@@ -61,7 +52,7 @@ export function UpcomingCapsules() {
       addTitle="캡슐 예약하기"
       renderAdd={(close) => <CapsuleForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {!hydrated ? null : waiting.length === 0 ? (
+      {waiting.length === 0 ? (
         <EmptyRow>
           정해둔 날에 열리는 편지를 {josa(partnerName, "이/가")} 받게 할 수 있어요
         </EmptyRow>
@@ -73,7 +64,7 @@ export function UpcomingCapsules() {
               key={capsule.id}
               icon={<Lock className="text-dusk-ink size-5" />}
               title={mine ? `${partnerName}에게 보낸 편지` : `${partnerName}의 편지`}
-              sub={`${formatDeliverAt(new Date(capsule.deliverAt))}에 열려요`}
+              sub={`${formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false })}에 열려요`}
               end={
                 mine && (
                   <Button
@@ -97,7 +88,7 @@ export function UpcomingCapsules() {
 }
 
 export function OpenedCapsules() {
-  const hydrated = useHydrated();
+  const myTz = useMyTimeZone();
   const { currentUserId, summary } = useSpace();
   const partnerName = displayName(summary.partner, "상대");
   const listQuery = useCapsules();
@@ -107,7 +98,7 @@ export function OpenedCapsules() {
     .filter((c) => new Date(c.deliverAt) <= now && c.content !== null)
     .reverse();
 
-  if (!hydrated || opened.length === 0) return null;
+  if (opened.length === 0) return null;
 
   return (
     <Section title="열린 캡슐">
@@ -118,7 +109,8 @@ export function OpenedCapsules() {
               <Mail className="size-4" />
               {capsule.senderId === currentUserId
                 ? `${partnerName}에게`
-                : `${partnerName}로부터`} · {formatDeliverAt(new Date(capsule.deliverAt))}
+                : `${partnerName}로부터`} ·{" "}
+              {formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false })}
             </p>
             {/* DESIGN.md §3.2: 캡슐 노트는 손글씨 폰트가 허용되는 감정적 순간 */}
             <p className="text-foreground font-handwritten mt-1 text-lg leading-snug">

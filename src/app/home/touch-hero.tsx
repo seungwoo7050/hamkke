@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { josa } from "@/lib/josa";
 import { relativeTimeAdverb } from "@/lib/relative-time";
-import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { useSpaceBroadcast } from "./realtime-context";
@@ -21,7 +20,6 @@ const SENT_FEEDBACK_MS = 2400;
 export function TouchHero() {
   const trpc = useTRPC();
   const { currentUserId, summary } = useSpace();
-  const hydrated = useHydrated();
   const now = useNow();
   const partnerName = displayName(summary.partner, "상대");
   const [lastReceivedAt, setLastReceivedAt] = useState<Date | null>(
@@ -59,10 +57,9 @@ export function TouchHero() {
         {justSent ? `${partnerName}에게 전했어요` : "생각하고 있어요"}
       </Button>
       <p className="font-handwritten text-dusk-ink mt-2.5 min-h-7 text-lg">
-        {hydrated &&
-          (lastReceivedAt
-            ? `${relativeTimeAdverb(lastReceivedAt, now)} ${josa(partnerName, "이/가")} 생각해줬어요`
-            : `생각날 때 눌러보세요. ${partnerName}에게 바로 닿아요`)}
+        {lastReceivedAt
+          ? `${relativeTimeAdverb(lastReceivedAt, now)} ${josa(partnerName, "이/가")} 생각해줬어요`
+          : `생각날 때 눌러보세요. ${partnerName}에게 바로 닿아요`}
       </p>
     </section>
   );

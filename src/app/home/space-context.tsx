@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 
 export type HomeSummary = inferRouterOutputs<AppRouter>["home"]["summary"];
@@ -38,3 +39,18 @@ export function useSpace() {
 export function displayName(person: { name: string | null } | null, fallback: string) {
   return person?.name?.trim() || fallback;
 }
+
+/**
+ * 내 시각 문구에 쓸 시간대. 서버 렌더와 첫 클라이언트 렌더는 프로필에 저장된
+ * 값(브라우저가 동기화해 둔 것)을 써서 둘이 같은 글자를 내고, 하이드레이션 뒤엔
+ * 지금 이 브라우저의 실제 시간대로 바꾼다(여행 중이면 여기서 한 번 다시 그려짐).
+ */
+export function useMyTimeZone() {
+  const { summary } = useSpace();
+  const hydrated = useHydrated();
+  if (hydrated) return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return summary.me.timezone ?? DEFAULT_TIME_ZONE;
+}
+
+// 프로필 시간대가 아직 없을 때(가입 직후 첫 화면)의 기본값 — 한국어 앱의 주 사용자 기준.
+export const DEFAULT_TIME_ZONE = "Asia/Seoul";

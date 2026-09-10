@@ -6,11 +6,11 @@ import { Calendar, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useHydrated } from "@/lib/use-hydrated";
+import { daysBetween, formatDateTime, formatTime, todayIn, weekdayOf } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Row, Section } from "./memories/section";
-import { displayName, useSpace } from "./space-context";
+import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
 // datetime-local input은 "YYYY-MM-DDTHH:mm"를 로컬 시간 기준으로 받는다
 // (toISOString()은 UTC라 그대로 쓰면 시간대만큼 어긋난다).
@@ -26,33 +26,19 @@ function hoursFromNow(h: number) {
   return toLocalInputValue(d);
 }
 
-function formatMine(date: Date) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
-
 // 상대 쪽은 시각만 — 날짜가 내 쪽과 달라질 때만 요일을 붙인다(한 줄에 담기게).
-function formatPartner(date: Date, timeZone: string) {
-  const day = (tz?: string) =>
-    new Intl.DateTimeFormat("ko-KR", { timeZone: tz, weekday: "short" }).format(date);
-  const time = new Intl.DateTimeFormat("ko-KR", {
-    timeZone,
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-  return day() === day(timeZone) ? time : `${day(timeZone)} ${time}`;
+function formatPartner(date: Date, myTz: string, partnerTz: string) {
+  const mine = todayIn(myTz, date);
+  const theirs = todayIn(partnerTz, date);
+  const time = formatTime(date, partnerTz);
+  return daysBetween(mine, theirs) === 0 ? time : `${weekdayOf(theirs)} ${time}`;
 }
 
 // 달력 그리드 대신 다가오는 순 리스트로 단순화했다(PRD.md §3.4 범위).
 // 같은 일정을 두 사람 시간대로 나란히 보여준다 — "양쪽 시간대 자동 변환".
 export function CalendarView() {
   const trpc = useTRPC();
-  const hydrated = useHydrated();
+  const myTz = useMyTimeZone();
   const { summary } = useSpace();
   const partnerTz = summary.partner?.timezone ?? null;
   const partnerName = displayName(summary.partner, "상대");
@@ -74,15 +60,15 @@ export function CalendarView() {
       addTitle="일정 추가"
       renderAdd={(close) => <CalendarForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {!hydrated ? null : upcoming.length === 0 ? (
+      {upcoming.length === 0 ? (
         <EmptyRow>영상통화 데이트 같은 약속을 잡아보세요</EmptyRow>
       ) : (
         upcoming.map((event) => {
           const start = new Date(event.startAt);
-          const mine = formatMine(start);
+          const mine = formatDateTime(start, myTz);
           const theirs =
-            partnerTz && partnerTz !== Intl.DateTimeFormat().resolvedOptions().timeZone
-              ? ` · ${partnerName} ${formatPartner(start, partnerTz)}`
+            partnerTz && partnerTz !== myTz
+              ? ` · ${partnerName} ${formatPartner(start, myTz, partnerTz)}`
               : "";
           return (
             <Row

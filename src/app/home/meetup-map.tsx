@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { dateOnly, formatYMD } from "@/lib/datetime";
 import { emberMarkerIcon } from "@/lib/map-markers";
 
 const DEFAULT_CENTER: [number, number] = [36.5, 127.8];
@@ -33,7 +34,7 @@ export function MeetupMap({ pins }: { pins: Pin[] }) {
       {pins.map((pin) => (
         <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={emberMarkerIcon}>
           <Popup>
-            {pin.label} · {new Date(pin.date).toLocaleDateString("ko-KR")}
+            {pin.label} · {formatYMD(dateOnly(pin.date), { year: true })}
           </Popup>
         </Marker>
       ))}

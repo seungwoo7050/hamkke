@@ -10,12 +10,13 @@ import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { josa } from "@/lib/josa";
-import { useHydrated } from "@/lib/use-hydrated";
+import { daysBetween, formatDayLabel, formatTime, todayIn } from "@/lib/datetime";
+import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
 import { useSpaceBroadcast, useSpaceRealtime } from "./realtime-context";
-import { displayName, useSpace } from "./space-context";
+import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
 type ChatMessage = inferRouterOutputs<AppRouter>["chat"]["list"]["messages"][number];
 type Touch = inferRouterOutputs<AppRouter>["touch"]["list"][number];
@@ -24,19 +25,6 @@ type TimelineItem =
 
 // 메시지가 하나도 없을 때 터치를 얼마나 거슬러 보여줄지.
 const EMPTY_CHAT_TOUCH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-function dayLabel(date: Date) {
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return "오늘";
-  if (date.toDateString() === yesterday.toDateString()) return "어제";
-  return date.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-}
-
-function timeLabel(date: Date) {
-  return date.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
-}
 
 const TYPING_THROTTLE_MS = 2000;
 const TYPING_CLEAR_MS = 3000;
@@ -87,7 +75,8 @@ export function ChatView({
   const queryClient = useQueryClient();
   const { currentUserId, summary } = useSpace();
   const { send: sendRealtime, connected: realtimeConnected } = useSpaceRealtime();
-  const hydrated = useHydrated();
+  const myTz = useMyTimeZone();
+  const now = useNow();
   const partnerName = displayName(summary.partner, "상대");
   const [messages, setMessages] = useState(initialMessages);
   const [olderCursor, setOlderCursor] = useState(initialNextCursor);
@@ -345,10 +334,10 @@ export function ChatView({
         )}
         {timeline.map((item, i) => {
           const prev = timeline[i - 1];
-          const newDay = !prev || prev.at.toDateString() !== item.at.toDateString();
+          const newDay = !prev || daysBetween(todayIn(myTz, prev.at), todayIn(myTz, item.at)) !== 0;
           const divider = newDay && (
             <p className="text-muted-foreground my-1 min-h-4 text-center text-xs">
-              {hydrated && dayLabel(item.at)}
+              {formatDayLabel(item.at, myTz, now)}
             </p>
           );
 
@@ -362,7 +351,7 @@ export function ChatView({
                   {fromMe
                     ? "생각하고 있다고 전했어요"
                     : `${josa(partnerName, "이/가")} 생각하고 있어요`}
-                  {hydrated && <span className="text-base">· {timeLabel(item.at)}</span>}
+                  <span className="text-base">· {formatTime(item.at, myTz)}</span>
                 </p>
               </div>
             );

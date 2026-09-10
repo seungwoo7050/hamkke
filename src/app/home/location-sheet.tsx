@@ -6,7 +6,6 @@ import { EmptyState } from "@/components/brand/empty-state";
 import { formatDistanceKm } from "@/lib/geo";
 import { josa } from "@/lib/josa";
 import { relativeTime } from "@/lib/relative-time";
-import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
 import {
   Drawer,
@@ -33,7 +32,6 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
   const { summary } = useSpace();
   const { me, sharing, partnerSharing, partnerLocation } = useLocationSharing();
   const { km, approaching, meetingSoon } = useDistance();
-  const hydrated = useHydrated();
   const now = useNow();
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[1]);
   const partnerName = displayName(summary.partner, "상대");
@@ -50,7 +48,6 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
       : [
           km !== null && formatDistanceKm(km),
           partnerLocation &&
-            hydrated &&
             `마지막 위치 ${relativeTime(new Date(partnerLocation.capturedAt), now)}`,
         ]
           .filter(Boolean)

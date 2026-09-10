@@ -5,10 +5,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Hourglass, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { daysUntil } from "@/lib/anniversary";
-import { useHydrated } from "@/lib/use-hydrated";
+import { dateOnly, daysBetween, formatYMD, todayIn } from "@/lib/datetime";
+import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Row, Section } from "./memories/section";
+import { useMyTimeZone } from "./space-context";
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -23,7 +24,8 @@ export function formatDday(days: number) {
 // (DESIGN.md §2 M3 Expressive 크기 대비), 나머지는 작은 줄로.
 export function CountdownTracker() {
   const trpc = useTRPC();
-  const hydrated = useHydrated();
+  const myTz = useMyTimeZone();
+  const now = useNow();
   const listQuery = useQuery(trpc.countdown.list.queryOptions());
   const deleteMutation = useMutation(
     trpc.countdown.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
@@ -31,12 +33,15 @@ export function CountdownTracker() {
 
   const upcoming = useMemo(() => {
     if (!listQuery.data) return [];
-    const now = new Date();
+    const today = todayIn(myTz, now);
     return listQuery.data
-      .map((c) => ({ ...c, days: daysUntil(new Date(c.targetDate), now) }))
+      .map((c) => {
+        const target = dateOnly(c.targetDate);
+        return { ...c, target, days: daysBetween(today, target) };
+      })
       .filter((c) => c.days >= 0)
       .sort((a, b) => a.days - b.days);
-  }, [listQuery.data]);
+  }, [listQuery.data, myTz, now]);
 
   const [next, ...rest] = upcoming;
 
@@ -46,7 +51,7 @@ export function CountdownTracker() {
       addTitle="카운트다운 추가"
       renderAdd={(close) => <CountdownForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {next && hydrated ? (
+      {next ? (
         <div className="bg-sky-dusk rounded-xl p-5">
           <p className="text-dusk-ink text-sm font-medium">{next.title}</p>
           <p className="text-foreground mt-1 text-5xl font-bold tracking-tight">
@@ -54,11 +59,7 @@ export function CountdownTracker() {
           </p>
           <div className="mt-1 flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
-              {new Date(next.targetDate).toLocaleDateString("ko-KR", {
-                month: "long",
-                day: "numeric",
-                weekday: "short",
-              })}
+              {formatYMD(next.target, { weekday: true })}
             </p>
             <Button
               type="button"
@@ -75,29 +76,28 @@ export function CountdownTracker() {
       ) : (
         <EmptyRow>다음에 만나는 날을 정해두면 여기서 세어줄게요</EmptyRow>
       )}
-      {hydrated &&
-        rest.map((c) => (
-          <Row
-            key={c.id}
-            icon={<Hourglass className="text-dusk-ink size-5" />}
-            title={c.title}
-            end={
-              <>
-                <span className="text-dusk-ink text-sm font-semibold">{formatDday(c.days)}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`${c.title} 삭제`}
-                  className="text-muted-foreground"
-                  onClick={() => deleteMutation.mutate({ id: c.id })}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </>
-            }
-          />
-        ))}
+      {rest.map((c) => (
+        <Row
+          key={c.id}
+          icon={<Hourglass className="text-dusk-ink size-5" />}
+          title={c.title}
+          end={
+            <>
+              <span className="text-dusk-ink text-sm font-semibold">{formatDday(c.days)}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`${c.title} 삭제`}
+                className="text-muted-foreground"
+                onClick={() => deleteMutation.mutate({ id: c.id })}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </>
+          }
+        />
+      ))}
     </Section>
   );
 }

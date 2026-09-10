@@ -4,15 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, ChevronRight, Gift, Mail, MessageCircleQuestion } from "lucide-react";
-import { daysUntil, nextOccurrence } from "@/lib/anniversary";
+import { dateOnly, daysBetween, nextOccurrence, todayIn } from "@/lib/datetime";
 import { selectContextCards, type ContextCard } from "@/lib/context-cards";
 import { josa } from "@/lib/josa";
-import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { formatDday } from "./countdown-tracker";
 import { QuestionSheet, useTodayQuestion } from "./daily-question";
-import { displayName, useSpace } from "./space-context";
+import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
 // 캡슐이 "새로 도착했다"고 보여줄 기간 — 그 뒤엔 기억 › 지나온에만 남는다.
 const CAPSULE_FRESH_MS = 24 * 60 * 60 * 1000;
@@ -46,7 +45,7 @@ function Card({ href, ...body }: { href: string } & React.ComponentProps<typeof 
 export function ContextCards() {
   const trpc = useTRPC();
   const { currentUserId, summary } = useSpace();
-  const hydrated = useHydrated();
+  const myTz = useMyTimeZone();
   const now = useNow();
   const partnerName = displayName(summary.partner, "상대");
 
@@ -57,8 +56,9 @@ export function ContextCards() {
   const [questionOpen, setQuestionOpen] = useState(false);
 
   const cards = useMemo(() => {
+    const today = todayIn(myTz, now);
     const todayAnniversaries = (anniversaries.data ?? [])
-      .filter((a) => daysUntil(nextOccurrence(new Date(a.date), a.recurring, now), now) === 0)
+      .filter((a) => daysBetween(today, nextOccurrence(dateOnly(a.date), a.recurring, today)) === 0)
       .map((a) => a.title);
     const arrivedCapsules = (capsules.data ?? []).filter(
       (c) =>
@@ -68,7 +68,7 @@ export function ContextCards() {
     ).length;
     const nextCountdown =
       (countdowns.data ?? [])
-        .map((c) => ({ title: c.title, days: daysUntil(new Date(c.targetDate), now) }))
+        .map((c) => ({ title: c.title, days: daysBetween(today, dateOnly(c.targetDate)) }))
         .filter((c) => c.days >= 0)
         .sort((a, b) => a.days - b.days)[0] ?? null;
 
@@ -81,10 +81,10 @@ export function ContextCards() {
           : null,
       nextCountdown,
     });
-  }, [anniversaries.data, capsules.data, countdowns.data, question.data, currentUserId, now]);
+  }, [anniversaries.data, capsules.data, countdowns.data, question.data, currentUserId, now, myTz]);
 
   const sheet = <QuestionSheet open={questionOpen} onOpenChange={setQuestionOpen} />;
-  if (!hydrated || cards.length === 0) return sheet;
+  if (cards.length === 0) return sheet;
 
   function render(card: ContextCard) {
     switch (card.kind) {

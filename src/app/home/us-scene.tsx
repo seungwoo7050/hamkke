@@ -4,15 +4,15 @@ import { Moon } from "lucide-react";
 import { cn } from "cn";
 import { Wordmark } from "@/components/brand/wordmark";
 import { formatDistanceKm } from "@/lib/geo";
+import { formatTime } from "@/lib/datetime";
 import { skyPhase, type SkyPhase } from "@/lib/sky";
 import { isLikelySleeping } from "@/lib/timezone";
-import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
 import { isRainOrSnowCode, WeatherIcon } from "@/lib/weather-codes";
 import { useDistance } from "./location-context";
 import { LocationSheet } from "./location-sheet";
 import { usePartnerPresent } from "./presence-context";
-import { displayName, useSpace, type HomeSummary } from "./space-context";
+import { displayName, useMyTimeZone, useSpace, type HomeSummary } from "./space-context";
 
 type Weather = HomeSummary["me"]["weather"];
 
@@ -22,12 +22,6 @@ const SKY_CLASS: Record<SkyPhase, string> = {
   dusk: "bg-sky-dusk text-foreground",
   night: "bg-sky-night text-zinc-50",
 };
-
-function formatTime(timeZone: string, now: Date) {
-  return new Intl.DateTimeFormat("ko-KR", { timeZone, hour: "numeric", minute: "2-digit" }).format(
-    now,
-  );
-}
 
 function Side({
   label,
@@ -45,11 +39,10 @@ function Side({
   present?: boolean;
   className?: string;
 }) {
-  const hydrated = useHydrated();
   const sleeping = timeZone ? isLikelySleeping(timeZone, now) : false;
   // 두 사람의 하늘이 다르다는 것 자체가 시차의 시각화다(Calm Technology —
   // 숫자를 읽지 않아도 느껴지게). 시간대를 모르거나 하이드레이션 전엔 중립색.
-  const sky = hydrated && timeZone ? SKY_CLASS[skyPhase(timeZone, now)] : "bg-muted";
+  const sky = timeZone ? SKY_CLASS[skyPhase(timeZone, now)] : "bg-muted";
 
   return (
     <div
@@ -69,7 +62,7 @@ function Side({
         )}
       </span>
       <span className="mt-1 min-h-9 text-3xl font-bold tracking-tight">
-        {timeZone && hydrated ? formatTime(timeZone, now) : null}
+        {timeZone ? formatTime(now, timeZone) : null}
       </span>
       {weather && (
         <span className="flex items-center gap-1 text-sm opacity-85">
@@ -77,7 +70,7 @@ function Side({
           {Math.round(weather.temperatureC)}°
         </span>
       )}
-      {hydrated && sleeping && (
+      {sleeping && (
         <span className="mt-2 flex items-center gap-1 text-sm font-medium">
           <Moon className="size-4" /> 자고 있을 시간
         </span>
@@ -119,13 +112,10 @@ export function UsScene() {
   const { summary } = useSpace();
   const { km, approaching, meetingSoon } = useDistance();
   const partnerPresent = usePartnerPresent();
-  const hydrated = useHydrated();
   const now = useNow(30_000);
   const partnerName = displayName(summary.partner, "상대");
   // 내 시간대는 서버 저장값보다 지금 이 브라우저가 아는 값이 더 정확하다.
-  const myTz = hydrated
-    ? Intl.DateTimeFormat().resolvedOptions().timeZone
-    : (summary.me.timezone ?? null);
+  const myTz = useMyTimeZone();
 
   const bothRainy =
     !!summary.me.weather &&

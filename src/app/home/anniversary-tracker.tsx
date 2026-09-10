@@ -6,22 +6,24 @@ import { Gift, Heart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { daysUntil, nextOccurrence } from "@/lib/anniversary";
-import { useHydrated } from "@/lib/use-hydrated";
+import { dateOnly, daysBetween, formatYMD, nextOccurrence, todayIn } from "@/lib/datetime";
+import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { formatDday } from "./countdown-tracker";
 import { EmptyRow, Row, Section } from "./memories/section";
+import { useMyTimeZone } from "./space-context";
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
 // 정확한 시각 push 스케줄러가 아직 없어(docs/COMMIT_PLAN.md Phase 4 각주)
-// "다가오는 기념일"은 매 렌더링마다 클라이언트의 로컬 오늘 기준으로 다시
-// 계산한다(src/lib/anniversary.ts). 지난 단발 기념일은 "다가올"에서 뺀다.
+// "다가오는 기념일"은 매 렌더링마다 내 시간대의 오늘 기준으로 다시
+// 계산한다(src/lib/datetime.ts). 지난 단발 기념일은 "다가올"에서 뺀다.
 export function AnniversaryTracker() {
   const trpc = useTRPC();
-  const hydrated = useHydrated();
+  const myTz = useMyTimeZone();
+  const now = useNow();
   const listQuery = useQuery(trpc.anniversary.list.queryOptions());
   const deleteMutation = useMutation(
     trpc.anniversary.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
@@ -29,15 +31,15 @@ export function AnniversaryTracker() {
 
   const sorted = useMemo(() => {
     if (!listQuery.data) return [];
-    const now = new Date();
+    const today = todayIn(myTz, now);
     return [...listQuery.data]
       .map((a) => {
-        const occurrence = nextOccurrence(new Date(a.date), a.recurring, now);
-        return { ...a, occurrence, days: daysUntil(occurrence, now) };
+        const occurrence = nextOccurrence(dateOnly(a.date), a.recurring, today);
+        return { ...a, occurrence, days: daysBetween(today, occurrence) };
       })
       .filter((a) => a.days >= 0)
       .sort((a, b) => a.days - b.days);
-  }, [listQuery.data]);
+  }, [listQuery.data, myTz, now]);
 
   return (
     <Section
@@ -47,7 +49,7 @@ export function AnniversaryTracker() {
         <AnniversaryForm onDone={close} onCreated={() => listQuery.refetch()} />
       )}
     >
-      {!hydrated ? null : sorted.length === 0 ? (
+      {sorted.length === 0 ? (
         <EmptyRow>처음 만난 날, 생일 같은 날을 적어두세요</EmptyRow>
       ) : (
         sorted.map((a) => (
@@ -61,7 +63,7 @@ export function AnniversaryTracker() {
               )
             }
             title={a.title}
-            sub={`${a.occurrence.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}${a.recurring ? " · 매년" : ""}`}
+            sub={`${formatYMD(a.occurrence)}${a.recurring ? " · 매년" : ""}`}
             end={
               <>
                 <span className="text-dusk-ink text-sm font-semibold">{formatDday(a.days)}</span>

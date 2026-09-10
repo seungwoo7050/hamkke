@@ -7,7 +7,7 @@ import { MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useHydrated } from "@/lib/use-hydrated";
+import { dateOnly, formatYMD } from "@/lib/datetime";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
@@ -21,7 +21,6 @@ function todayInputValue() {
 // 실제로 같이 만났던 장소를 지도 핀 + 타임라인으로 기록한다(PRD.md §3.3).
 export function MeetupTimeline() {
   const trpc = useTRPC();
-  const hydrated = useHydrated();
   const listQuery = useQuery(trpc.meetup.list.queryOptions());
   const deleteMutation = useMutation(
     trpc.meetup.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
@@ -42,31 +41,26 @@ export function MeetupTimeline() {
             <MeetupMap pins={pins} />
           </div>
           <div className="mt-2">
-            {hydrated &&
-              pins.map((pin) => (
-                <Row
-                  key={pin.id}
-                  icon={<MapPin className="text-ember size-5" />}
-                  title={pin.label}
-                  sub={new Date(pin.date).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                  end={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`${pin.label} 삭제`}
-                      className="text-muted-foreground"
-                      onClick={() => deleteMutation.mutate({ id: pin.id })}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  }
-                />
-              ))}
+            {pins.map((pin) => (
+              <Row
+                key={pin.id}
+                icon={<MapPin className="text-ember size-5" />}
+                title={pin.label}
+                sub={formatYMD(dateOnly(pin.date), { year: true })}
+                end={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`${pin.label} 삭제`}
+                    className="text-muted-foreground"
+                    onClick={() => deleteMutation.mutate({ id: pin.id })}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                }
+              />
+            ))}
           </div>
         </>
       )}
