@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Crown } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { isNearLimit } from "@/lib/plan-usage";
 import { useTRPC } from "@/trpc/client";
 
 // 구독 시작은 Checkout, 해지/결제수단 변경은 Customer Portal로 위임한다
@@ -12,6 +13,7 @@ import { useTRPC } from "@/trpc/client";
 export function BillingSection() {
   const trpc = useTRPC();
   const { data: subscription } = useQuery(trpc.billing.status.queryOptions());
+  const { data: usage } = useQuery(trpc.billing.usage.queryOptions());
   const checkoutMutation = useMutation(
     trpc.billing.createCheckoutSession.mutationOptions({
       onSuccess: ({ url }) => {
@@ -32,35 +34,64 @@ export function BillingSection() {
   const premium = subscription?.status === "active";
 
   return (
-    <div className="flex items-center gap-3 py-3">
-      <Crown className="text-dusk-ink size-5" />
-      <div className="flex-1">
-        <p className="text-foreground text-base font-medium">
-          {premium ? "Hamkke Premium" : "무료 플랜"}
-        </p>
-        <p className="text-muted-foreground text-sm">
-          {premium ? "두 사람 모두 프리미엄 혜택을 받고 있어요" : "사진·캡슐·만남 지도 한도 있음"}
-        </p>
+    <div className="py-3">
+      <div className="flex items-center gap-3">
+        <Crown className="text-dusk-ink size-5" />
+        <div className="flex-1">
+          <p className="text-foreground text-base font-medium">
+            {premium ? "Hamkke Premium" : "무료 플랜"}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {premium
+              ? "두 사람 모두 프리미엄 혜택을 받고 있어요"
+              : "프리미엄이면 전부 무제한이에요"}
+          </p>
+        </div>
+        {premium ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => portalMutation.mutate()}
+            disabled={portalMutation.isPending}
+          >
+            구독 관리
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => checkoutMutation.mutate()}
+            disabled={checkoutMutation.isPending}
+          >
+            프리미엄
+          </Button>
+        )}
       </div>
-      {premium ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => portalMutation.mutate()}
-          disabled={portalMutation.isPending}
-        >
-          구독 관리
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => checkoutMutation.mutate()}
-          disabled={checkoutMutation.isPending}
-        >
-          프리미엄
-        </Button>
+      {!premium && usage && !usage.premium && (
+        // 한도에 부딪힌 뒤 토스트로 알던 걸 미리 보이게(PRD §3.5). 한도 근처면
+        // 숫자만 ember로 — 경고 배너 대신 조용하게.
+        <dl className="mt-3 ml-8 flex flex-col gap-2">
+          {usage.items.map((item) => {
+            const near = isNearLimit(item);
+            return (
+              <div key={item.key} className="flex flex-col gap-1">
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted-foreground">{item.label}</dt>
+                  <dd className={near ? "text-primary font-semibold" : "text-foreground"}>
+                    {item.used}/{item.limit}
+                  </dd>
+                </div>
+                <div className="bg-muted h-1 overflow-hidden rounded-full" aria-hidden>
+                  <div
+                    className={`duration-slow ease-standard h-full rounded-full transition-[width] ${near ? "bg-primary" : "bg-dusk-ink/50"}`}
+                    style={{ width: `${Math.min(100, (item.used / item.limit) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </dl>
       )}
     </div>
   );
