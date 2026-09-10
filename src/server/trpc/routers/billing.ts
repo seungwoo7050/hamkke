@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { router, spaceProcedure } from "../init";
@@ -8,6 +9,40 @@ export const billingRouter = router({
   status: spaceProcedure.query(({ ctx }) =>
     prisma.subscription.findUnique({ where: { spaceId: ctx.space.id } }),
   ),
+
+  // 무료 한도 대비 현재 사용량(PRD §3.5 "요금제 사용량 표시"). 세는 방식은 각
+  // 기능의 게이팅과 같다 — 사진은 전체 수, 캡슐은 아직 안 열린(예약 중) 수,
+  // 만남 지도는 전체 핀 수(한도를 넘으면 오래된 것부터 정리됨). 프리미엄이면
+  // 한도가 없으므로 items는 비운다.
+  usage: spaceProcedure.query(async ({ ctx }) => {
+    if (await isPremiumSpace(ctx.space.id)) return { premium: true as const, items: [] };
+
+    const spaceId = ctx.space.id;
+    const [moments, activeCapsules, meetupPins] = await Promise.all([
+      prisma.moment.count({ where: { spaceId } }),
+      prisma.capsule.count({ where: { spaceId, deliveredAt: null } }),
+      prisma.meetupPin.count({ where: { spaceId } }),
+    ]);
+
+    return {
+      premium: false as const,
+      items: [
+        { key: "moments" as const, label: "사진", used: moments, limit: FREE_TIER_LIMITS.moments },
+        {
+          key: "activeCapsules" as const,
+          label: "예약 캡슐",
+          used: activeCapsules,
+          limit: FREE_TIER_LIMITS.activeCapsules,
+        },
+        {
+          key: "meetupPins" as const,
+          label: "만남 지도",
+          used: meetupPins,
+          limit: FREE_TIER_LIMITS.meetupPins,
+        },
+      ],
+    };
+  }),
 
   createCheckoutSession: spaceProcedure.mutation(async ({ ctx }) => {
     const existing = await prisma.subscription.findUnique({ where: { spaceId: ctx.space.id } });
