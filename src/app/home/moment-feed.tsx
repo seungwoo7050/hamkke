@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Section } from "./memories/section";
+import { UpgradeHint } from "./upgrade-hint";
 import { displayName, useSpace } from "./space-context";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
@@ -166,6 +167,7 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
 
   return (
     <div className="flex flex-col gap-3">
+      <UpgradeHint usageKey="moments" />
       <input
         ref={fileInputRef}
         type="file"

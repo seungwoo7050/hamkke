@@ -11,6 +11,7 @@ import { useHydrated } from "@/lib/use-hydrated";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Row, Section } from "./memories/section";
+import { UpgradeHint } from "./upgrade-hint";
 import { displayName, useSpace } from "./space-context";
 
 function toLocalInputValue(d: Date) {
@@ -156,6 +157,7 @@ function CapsuleForm({ onDone, onCreated }: { onDone: () => void; onCreated: () 
         });
       }}
     >
+      <UpgradeHint usageKey="activeCapsules" />
       <Input
         value={content}
         onChange={(e) => setContent(e.target.value)}

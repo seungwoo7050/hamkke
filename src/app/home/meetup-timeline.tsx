@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, Row, Section } from "./memories/section";
+import { UpgradeHint } from "./upgrade-hint";
 
 const MeetupMap = dynamic(() => import("./meetup-map").then((m) => m.MeetupMap), { ssr: false });
 
@@ -114,6 +115,7 @@ function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
 
   return (
     <div className="flex flex-col gap-3">
+      <UpgradeHint usageKey="meetupPins" />
       <Input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
