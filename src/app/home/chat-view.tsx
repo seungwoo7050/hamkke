@@ -123,7 +123,11 @@ export function ChatView({
     if (message.senderId !== currentUserId) markReadMutation.mutate();
   });
 
-  useSpaceBroadcast<{ readAt: string; readBy: string }>("read", ({ readAt }) => {
+  // 상대가 읽었을 때만 내 메시지에 "읽음"을 단다. 읽음 이벤트는 서버가 REST로
+  // 보내서 읽은 본인에게도 도착하는데, 전에는 readBy를 보지 않아 내가 대화를
+  // 열기만 해도(markRead) 내가 보낸 메시지까지 "읽음"으로 바뀌었다.
+  useSpaceBroadcast<{ readAt: string; readBy: string }>("read", ({ readAt, readBy }) => {
+    if (readBy === currentUserId) return;
     const readAtDate = new Date(readAt);
     setMessages((prev) =>
       prev.map((m) =>
