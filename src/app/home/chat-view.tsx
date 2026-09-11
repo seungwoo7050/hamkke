@@ -17,6 +17,7 @@ import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
+import { VoiceMessage } from "./voice-message";
 import { useSpaceBroadcast, useSpaceRealtime } from "./realtime-context";
 import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
@@ -412,7 +413,7 @@ export function ChatView({
                       className={cn("h-60 w-60 rounded-lg object-cover", corners)}
                     />
                   ) : message.type === "voice" ? (
-                    <audio controls src={message.content} className="h-10 max-w-full" />
+                    <VoiceMessage src={message.content} mine={isMine} className={corners} />
                   ) : (
                     <div
                       className={cn(
