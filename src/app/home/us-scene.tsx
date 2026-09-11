@@ -51,7 +51,7 @@ function Side({
   return (
     <div
       className={cn(
-        "duration-slow ease-standard flex flex-col gap-1 px-4 pt-5 pb-16 transition-colors",
+        "duration-slow ease-standard flex min-h-48 flex-col gap-1 px-4 pt-5 pb-20 transition-colors",
         sky,
         className,
       )}
@@ -65,11 +65,12 @@ function Side({
           </>
         )}
       </span>
-      <span className="mt-1 min-h-9 text-3xl font-bold tracking-tight">
-        {timeZone ? formatTime(now, timeZone) : null}
-      </span>
-      {!timeZone && placeholder && (
-        <span className="text-muted-foreground -mt-8 text-sm leading-snug">{placeholder}</span>
+      {timeZone ? (
+        <span className="mt-1 text-3xl font-bold tracking-tight">{formatTime(now, timeZone)}</span>
+      ) : (
+        placeholder && (
+          <span className="text-muted-foreground mt-1 text-sm leading-snug">{placeholder}</span>
+        )
       )}
       {weather && (
         <span className="flex items-center gap-1 text-sm opacity-85">
@@ -86,10 +87,6 @@ function Side({
   );
 }
 
-// "우리" 탭의 주인공 장면(DESIGN.md §2 Calm Technology, §4). 흘끗 보면 되는
-// 정보 — 서로의 현지 시각·날씨·수면 상태·거리 — 를 숫자 나열이 아니라 두
-// 사람이 나란히 선 한 장면으로 압축한다. 가운데 기댄 모티프(§1)가 두 영역을
-// 잇고, 누르면 위치 시트가 열린다.
 // "곧 만나요" — 거리가 임계값 안으로 들어오면(src/lib/geo.ts) 둘로 나뉜 장면
 // 대신 두 사람이 한 장면에 모인다. 상황 카드보다 우선하는 최상위 상태라
 // 카드가 아니라 장면 자체를 바꾼다(PRD §3.3 만남 모드, §3.7 우선순위).
@@ -115,6 +112,10 @@ function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolea
   );
 }
 
+// "우리" 탭의 주인공 장면(DESIGN.md §2 Calm Technology, §4). 흘끗 보면 되는
+// 정보 — 서로의 현지 시각·날씨·수면 상태·거리 — 를 숫자 나열이 아니라 두
+// 사람이 나란히 선 한 장면으로 압축한다. 가운데 기댄 모티프(§1)가 두 영역을
+// 잇고, 누르면 위치 시트가 열린다.
 export function UsScene() {
   const { summary } = useSpace();
   const { km, approaching, meetingSoon } = useDistance();

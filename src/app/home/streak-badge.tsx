@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Flame } from "lucide-react";
+import { cn } from "cn";
 import { computeStreak } from "@/lib/streak";
 import { useTRPC } from "@/trpc/client";
 
@@ -21,11 +22,16 @@ export function StreakBadge() {
   if (streak === 0) return null;
 
   return (
+    // glow = 터치·스트릭 하이라이트 전용 토큰(DESIGN.md §3.1). 오늘 아직 대화
+    // 전이면 흐리게 — 이어갈 수 있다는 신호만 조용히.
     <span
-      className="text-muted-foreground flex items-center gap-1 text-xs"
+      className={cn(
+        "text-foreground flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+        activeToday ? "bg-glow/40" : "bg-muted text-muted-foreground",
+      )}
       title={activeToday ? "오늘도 대화했어요" : "오늘 대화하면 스트릭이 이어져요"}
     >
-      <Flame className={activeToday ? "text-primary size-3.5" : "size-3.5"} />
+      <Flame className={cn("size-4", activeToday && "text-primary")} />
       {streak}일 연속
     </span>
   );
