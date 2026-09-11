@@ -2,13 +2,13 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, LoadingRow, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, LoadMore, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 import { displayName, useSpace } from "./space-context";
 
@@ -28,12 +28,17 @@ type Moment = {
 export function MomentFeed() {
   const trpc = useTRPC();
   const { currentUserId } = useSpace();
-  const listQuery = useQuery(trpc.moment.list.queryOptions({}));
+  const listQuery = useInfiniteQuery(
+    trpc.moment.list.infiniteQueryOptions(
+      { limit: 20 },
+      { getNextPageParam: (last) => last.nextCursor },
+    ),
+  );
   const deleteMutation = useMutation(
     trpc.moment.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
   );
 
-  const moments = listQuery.data?.moments ?? [];
+  const moments = listQuery.data?.pages.flatMap((page) => page.moments) ?? [];
   const [latest, ...rest] = moments;
   const pairs: Moment[][] = [];
   for (let i = 0; i < rest.length; i += 2) pairs.push(rest.slice(i, i + 2));
@@ -75,6 +80,11 @@ export function MomentFeed() {
               ))}
             </div>
           ))}
+          <LoadMore
+            hasMore={listQuery.hasNextPage}
+            loading={listQuery.isFetchingNextPage}
+            onLoad={() => void listQuery.fetchNextPage()}
+          />
         </div>
       )}
     </Section>

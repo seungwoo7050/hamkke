@@ -77,27 +77,46 @@ export const questionRouter = router({
     }),
 
   // "기억 › 지나온"용 — 내가 답한 날만, 최신순. 내가 답한 날이므로 상대 답도
-  // 공개 조건을 만족한다.
-  history: spaceProcedure.query(async ({ ctx }) => {
-    const mine = await prisma.dailyAnswer.findMany({
-      where: { spaceId: ctx.space.id, userId: ctx.session.user.id },
-      orderBy: { dateKey: "desc" },
-      take: 60,
-    });
-    const partners = await prisma.dailyAnswer.findMany({
-      where: {
-        spaceId: ctx.space.id,
-        userId: { not: ctx.session.user.id },
-        dateKey: { in: mine.map((a) => a.dateKey) },
-      },
-    });
-    const partnerByDate = new Map(partners.map((a) => [a.dateKey, a.content]));
+  // 공개 조건을 만족한다. 커서는 마지막으로 받은 dateKey(그보다 이전 날부터).
+  history: spaceProcedure
+    .input(
+      z
+        .object({
+          cursor: z.string().nullish(),
+          limit: z.number().min(1).max(50).default(20),
+        })
+        .default({ limit: 20 }),
+    )
+    .query(async ({ ctx, input }) => {
+      const mine = await prisma.dailyAnswer.findMany({
+        where: {
+          spaceId: ctx.space.id,
+          userId: ctx.session.user.id,
+          ...(input.cursor ? { dateKey: { lt: input.cursor } } : {}),
+        },
+        orderBy: { dateKey: "desc" },
+        take: input.limit + 1,
+      });
+      const hasMore = mine.length > input.limit;
+      const page = hasMore ? mine.slice(0, input.limit) : mine;
 
-    return mine.map((a) => ({
-      dateKey: a.dateKey,
-      question: questionByKey(a.questionKey) ?? null,
-      myAnswer: a.content,
-      partnerAnswer: partnerByDate.get(a.dateKey) ?? null,
-    }));
-  }),
+      const partners = await prisma.dailyAnswer.findMany({
+        where: {
+          spaceId: ctx.space.id,
+          userId: { not: ctx.session.user.id },
+          dateKey: { in: page.map((a) => a.dateKey) },
+        },
+      });
+      const partnerByDate = new Map(partners.map((a) => [a.dateKey, a.content]));
+
+      return {
+        items: page.map((a) => ({
+          dateKey: a.dateKey,
+          question: questionByKey(a.questionKey) ?? null,
+          myAnswer: a.content,
+          partnerAnswer: partnerByDate.get(a.dateKey) ?? null,
+        })),
+        nextCursor: hasMore ? page[page.length - 1].dateKey : undefined,
+      };
+    }),
 });

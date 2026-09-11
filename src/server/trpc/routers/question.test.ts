@@ -109,7 +109,7 @@ describe("question 라우터 (통합)", () => {
       ],
     });
 
-    const history = await (await callerFor(userAId)).question.history();
+    const { items: history } = await (await callerFor(userAId)).question.history();
 
     expect(history.map((h) => h.dateKey)).toEqual(["2026-09-02", "2026-09-01"]);
     expect(history[0].partnerAnswer).toBeNull();
@@ -131,5 +131,29 @@ describe("question 라우터 (통합)", () => {
     expect(excludeUserId).toBe(userAId);
     expect(notification.body).toBe("민준이 오늘의 질문에 답했어요");
     expect(notification.body).not.toContain("비밀스러운 답");
+  });
+
+  it("history는 dateKey 커서로 이전 날을 이어서 준다", async () => {
+    await prisma.dailyAnswer.createMany({
+      data: ["01", "02", "03", "04", "05"].map((d) => ({
+        spaceId,
+        userId: userAId,
+        dateKey: `2026-08-${d}`,
+        questionKey: "q001",
+        content: d,
+      })),
+    });
+    const caller = await callerFor(userAId);
+
+    const first = await caller.question.history({ limit: 2 });
+    expect(first.items.map((h) => h.dateKey)).toEqual(["2026-08-05", "2026-08-04"]);
+    expect(first.nextCursor).toBe("2026-08-04");
+
+    const second = await caller.question.history({ limit: 2, cursor: first.nextCursor });
+    expect(second.items.map((h) => h.dateKey)).toEqual(["2026-08-03", "2026-08-02"]);
+
+    const last = await caller.question.history({ limit: 2, cursor: second.nextCursor });
+    expect(last.items.map((h) => h.dateKey)).toEqual(["2026-08-01"]);
+    expect(last.nextCursor).toBeUndefined();
   });
 });

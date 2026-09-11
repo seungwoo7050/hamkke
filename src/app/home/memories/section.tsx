@@ -98,3 +98,27 @@ export function LoadingRow() {
     </div>
   );
 }
+
+/** 목록 끝 "더 보기" — 다음 페이지가 있을 때만. */
+export function LoadMore({
+  hasMore,
+  loading,
+  onLoad,
+}: {
+  hasMore: boolean;
+  loading: boolean;
+  onLoad: () => void;
+}) {
+  if (!hasMore) return null;
+  return (
+    <div className="mt-2 flex justify-center">
+      {loading ? (
+        <LoadingMotif compact />
+      ) : (
+        <Button type="button" variant="ghost" size="sm" onClick={onLoad}>
+          더 보기
+        </Button>
+      )}
+    </div>
+  );
+}

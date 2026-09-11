@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircleQuestion } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { josa } from "@/lib/josa";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, LoadingRow, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, LoadMore, Section } from "./memories/section";
 import { useSpaceBroadcast } from "./realtime-context";
 import { displayName, useSpace } from "./space-context";
 
@@ -26,8 +26,8 @@ export function useTodayQuestion() {
   // 상대가 답하면 카드 문구("답했어요")와 열린 시트의 상대 답이 바로 바뀌게.
   useSpaceBroadcast<{ userId: string }>("question-answered", ({ userId }) => {
     if (userId === currentUserId) return;
-    void queryClient.invalidateQueries(trpc.question.today.queryFilter());
-    void queryClient.invalidateQueries(trpc.question.history.queryFilter());
+    void queryClient.invalidateQueries(trpc.question.today.pathFilter());
+    void queryClient.invalidateQueries(trpc.question.history.pathFilter());
   });
   return useQuery(trpc.question.today.queryOptions());
 }
@@ -63,8 +63,8 @@ export function QuestionSheet({
     trpc.question.answer.mutationOptions({
       onSuccess: () => {
         setDraft("");
-        void queryClient.invalidateQueries(trpc.question.today.queryFilter());
-        void queryClient.invalidateQueries(trpc.question.history.queryFilter());
+        void queryClient.invalidateQueries(trpc.question.today.pathFilter());
+        void queryClient.invalidateQueries(trpc.question.history.pathFilter());
       },
       onError: (err) => toast.error(err.message),
     }),
@@ -135,8 +135,13 @@ export function QuestionHistory() {
   const trpc = useTRPC();
   const { summary } = useSpace();
   const partnerName = displayName(summary.partner, "상대");
-  const history = useQuery(trpc.question.history.queryOptions());
-  const items = history.data ?? [];
+  const history = useInfiniteQuery(
+    trpc.question.history.infiniteQueryOptions(
+      { limit: 20 },
+      { getNextPageParam: (last) => last.nextCursor },
+    ),
+  );
+  const items = history.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <Section title="지난 질문">
@@ -161,6 +166,11 @@ export function QuestionHistory() {
               </div>
             </article>
           ))}
+          <LoadMore
+            hasMore={history.hasNextPage}
+            loading={history.isFetchingNextPage}
+            onLoad={() => void history.fetchNextPage()}
+          />
         </div>
       )}
     </Section>
