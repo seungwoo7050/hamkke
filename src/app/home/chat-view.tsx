@@ -5,11 +5,13 @@ import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { ArrowUp, Heart, ImagePlus, Mic, Square } from "lucide-react";
+import { cn } from "cn";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { josa } from "@/lib/josa";
+import { groupPositions } from "@/lib/chat-grouping";
 import { daysBetween, formatDayLabel, formatTime, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -169,6 +171,19 @@ export function ChatView({
     return items.sort((a, b) => a.at.getTime() - b.at.getTime());
   }, [messages, touchQuery.data, liveTouches]);
 
+  const positions = useMemo(
+    () =>
+      groupPositions(
+        timeline.map((item) =>
+          item.kind === "message"
+            ? { kind: "message" as const, senderId: item.message.senderId, at: item.at }
+            : { kind: "touch" as const, at: item.at },
+        ),
+        myTz,
+      ),
+    [timeline, myTz],
+  );
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [timeline.length]);
@@ -317,7 +332,7 @@ export function ChatView({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ChatHeader />
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-1 pb-4">
         {timeline.length === 0 && (
           <EmptyState caption="아직 나눈 이야기가 없어요" className="flex-1" />
         )}
@@ -334,9 +349,10 @@ export function ChatView({
         )}
         {timeline.map((item, i) => {
           const prev = timeline[i - 1];
+          const position = positions[i];
           const newDay = !prev || daysBetween(todayIn(myTz, prev.at), todayIn(myTz, item.at)) !== 0;
           const divider = newDay && (
-            <p className="text-muted-foreground my-1 min-h-4 text-center text-xs">
+            <p className="text-muted-foreground mt-4 mb-1 text-center text-xs">
               {formatDayLabel(item.at, myTz, now)}
             </p>
           );
@@ -346,7 +362,7 @@ export function ChatView({
             return (
               <div key={`touch-${item.touch.id}`} className="contents">
                 {divider}
-                <p className="bg-glow/30 text-dusk-ink font-handwritten flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-lg">
+                <p className="bg-glow/30 text-dusk-ink font-handwritten mt-3 flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-lg">
                   <Heart className="size-4" />
                   {fromMe
                     ? "생각하고 있다고 전했어요"
@@ -359,30 +375,59 @@ export function ChatView({
 
           const message = item.message;
           const isMine = message.senderId === currentUserId;
+          // 묶음 안쪽(이어지는 쪽) 모서리만 줄여 한 덩어리로 보이게.
+          const corners = cn(
+            isMine
+              ? [!position.first && "rounded-tr-sm", !position.last && "rounded-br-sm"]
+              : [!position.first && "rounded-tl-sm", !position.last && "rounded-bl-sm"],
+          );
+          const time = position.last && (
+            <time
+              dateTime={item.at.toISOString()}
+              className="text-muted-foreground shrink-0 pb-0.5 text-xs"
+            >
+              {formatTime(item.at, myTz)}
+            </time>
+          );
           return (
             <div key={message.id} className="contents">
               {divider}
-              <div className={`flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}>
-                {message.type === "image" ? (
-                  <Image
-                    src={message.content}
-                    alt="공유한 사진"
-                    width={240}
-                    height={240}
-                    unoptimized
-                    className="h-60 w-60 rounded-lg object-cover"
-                  />
-                ) : message.type === "voice" ? (
-                  <audio controls src={message.content} className="h-10 max-w-[75%]" />
-                ) : (
-                  <div
-                    className={`max-w-[75%] rounded-md px-3 py-2 ${
-                      isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed">{message.content}</p>
-                  </div>
+              <div
+                className={cn(
+                  "flex flex-col gap-1",
+                  position.first ? "mt-3" : "mt-1",
+                  isMine ? "items-end" : "items-start",
                 )}
+              >
+                <div
+                  className={cn("flex max-w-[85%] items-end gap-1.5", isMine && "flex-row-reverse")}
+                >
+                  {message.type === "image" ? (
+                    <Image
+                      src={message.content}
+                      alt="공유한 사진"
+                      width={240}
+                      height={240}
+                      unoptimized
+                      className={cn("h-60 w-60 rounded-lg object-cover", corners)}
+                    />
+                  ) : message.type === "voice" ? (
+                    <audio controls src={message.content} className="h-10 max-w-full" />
+                  ) : (
+                    <div
+                      className={cn(
+                        "rounded-lg px-3 py-2",
+                        corners,
+                        isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                      )}
+                    >
+                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    </div>
+                  )}
+                  {time}
+                </div>
                 {isMine && message.id === lastReadMineId && (
                   <span className="text-muted-foreground text-xs">읽음</span>
                 )}
