@@ -105,14 +105,18 @@ function MomentTile({
   const { summary } = useSpace();
   const who = mine ? "나" : displayName(summary.partner, "상대");
   return (
-    <figure className="group relative overflow-hidden rounded-lg">
+    // 2:1 줄의 두 칸은 폭이 달라도 높이가 같아야 한 줄로 읽힌다 — 줄 칸은 높이를
+    // 고정하고 사진을 그 안에 채운다(폭 비율로 높이를 정하면 좁은 칸이 짧아짐).
+    <figure
+      className={`group relative overflow-hidden rounded-lg ${large ? "aspect-4/3" : "h-40"}`}
+    >
       <Image
         src={moment.mediaUrl}
         alt={moment.caption ?? "오늘의 사진"}
         width={large ? 720 : 360}
         height={large ? 540 : 240}
         unoptimized
-        className={`w-full object-cover ${large ? "aspect-4/3" : "aspect-3/2"}`}
+        className="size-full object-cover"
       />
       {large && (
         <figcaption className="absolute inset-x-0 bottom-0 bg-linear-to-t from-zinc-900/60 to-transparent px-3 pt-8 pb-2.5 text-sm font-medium text-zinc-50">
