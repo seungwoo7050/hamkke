@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { LoadingMotif } from "@/components/brand/loading-motif";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -84,4 +85,13 @@ export function Row({
 
 export function EmptyRow({ children }: { children: React.ReactNode }) {
   return <p className="text-muted-foreground py-2 text-sm">{children}</p>;
+}
+
+/** 목록을 불러오는 동안 빈 상태 문구가 잠깐 비치지 않게 작은 모티프를 둔다. */
+export function LoadingRow() {
+  return (
+    <div className="py-2">
+      <LoadingMotif compact />
+    </div>
+  );
 }

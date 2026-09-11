@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { daysBetween, formatDateTime, formatTime, todayIn, weekdayOf } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, Row, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
 // datetime-local input은 "YYYY-MM-DDTHH:mm"를 로컬 시간 기준으로 받는다
@@ -60,7 +60,9 @@ export function CalendarView() {
       addTitle="일정 추가"
       renderAdd={(close) => <CalendarForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {upcoming.length === 0 ? (
+      {listQuery.isPending ? (
+        <LoadingRow />
+      ) : upcoming.length === 0 ? (
         <EmptyRow>영상통화 데이트 같은 약속을 잡아보세요</EmptyRow>
       ) : (
         upcoming.map((event) => {

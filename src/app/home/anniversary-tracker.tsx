@@ -10,7 +10,7 @@ import { dateOnly, daysBetween, formatYMD, nextOccurrence, todayIn } from "@/lib
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { formatDday } from "./countdown-tracker";
-import { EmptyRow, Row, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone } from "./space-context";
 
 function todayInputValue() {
@@ -49,7 +49,9 @@ export function AnniversaryTracker() {
         <AnniversaryForm onDone={close} onCreated={() => listQuery.refetch()} />
       )}
     >
-      {sorted.length === 0 ? (
+      {listQuery.isPending ? (
+        <LoadingRow />
+      ) : sorted.length === 0 ? (
         <EmptyRow>처음 만난 날, 생일 같은 날을 적어두세요</EmptyRow>
       ) : (
         sorted.map((a) => (

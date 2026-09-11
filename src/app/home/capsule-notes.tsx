@@ -10,7 +10,7 @@ import { josa } from "@/lib/josa";
 import { formatDateTime } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, Row, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
@@ -52,7 +52,9 @@ export function UpcomingCapsules() {
       addTitle="캡슐 예약하기"
       renderAdd={(close) => <CapsuleForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {waiting.length === 0 ? (
+      {listQuery.isPending ? (
+        <LoadingRow />
+      ) : waiting.length === 0 ? (
         <EmptyRow>
           정해둔 날에 열리는 편지를 {josa(partnerName, "이/가")} 받게 할 수 있어요
         </EmptyRow>

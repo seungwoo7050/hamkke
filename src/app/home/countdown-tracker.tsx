@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { dateOnly, daysBetween, formatYMD, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, Row, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone } from "./space-context";
 
 function todayInputValue() {
@@ -51,7 +51,9 @@ export function CountdownTracker() {
       addTitle="카운트다운 추가"
       renderAdd={(close) => <CountdownForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {next ? (
+      {listQuery.isPending ? (
+        <LoadingRow />
+      ) : next ? (
         <div className="bg-sky-dusk rounded-xl p-5">
           <p className="text-dusk-ink text-sm font-medium">{next.title}</p>
           <p className="text-foreground mt-1 text-5xl font-bold tracking-tight">

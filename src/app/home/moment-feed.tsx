@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 import { displayName, useSpace } from "./space-context";
 
@@ -48,7 +48,9 @@ export function MomentFeed() {
       addTitle="사진 올리기"
       renderAdd={(close) => <MomentForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {!latest ? (
+      {listQuery.isPending ? (
+        <LoadingRow />
+      ) : !latest ? (
         <EmptyRow>오늘 본 하늘, 먹은 것 — 사소한 장면일수록 좋아요</EmptyRow>
       ) : (
         <div className="flex flex-col gap-2">

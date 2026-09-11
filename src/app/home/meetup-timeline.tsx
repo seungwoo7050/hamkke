@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { dateOnly, formatYMD } from "@/lib/datetime";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, Row, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 
 const MeetupMap = dynamic(() => import("./meetup-map").then((m) => m.MeetupMap), { ssr: false });
@@ -33,7 +33,9 @@ export function MeetupTimeline() {
       addTitle="지금 있는 곳 기록하기"
       renderAdd={(close) => <MeetupForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
-      {pins.length === 0 ? (
+      {listQuery.isPending ? (
+        <LoadingRow />
+      ) : pins.length === 0 ? (
         <EmptyRow>만났을 때 지금 있는 곳을 남겨두면 지도에 쌓여요</EmptyRow>
       ) : (
         <>

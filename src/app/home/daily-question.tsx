@@ -15,7 +15,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { josa } from "@/lib/josa";
 import { useTRPC } from "@/trpc/client";
-import { EmptyRow, Section } from "./memories/section";
+import { EmptyRow, LoadingRow, Section } from "./memories/section";
 import { useSpaceBroadcast } from "./realtime-context";
 import { displayName, useSpace } from "./space-context";
 
@@ -140,7 +140,9 @@ export function QuestionHistory() {
 
   return (
     <Section title="지난 질문">
-      {items.length === 0 ? (
+      {history.isPending ? (
+        <LoadingRow />
+      ) : items.length === 0 ? (
         <EmptyRow>오늘의 질문에 답하면 여기에 둘의 답이 쌓여요</EmptyRow>
       ) : (
         <div className="flex flex-col gap-3">
