@@ -4,16 +4,13 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Hourglass, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateField, localTodayValue } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { dateOnly, daysBetween, formatYMD, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone } from "./space-context";
-
-function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function formatDday(days: number) {
   if (days === 0) return "오늘";
@@ -108,7 +105,7 @@ export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
 function CountdownForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
   const [title, setTitle] = useState("다음 만남");
-  const [targetDate, setTargetDate] = useState(todayInputValue);
+  const [targetDate, setTargetDate] = useState(() => localTodayValue());
   const createMutation = useMutation(
     trpc.countdown.create.mutationOptions({
       onSuccess: () => {
@@ -128,7 +125,7 @@ function CountdownForm({ onDone, onCreated }: { onDone: () => void; onCreated: (
       }}
     >
       <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 다음 만남" />
-      <Input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+      <DateField label="만나는 날" value={targetDate} onChange={setTargetDate} />
       <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
         추가
       </Button>

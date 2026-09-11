@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Calendar, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { daysBetween, formatDateTime, formatTime, todayIn, weekdayOf } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
@@ -103,6 +104,14 @@ function CalendarForm({ onDone, onCreated }: { onDone: () => void; onCreated: ()
   const [title, setTitle] = useState("");
   const [startAt, setStartAt] = useState(() => hoursFromNow(1));
   const [endAt, setEndAt] = useState(() => hoursFromNow(2));
+  // 시작을 옮기면 끝도 같은 길이만큼 따라 옮긴다 — 날짜를 바꿨는데 끝이 그대로면
+  // "끝이 시작보다 앞"이 되어 저장이 거절됐다(실제 검증 중 발견).
+  function changeStart(next: string) {
+    const duration = new Date(endAt).getTime() - new Date(startAt).getTime();
+    setStartAt(next);
+    setEndAt(toLocalInputValue(new Date(new Date(next).getTime() + Math.max(duration, 0))));
+  }
+
   const createMutation = useMutation(
     trpc.calendar.create.mutationOptions({
       onSuccess: () => {
@@ -128,14 +137,8 @@ function CalendarForm({ onDone, onCreated }: { onDone: () => void; onCreated: ()
       }}
     >
       <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 영상통화" />
-      <label className="text-muted-foreground flex flex-col gap-1 text-sm">
-        시작
-        <Input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
-      </label>
-      <label className="text-muted-foreground flex flex-col gap-1 text-sm">
-        끝
-        <Input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
-      </label>
+      <DateTimeField label="시작" value={startAt} onChange={changeStart} />
+      <DateTimeField label="끝" value={endAt} onChange={setEndAt} />
       <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
         추가
       </Button>

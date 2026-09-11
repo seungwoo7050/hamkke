@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Lock, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { josa } from "@/lib/josa";
 import { formatDateTime } from "@/lib/datetime";
@@ -19,9 +20,11 @@ function toLocalInputValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// 내일 같은 시각, 분은 시각 선택(10분 단위)에 맞춰 내림.
 function defaultDeliverAt() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
+  d.setMinutes(Math.floor(d.getMinutes() / 10) * 10, 0, 0);
   return toLocalInputValue(d);
 }
 
@@ -157,14 +160,7 @@ function CapsuleForm({ onDone, onCreated }: { onDone: () => void; onCreated: () 
         onChange={(e) => setContent(e.target.value)}
         placeholder="미래의 너에게"
       />
-      <label className="text-muted-foreground flex flex-col gap-1 text-sm">
-        열리는 시각
-        <Input
-          type="datetime-local"
-          value={deliverAt}
-          onChange={(e) => setDeliverAt(e.target.value)}
-        />
-      </label>
+      <DateTimeField label="열리는 날" value={deliverAt} onChange={setDeliverAt} />
       <Button type="submit" size="lg" disabled={!content.trim() || createMutation.isPending}>
         예약 보내기
       </Button>

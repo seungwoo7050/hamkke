@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DateField, localTodayValue } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { dateOnly, formatYMD } from "@/lib/datetime";
 import { useTRPC } from "@/trpc/client";
@@ -13,10 +14,6 @@ import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 
 const MeetupMap = dynamic(() => import("./meetup-map").then((m) => m.MeetupMap), { ssr: false });
-
-function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // 실제로 같이 만났던 장소를 지도 핀 + 타임라인으로 기록한다(PRD.md §3.3).
 export function MeetupTimeline() {
@@ -73,7 +70,7 @@ export function MeetupTimeline() {
 function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
   const [label, setLabel] = useState("");
-  const [date, setDate] = useState(todayInputValue);
+  const [date, setDate] = useState(() => localTodayValue());
   const [registering, setRegistering] = useState(false);
   const createMutation = useMutation(
     trpc.meetup.create.mutationOptions({
@@ -117,7 +114,7 @@ function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
         onChange={(e) => setLabel(e.target.value)}
         placeholder="예: 첫 데이트 카페"
       />
-      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <DateField label="만난 날" value={date} onChange={setDate} />
       <Button
         type="button"
         size="lg"

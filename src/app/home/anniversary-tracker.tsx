@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Gift, Heart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateField, localTodayValue } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { dateOnly, daysBetween, formatYMD, nextOccurrence, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
@@ -12,10 +13,6 @@ import { useTRPC } from "@/trpc/client";
 import { formatDday } from "./countdown-tracker";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone } from "./space-context";
-
-function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // 정확한 시각 push 스케줄러가 아직 없어(docs/COMMIT_PLAN.md Phase 4 각주)
 // "다가오는 기념일"은 매 렌더링마다 내 시간대의 오늘 기준으로 다시
@@ -92,7 +89,7 @@ export function AnniversaryTracker({ openAdd = false }: { openAdd?: boolean }) {
 function AnniversaryForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState(todayInputValue);
+  const [date, setDate] = useState(() => localTodayValue());
   const [recurring, setRecurring] = useState(true);
   const createMutation = useMutation(
     trpc.anniversary.create.mutationOptions({
@@ -113,7 +110,7 @@ function AnniversaryForm({ onDone, onCreated }: { onDone: () => void; onCreated:
       }}
     >
       <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 생일" />
-      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <DateField label="날짜" value={date} onChange={setDate} />
       <label className="text-foreground flex items-center gap-2 text-sm">
         <Checkbox checked={recurring} onCheckedChange={(checked) => setRecurring(!!checked)} />
         매년 반복
