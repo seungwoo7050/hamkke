@@ -19,14 +19,17 @@ export function Section({
   title,
   addTitle,
   renderAdd,
+  defaultAddOpen = false,
   children,
 }: {
   title: string;
   addTitle?: string;
   renderAdd?: (close: () => void) => React.ReactNode;
+  /** 상황 카드(첫날 안내)에서 들어왔을 때 추가 시트를 바로 연다. */
+  defaultAddOpen?: boolean;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultAddOpen);
 
   return (
     <section className="mt-8 first:mt-0">

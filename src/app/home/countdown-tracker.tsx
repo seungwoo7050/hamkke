@@ -22,7 +22,7 @@ export function formatDday(days: number) {
 
 // PRD.md §3.4 "다음 만남까지 카운트다운" — 가장 가까운 목표일 하나를 크게
 // (DESIGN.md §2 M3 Expressive 크기 대비), 나머지는 작은 줄로.
-export function CountdownTracker() {
+export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
   const trpc = useTRPC();
   const myTz = useMyTimeZone();
   const now = useNow();
@@ -49,6 +49,7 @@ export function CountdownTracker() {
     <Section
       title="다음 만남"
       addTitle="카운트다운 추가"
+      defaultAddOpen={openAdd}
       renderAdd={(close) => <CountdownForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
       {listQuery.isPending ? (

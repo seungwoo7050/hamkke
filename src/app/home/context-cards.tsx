@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, ChevronRight, Gift, Mail, MessageCircleQuestion } from "lucide-react";
+import {
+  Calendar,
+  CalendarHeart,
+  ChevronRight,
+  Gift,
+  Mail,
+  MessageCircleQuestion,
+} from "lucide-react";
 import { dateOnly, daysBetween, nextOccurrence, todayIn } from "@/lib/datetime";
 import { selectContextCards, type ContextCard } from "@/lib/context-cards";
 import { josa } from "@/lib/josa";
@@ -66,10 +73,12 @@ export function ContextCards() {
         c.deliveredAt &&
         now.getTime() - new Date(c.deliveredAt).getTime() < CAPSULE_FRESH_MS,
     ).length;
+    const upcomingCountdowns = (countdowns.data ?? []).filter(
+      (c) => daysBetween(today, dateOnly(c.targetDate)) >= 0,
+    );
     const nextCountdown =
-      (countdowns.data ?? [])
+      upcomingCountdowns
         .map((c) => ({ title: c.title, days: daysBetween(today, dateOnly(c.targetDate)) }))
-        .filter((c) => c.days >= 0)
         .sort((a, b) => a.days - b.days)[0] ?? null;
 
     return selectContextCards({
@@ -80,6 +89,14 @@ export function ContextCards() {
           ? { partnerAnswered: question.data.partnerAnswered }
           : null,
       nextCountdown,
+      // 두 목록을 다 불러온 뒤에만 판단한다(불러오는 중에 "비어 있음"으로 오판하지 않게).
+      setup:
+        anniversaries.data && countdowns.data
+          ? {
+              needsAnniversary: anniversaries.data.length === 0,
+              needsMeetupDate: upcomingCountdowns.length === 0,
+            }
+          : undefined,
     });
   }, [anniversaries.data, capsules.data, countdowns.data, question.data, currentUserId, now, myTz]);
 
@@ -116,6 +133,26 @@ export function ContextCards() {
             icon={<Calendar className="size-6" />}
             title={`${card.title}까지 ${formatDday(card.days)}`}
             sub="기억 탭에서 일정·캡슐을 준비해요"
+          />
+        );
+      case "setup-meetup":
+        return (
+          <Card
+            key="setup-meetup"
+            href="/home/memories?add=countdown"
+            icon={<CalendarHeart className="size-6" />}
+            title="다음에 만나는 날을 정해볼까요"
+            sub="정해두면 여기서 D-day를 세어줄게요"
+          />
+        );
+      case "setup-anniversary":
+        return (
+          <Card
+            key="setup-anniversary"
+            href="/home/memories?add=anniversary"
+            icon={<Gift className="size-6" />}
+            title="처음 만난 날을 적어주세요"
+            sub="기념일이 되면 여기서 먼저 알려줄게요"
           />
         );
       case "question":

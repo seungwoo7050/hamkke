@@ -10,8 +10,8 @@ import { MemoriesTabs } from "./memories-tabs";
 
 // "기억" 탭 — 인증·페어링 가드는 layout.tsx가 맡는다.
 export default async function MemoriesPage({ searchParams }: PageProps<"/home/memories">) {
-  // 상황 카드(도착한 캡슐)가 "지나온"으로 바로 데려올 수 있게.
-  const { tab } = await searchParams;
+  // 상황 카드가 "지나온"(도착한 캡슐)이나 추가 시트(첫날 안내)로 바로 데려올 수 있게.
+  const { tab, add } = await searchParams;
   return (
     <>
       <TopBar>
@@ -22,8 +22,8 @@ export default async function MemoriesPage({ searchParams }: PageProps<"/home/me
           defaultTab={tab === "past" ? "past" : "upcoming"}
           upcoming={
             <>
-              <CountdownTracker />
-              <AnniversaryTracker />
+              <CountdownTracker openAdd={add === "countdown"} />
+              <AnniversaryTracker openAdd={add === "anniversary"} />
               <CalendarView />
               <UpcomingCapsules />
             </>

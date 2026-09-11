@@ -4,6 +4,7 @@ import { Moon } from "lucide-react";
 import { cn } from "cn";
 import { Wordmark } from "@/components/brand/wordmark";
 import { formatDistanceKm } from "@/lib/geo";
+import { josa } from "@/lib/josa";
 import { formatTime } from "@/lib/datetime";
 import { skyPhase, type SkyPhase } from "@/lib/sky";
 import { isLikelySleeping } from "@/lib/timezone";
@@ -29,6 +30,7 @@ function Side({
   weather,
   now,
   present = false,
+  placeholder,
   className,
 }: {
   label: string;
@@ -37,6 +39,8 @@ function Side({
   now: Date;
   /** 상대가 지금 앱을 보고 있음(Presence) */
   present?: boolean;
+  /** 시간대를 아직 모를 때(상대가 앱을 처음 열기 전) 빈 칸 대신 보여줄 말 */
+  placeholder?: string;
   className?: string;
 }) {
   const sleeping = timeZone ? isLikelySleeping(timeZone, now) : false;
@@ -64,6 +68,9 @@ function Side({
       <span className="mt-1 min-h-9 text-3xl font-bold tracking-tight">
         {timeZone ? formatTime(now, timeZone) : null}
       </span>
+      {!timeZone && placeholder && (
+        <span className="text-muted-foreground -mt-8 text-sm leading-snug">{placeholder}</span>
+      )}
       {weather && (
         <span className="flex items-center gap-1 text-sm opacity-85">
           <WeatherIcon code={weather.weatherCode} className="size-4" /> {weather.description}{" "}
@@ -135,6 +142,7 @@ export function UsScene() {
           weather={summary.partner?.weather ?? null}
           now={now}
           present={partnerPresent}
+          placeholder={`${josa(partnerName, "이/가")} 앱을 열면 시간과 날씨가 여기 채워져요`}
         />
         <LocationSheet>
           <button

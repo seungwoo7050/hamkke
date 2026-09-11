@@ -41,4 +41,17 @@ describe("selectContextCards", () => {
       { kind: "anniversary", title: "지우 생일" },
     ]);
   });
+
+  it("첫날 안내는 가장 뒤 — 다른 카드가 있으면 밀려난다", () => {
+    const setup = { needsAnniversary: true, needsMeetupDate: true };
+    expect(selectContextCards({ ...none, setup }).map((c) => c.kind)).toEqual([
+      "setup-meetup",
+      "setup-anniversary",
+    ]);
+    expect(
+      selectContextCards({ ...none, pendingQuestion: { partnerAnswered: false }, setup }).map(
+        (c) => c.kind,
+      ),
+    ).toEqual(["question", "setup-meetup"]);
+  });
 });

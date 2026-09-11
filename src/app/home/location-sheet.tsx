@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { MapPin } from "lucide-react";
 import { EmptyState } from "@/components/brand/empty-state";
+import { Button } from "@/components/ui/button";
 import { formatDistanceKm } from "@/lib/geo";
 import { josa } from "@/lib/josa";
 import { relativeTime } from "@/lib/relative-time";
@@ -30,7 +32,8 @@ const SNAP_POINTS = [0.4, 0.65, 1] as const;
 
 export function LocationSheet({ children }: { children: React.ReactNode }) {
   const { summary } = useSpace();
-  const { me, sharing, partnerSharing, partnerLocation } = useLocationSharing();
+  const { me, sharing, partnerSharing, partnerLocation, toggleSharing, togglePending } =
+    useLocationSharing();
   const { km, approaching, meetingSoon } = useDistance();
   const now = useNow();
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[1]);
@@ -73,6 +76,18 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
           </div>
         ) : (
           <EmptyState caption="위치를 나누면 여기서 서로를 찾을 수 있어요" className="py-8" />
+        )}
+        {!sharing && (
+          // 첫날엔 여기가 막다른 곳이었다 — 설명만 하고 켜는 곳(설정 시트)은 따로
+          // 있었음. 옵트인 원칙(ARCHITECTURE.md §5)대로 누르기 전엔 켜지 않는다.
+          <div className="mt-4 flex flex-col gap-2">
+            <Button size="lg" disabled={togglePending} onClick={() => void toggleSharing()}>
+              <MapPin className="size-5" /> 내 위치 나누기
+            </Button>
+            <p className="text-muted-foreground text-center text-xs">
+              {partnerName}에게만 보이고, 설정에서 언제든 끌 수 있어요
+            </p>
+          </div>
         )}
       </DrawerContent>
     </Drawer>

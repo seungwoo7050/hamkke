@@ -20,7 +20,7 @@ function todayInputValue() {
 // 정확한 시각 push 스케줄러가 아직 없어(docs/COMMIT_PLAN.md Phase 4 각주)
 // "다가오는 기념일"은 매 렌더링마다 내 시간대의 오늘 기준으로 다시
 // 계산한다(src/lib/datetime.ts). 지난 단발 기념일은 "다가올"에서 뺀다.
-export function AnniversaryTracker() {
+export function AnniversaryTracker({ openAdd = false }: { openAdd?: boolean }) {
   const trpc = useTRPC();
   const myTz = useMyTimeZone();
   const now = useNow();
@@ -45,6 +45,7 @@ export function AnniversaryTracker() {
     <Section
       title="기념일"
       addTitle="기념일 추가"
+      defaultAddOpen={openAdd}
       renderAdd={(close) => (
         <AnniversaryForm onDone={close} onCreated={() => listQuery.refetch()} />
       )}
