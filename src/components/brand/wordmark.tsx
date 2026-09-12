@@ -1,28 +1,36 @@
+import { useId } from "react";
 import { cn } from "cn";
+import { MARK } from "./mark-geometry";
 
 /**
- * Hamkke 브랜드 심볼 — H(서 있는 사람, ember)와 K(그 등에 기댄 사람, dusk)를
- * 인체 실루엣으로 재해석한 라인아트(DESIGN.md §1, §8). 온보딩·빈 상태
- * 화면에서 항상 이 하나의 심볼만 재사용한다 — 화면마다 새로 그리지 않는다.
+ * Hamkke 브랜드 심볼(DESIGN.md §1.1) — 곧게 선 H(ember)의 등에 K(dusk)가 어깨와
+ * 머리를 기댄 구도. 두 획이 겹치는 곳은 K 둘레만큼 H를 마스크로 비워 배경색
+ * 틈을 만든다 — 배경색을 따로 알 필요가 없어 어떤 면 위에서도 같게 보인다.
+ * 온보딩·빈 상태·장면에서 항상 이 하나만 재사용한다(§8).
  */
 export function Wordmark({ className }: { className?: string }) {
+  const maskId = useId();
+  const { h, k, stroke, gap } = MARK;
+
   return (
     <svg
-      viewBox="0 0 120 120"
+      viewBox={MARK.viewBox}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       className={cn("size-24", className)}
     >
-      <path d="M42 104 L42 40" stroke="var(--color-ember)" strokeWidth="4" strokeLinecap="round" />
-      <circle cx="42" cy="28" r="10" stroke="var(--color-ember)" strokeWidth="4" />
-      <path
-        d="M78 104 C78 86 66 70 54 52"
-        stroke="var(--dusk-ink)"
-        strokeWidth="4"
-        strokeLinecap="round"
-      />
-      <circle cx="49" cy="43" r="10" stroke="var(--dusk-ink)" strokeWidth="4" />
+      <mask id={maskId} maskUnits="userSpaceOnUse">
+        <rect x="0" y="0" width="130" height="130" fill="white" />
+        <path d={k.body} stroke="black" strokeWidth={stroke + gap * 2} strokeLinecap="round" />
+        <circle cx={k.head.cx} cy={k.head.cy} r={k.head.r + gap} fill="black" />
+      </mask>
+      <g mask={`url(#${maskId})`}>
+        <path d={h.body} stroke="var(--color-ember)" strokeWidth={stroke} strokeLinecap="round" />
+        <circle cx={h.head.cx} cy={h.head.cy} r={h.head.r} fill="var(--color-ember)" />
+      </g>
+      <path d={k.body} stroke="var(--dusk-ink)" strokeWidth={stroke} strokeLinecap="round" />
+      <circle cx={k.head.cx} cy={k.head.cy} r={k.head.r} fill="var(--dusk-ink)" />
     </svg>
   );
 }
