@@ -30,7 +30,10 @@ export function ChatHeader() {
       <div>
         <h1 className="text-foreground text-base font-semibold">{displayName(partner, "상대")}</h1>
         {tz && (
-          <p className="text-muted-foreground flex items-center gap-1 text-xs">
+          <p
+            className="text-muted-foreground flex items-center gap-1 text-xs"
+            suppressHydrationWarning
+          >
             {sleeping && <Moon className="size-3.5" />}
             {formatTime(now, tz)}
             {present ? " · 지금 보고 있어요" : sleeping && " · 자고 있을 시간이에요"}

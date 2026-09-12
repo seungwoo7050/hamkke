@@ -66,7 +66,9 @@ function Side({
         )}
       </span>
       {timeZone ? (
-        <span className="mt-1 text-3xl font-bold tracking-tight">{formatTime(now, timeZone)}</span>
+        <span className="mt-1 text-3xl font-bold tracking-tight" suppressHydrationWarning>
+          {formatTime(now, timeZone)}
+        </span>
       ) : (
         placeholder && (
           <span className="text-muted-foreground mt-1 text-sm leading-snug">{placeholder}</span>
