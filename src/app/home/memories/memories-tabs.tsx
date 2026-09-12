@@ -32,10 +32,10 @@ export function MemoriesTabs({
           </Tabs.Trigger>
         ))}
       </Tabs.List>
-      <Tabs.Content value="upcoming" className="px-4 pb-8 outline-none">
+      <Tabs.Content value="upcoming" className="tab-enter px-4 pb-8 outline-none">
         {upcoming}
       </Tabs.Content>
-      <Tabs.Content value="past" className="px-4 pb-8 outline-none">
+      <Tabs.Content value="past" className="tab-enter px-4 pb-8 outline-none">
         {past}
       </Tabs.Content>
     </Tabs.Root>

@@ -237,6 +237,37 @@
   }
 }
 
+/* 탭 전환(DESIGN.md §3.4) — Material의 최상위 목적지 전환 문법(fade through)
+   중 들어오는 쪽만: 새 탭이 살짝 작은 상태에서 떠오르듯 나타난다. 나가는 쪽은
+   App Router가 즉시 교체하므로 두지 않는다. JS 없이 서버 렌더 직후에도 보이게
+   CSS 애니메이션으로 하고, 끝나면 transform이 남지 않아(fill 없음) 시트·고정
+   요소의 기준 박스를 바꾸지 않는다. */
+@keyframes tab-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+.tab-enter {
+  animation: tab-enter var(--duration-base) var(--ease-standard);
+}
+/* 하단 내비 활성 표시 — M3 내비게이션 바처럼 가운데에서 좌우로 자라난다. */
+@keyframes nav-indicator-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0.4);
+  }
+}
+.nav-indicator-in {
+  animation: nav-indicator-in var(--duration-slow) var(--ease-standard);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-enter,
+  .nav-indicator-in {
+    animation: none;
+  }
+}
+
 /* 지도(DESIGN.md §4 지도 다크 모드) — Leaflet 기본 크롬을 토큰 톤으로. 다크
    전용 타일(API 키·상업 한도)이 아니라 OSM 타일에 필터를 입혀 어둡게 한다. */
 .hamkke-map.leaflet-container {

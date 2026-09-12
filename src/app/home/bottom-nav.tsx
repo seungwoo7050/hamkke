@@ -68,11 +68,17 @@ export function BottomNav() {
           >
             <span
               className={cn(
-                "duration-base ease-standard grid h-8 w-14 place-items-center rounded-full transition-colors",
-                active && "bg-primary/15 text-primary",
+                "duration-base ease-standard relative grid h-8 w-14 place-items-center transition-colors",
+                active && "text-primary",
               )}
             >
-              <Icon className="size-6" />
+              {active && (
+                <span
+                  aria-hidden
+                  className="nav-indicator-in bg-primary/15 absolute inset-0 rounded-full"
+                />
+              )}
+              <Icon className="relative size-6" />
             </span>
             {label}
             {href === "/home/chat" && !active && unread > 0 && (
