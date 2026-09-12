@@ -143,4 +143,44 @@ describe("home 라우터 (통합)", () => {
     expect(summary.partner?.weather).toBeNull();
     expect(summary.distanceKm).toBeNull();
   });
+
+  it("위젯 값은 날씨 없이 시간대·거리·마지막 받은 터치만 돌려준다", async () => {
+    const { fetchWeather } = await import("@/lib/weather");
+    vi.mocked(fetchWeather).mockClear();
+    await prisma.user.updateMany({
+      where: { id: { in: [userAId, userBId] } },
+      data: { locationSharingEnabled: true },
+    });
+    await prisma.user.update({ where: { id: userBId }, data: { name: " 지우 " } });
+    await prisma.locationPing.createMany({
+      data: [
+        { userId: userAId, lat: 37.5665, lng: 126.978 },
+        { userId: userBId, lat: 51.5072, lng: -0.1276 },
+      ],
+    });
+    const touch = await prisma.touch.create({ data: { spaceId, senderId: userBId } });
+
+    const widget = await (await callerFor(userAId)).home.widget();
+
+    expect(widget).toMatchObject({
+      myTimezone: "Asia/Seoul",
+      partnerName: "지우",
+      partnerTimezone: "Europe/London",
+      lastTouchReceivedAt: touch.createdAt.toISOString(),
+    });
+    expect(Number.isInteger(widget.distanceKm)).toBe(true);
+    expect(fetchWeather).not.toHaveBeenCalled();
+  });
+
+  it("위젯도 위치공유가 꺼져 있으면 거리를 드러내지 않는다", async () => {
+    await prisma.locationPing.createMany({
+      data: [
+        { userId: userAId, lat: 37.5665, lng: 126.978 },
+        { userId: userBId, lat: 51.5072, lng: -0.1276 },
+      ],
+    });
+    const widget = await (await callerFor(userAId)).home.widget();
+    expect(widget.distanceKm).toBeNull();
+    expect(widget.lastTouchReceivedAt).toBeNull();
+  });
 });

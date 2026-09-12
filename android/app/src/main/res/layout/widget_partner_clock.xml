@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 상대 현지 시각 — Glance에 없는 TextClock을 RemoteViews로 끼워 넣는다.
+     시간대는 HamkkeWidget에서 setTimeZone으로 넣고, 기기 시계가 매분 다시 그린다.
+     표기는 앱과 같은 "오후 3:12"(12시간제 고정). -->
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/partner_clock"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:format12Hour="a h:mm"
+    android:format24Hour="a h:mm"
+    android:includeFontPadding="false"
+    android:textColor="#FFF4E6"
+    android:textSize="30sp"
+    android:textStyle="bold" />

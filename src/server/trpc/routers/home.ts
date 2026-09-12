@@ -63,4 +63,36 @@ export const homeRouter = router({
       unreadCount,
     };
   }),
+
+  // Android 홈 화면 위젯(Phase 6, /api/widget)용 — 흘끗 보는 세 가지(거리·시차·
+  // 마지막 터치)만. 위젯은 30분마다 조용히 새로고침하므로 외부 날씨 API를
+  // 부르지 않고, 시각은 시간대만 넘겨 위젯이 기기 시계로 직접 그린다(TextClock
+  // — 새로고침 사이에도 시각이 멈추지 않게).
+  widget: spaceProcedure.query(async ({ ctx }) => {
+    const myId = ctx.session.user.id;
+    const [me, partner, lastTouch] = await Promise.all([
+      prisma.user.findUniqueOrThrow({ where: { id: myId }, select: personSelect }),
+      prisma.user.findFirst({
+        where: { spaceId: ctx.space.id, id: { not: myId } },
+        select: personSelect,
+      }),
+      prisma.touch.findFirst({
+        where: { spaceId: ctx.space.id, senderId: { not: myId } },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+    ]);
+    const [myPing, partnerPing] = await Promise.all([
+      latestPing(me.id, me.locationSharingEnabled),
+      partner ? latestPing(partner.id, partner.locationSharingEnabled) : null,
+    ]);
+
+    return {
+      myTimezone: me.timezone,
+      partnerName: partner?.name?.trim() || null,
+      partnerTimezone: partner?.timezone ?? null,
+      distanceKm: myPing && partnerPing ? Math.round(distanceKm(myPing, partnerPing)) : null,
+      lastTouchReceivedAt: lastTouch?.createdAt.toISOString() ?? null,
+    };
+  }),
 });

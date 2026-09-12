@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 브랜드 심볼(DESIGN.md §1.1, src/components/brand/mark-geometry.ts)의 위젯판.
+     VectorDrawable엔 마스크가 없어, 배경(dusk)이 정해진 위젯 위에서 K 둘레를
+     dusk로 한 번 더 그려 같은 틈을 만든다. 앱 아이콘과 같이 K는 크림. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <group android:translateX="-1.5" android:translateY="-5.5">
+        <path android:pathData="M40,102 V54" android:strokeColor="#F2653A" android:strokeWidth="18" android:strokeLineCap="round" />
+        <path android:pathData="M28,32 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" android:fillColor="#F2653A" />
+        <path android:pathData="M86,102 L57,61" android:strokeColor="#4B4468" android:strokeWidth="25" android:strokeLineCap="round" />
+        <path android:pathData="M45,41 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" android:fillColor="#4B4468" />
+        <path android:pathData="M86,102 L57,61" android:strokeColor="#FFF4E6" android:strokeWidth="18" android:strokeLineCap="round" />
+        <path android:pathData="M48.5,41 a11.5,11.5 0 1,0 23,0 a11.5,11.5 0 1,0 -23,0" android:fillColor="#FFF4E6" />
+    </group>
+</vector>
