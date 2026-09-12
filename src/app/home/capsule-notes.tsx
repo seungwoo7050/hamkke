@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Lock, Mail, Trash2 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Lock, Mail, MailOpen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { josa } from "@/lib/josa";
 import { formatDateTime } from "@/lib/datetime";
+import { SPRING } from "@/lib/motion";
+import { markCapsuleUnsealed, useUnsealedCapsules } from "@/lib/unsealed-capsules";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
@@ -97,6 +100,7 @@ export function OpenedCapsules() {
   const { currentUserId, summary } = useSpace();
   const partnerName = displayName(summary.partner, "상대");
   const listQuery = useCapsules();
+  const unsealed = useUnsealedCapsules();
 
   const now = useNow();
   const opened = (listQuery.data ?? [])
@@ -108,23 +112,98 @@ export function OpenedCapsules() {
   return (
     <Section title="열린 캡슐">
       <div className="flex flex-col gap-3">
-        {opened.map((capsule) => (
-          <article key={capsule.id} className="bg-muted rounded-lg px-4 py-3">
-            <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-              <Mail className="size-4" />
-              {capsule.senderId === currentUserId
-                ? `${partnerName}에게`
-                : `${partnerName}로부터`} ·{" "}
-              {formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false })}
-            </p>
-            {/* DESIGN.md §3.2: 캡슐 노트는 손글씨 폰트가 허용되는 감정적 순간 */}
-            <p className="text-foreground font-handwritten mt-1 text-lg leading-snug">
-              {capsule.content}
-            </p>
-          </article>
-        ))}
+        {opened.map((capsule) => {
+          const mine = capsule.senderId === currentUserId;
+          const when = formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false });
+          return (
+            <CapsuleLetter
+              key={capsule.id}
+              sealed={!mine && !unsealed.has(capsule.id)}
+              onOpen={() => markCapsuleUnsealed(capsule.id)}
+              from={mine ? `${partnerName}에게` : `${partnerName}로부터`}
+              when={when}
+              sealedTitle={`${partnerName}의 편지`}
+              content={capsule.content ?? ""}
+            />
+          );
+        })}
       </div>
     </Section>
+  );
+}
+
+// 캡슐이 열리는 순간(DESIGN.md §3.4 "열림" 상태 변화, §2 감정적 순간).
+// 받은 편지는 처음엔 봉인된 채로 도착해 있고, 직접 눌러야 펼쳐진다 — 목록을
+// 여는 것만으로 내용이 한꺼번에 쏟아지지 않게. 봉인이 걷히면 손글씨가 위에서
+// 아래로 펼쳐지듯 드러난다(spring 프리셋 하나). 내가 보낸 편지는 처음부터 펼침.
+function CapsuleLetter({
+  sealed,
+  onOpen,
+  from,
+  when,
+  sealedTitle,
+  content,
+}: {
+  sealed: boolean;
+  onOpen: () => void;
+  from: string;
+  when: string;
+  sealedTitle: string;
+  content: string;
+}) {
+  const reduce = useReducedMotion();
+  // 이 화면에서 직접 연 경우에만 펼침 모션 — 이미 열어둔 편지는 그대로 보인다.
+  const [justOpened, setJustOpened] = useState(false);
+
+  return (
+    <motion.article layout={!reduce} transition={SPRING} className="bg-muted rounded-lg">
+      <AnimatePresence initial={false} mode="popLayout">
+        {sealed ? (
+          <motion.button
+            key="sealed"
+            type="button"
+            onClick={() => {
+              setJustOpened(true);
+              onOpen();
+            }}
+            exit={reduce ? undefined : { opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.12 }}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left"
+          >
+            <span className="bg-background text-dusk-ink grid size-10 shrink-0 place-items-center rounded-full">
+              <Mail className="size-5" />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-foreground font-semibold">{sealedTitle}</span>
+              <span className="text-muted-foreground text-sm">{when}에 도착했어요</span>
+            </span>
+            <span className="text-primary text-sm font-semibold">열어보기</span>
+          </motion.button>
+        ) : (
+          <motion.div
+            key="open"
+            initial={reduce || !justOpened ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="px-4 py-3"
+          >
+            <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+              <MailOpen className="size-4" />
+              {from} · {when}
+            </p>
+            {/* DESIGN.md §3.2: 캡슐 노트는 손글씨 폰트가 허용되는 감정적 순간 */}
+            <motion.p
+              initial={reduce || !justOpened ? false : { clipPath: "inset(0 0 100% 0)", y: -4 }}
+              animate={{ clipPath: "inset(0 0 0% 0)", y: 0 }}
+              transition={{ ...SPRING, delay: 0.08 }}
+              className="text-foreground font-handwritten mt-1 text-lg leading-snug break-words whitespace-pre-wrap"
+            >
+              {content}
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.article>
   );
 }
 
