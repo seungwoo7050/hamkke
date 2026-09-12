@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { latLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { AttributionControl, MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { duskMarkerIcon, emberMarkerIcon } from "@/lib/map-markers";
 
 type LatLng = { lat: number; lng: number };
@@ -32,12 +32,19 @@ export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLn
       // react-leaflet은 center/zoom이 있으면 bounds를 무시하므로 둘 중 하나만 준다.
       {...(bounds ? { bounds } : { center: [center.lat, center.lng], zoom: hasAnyPoint ? 11 : 6 })}
       scrollWheelZoom={false}
-      className="h-64 w-full"
+      className="hamkke-map h-64 w-full"
+      // 모바일은 두 손가락으로 확대한다 — 기본 +/− 버튼은 앱 크롬과 어긋나 뺐다(Find My처럼).
+      zoomControl={false}
+      attributionControl={false}
+      minZoom={1}
+      worldCopyJump
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      {/* OSM 저작자 표시는 라이선스상 필수 — 문구만 남기고 토큰 톤으로(globals.css .hamkke-map). */}
+      <AttributionControl position="bottomright" prefix={false} />
       {me && (
         <Marker position={[me.lat, me.lng]} icon={emberMarkerIcon}>
           <Popup>나</Popup>
