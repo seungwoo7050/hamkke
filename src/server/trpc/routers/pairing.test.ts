@@ -10,7 +10,7 @@ const createCaller = createCallerFactory(appRouter);
 
 // 실제 요청은 매번 auth()로 세션을 새로 읽으므로, 테스트도 캐시된 caller를
 // 재사용하지 않고 호출 직전 DB에서 최신 spaceId를 읽어 caller를 새로 만든다.
-async function callerFor(userId: string) {
+async function callerFor(userId: string, ip: string | null = null) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   return createCaller({
     session: {
@@ -18,6 +18,7 @@ async function callerFor(userId: string) {
       expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     },
     baseUrl: "http://localhost:3000",
+    ip,
   });
 }
 
@@ -112,5 +113,61 @@ describe("pairing 플로우 (통합)", () => {
     const second = await (await callerFor(userAId)).pairing.createInviteCode();
 
     expect(second.inviteCode).toBe(first.inviteCode);
+  });
+
+  describe("입력 횟수 제한 (ARCHITECTURE.md §7)", () => {
+    it("사용자당 15분에 5번 틀리면 올바른 코드도 막고, 남은 시간을 알려준다", async () => {
+      const created = await (await callerFor(userAId)).pairing.createInviteCode();
+      const b = await callerFor(userBId);
+      for (let i = 0; i < 5; i++) {
+        await expect(b.pairing.redeemInviteCode({ code: "ZZZZZZ" })).rejects.toMatchObject({
+          code: "NOT_FOUND",
+        });
+      }
+
+      const blocked = b.pairing.redeemInviteCode({ code: created.inviteCode });
+      await expect(blocked).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+      await expect(blocked).rejects.toThrow(/1[45]분 뒤/);
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: userBId } })).spaceId).toBeNull();
+    });
+
+    it("창(15분)이 지난 실패는 세지 않는다", async () => {
+      const created = await (await callerFor(userAId)).pairing.createInviteCode();
+      const old = new Date(Date.now() - 16 * 60_000);
+      await prisma.inviteCodeAttempt.createMany({
+        data: Array.from({ length: 5 }, () => ({ userId: userBId, createdAt: old })),
+      });
+
+      const redeemed = await (
+        await callerFor(userBId)
+      ).pairing.redeemInviteCode({
+        code: created.inviteCode,
+      });
+      expect(redeemed.spaceId).toBeTruthy();
+    });
+
+    it("같은 IP에서 1시간에 20번 틀리면 다른 계정이어도 막는다", async () => {
+      const ip = `203.0.113.${Math.floor(Math.random() * 250)}`;
+      // 계정을 여럿 만들어 사용자 한도를 피해 간 경우 — 실패 20건이 이미 쌓였다.
+      await prisma.inviteCodeAttempt.createMany({
+        data: Array.from({ length: 20 }, () => ({ userId: userAId, ip })),
+      });
+
+      await expect(
+        (await callerFor(userBId, ip)).pairing.redeemInviteCode({ code: "ZZZZZZ" }),
+      ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+      // 다른 IP의 같은 계정은 막지 않는다(사용자 한도엔 아직 여유).
+      await expect(
+        (await callerFor(userBId, "198.51.100.7")).pairing.redeemInviteCode({ code: "ZZZZZZ" }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    });
+
+    it("이미 스페이스가 있어 거절된 입력은 실패로 세지 않는다", async () => {
+      const created = await (await callerFor(userAId)).pairing.createInviteCode();
+      await expect(
+        (await callerFor(userAId)).pairing.redeemInviteCode({ code: created.inviteCode }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      expect(await prisma.inviteCodeAttempt.count({ where: { userId: userAId } })).toBe(0);
+    });
   });
 });

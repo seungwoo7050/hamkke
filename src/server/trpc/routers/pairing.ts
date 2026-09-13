@@ -2,6 +2,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { prisma } from "@/lib/prisma";
 import { generateInviteCode, inviteCodeExpiryDate } from "@/server/pairing/invite-code";
+import {
+  assertCanRedeemInviteCode,
+  recordFailedInviteCodeAttempt,
+} from "@/server/pairing/rate-limit";
 import { protectedProcedure, router } from "../init";
 
 export const pairingRouter = router({
@@ -79,17 +83,27 @@ export const pairingRouter = router({
         throw new TRPCError({ code: "CONFLICT", message: "이미 Space에 속해 있습니다." });
       }
 
+      // 코드를 찾아보기 전에 먼저 막는다(ARCHITECTURE.md §7).
+      await assertCanRedeemInviteCode(userId, ctx.ip);
+      const fail = async (
+        code: "NOT_FOUND" | "CONFLICT" | "PRECONDITION_FAILED",
+        message: string,
+      ) => {
+        await recordFailedInviteCodeAttempt(userId, ctx.ip);
+        return new TRPCError({ code, message });
+      };
+
       const space = await prisma.space.findUnique({
         where: { inviteCode: input.code.toUpperCase() },
       });
       if (!space) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "유효하지 않은 초대코드입니다." });
+        throw await fail("NOT_FOUND", "유효하지 않은 초대코드입니다.");
       }
       if (space.status !== "pending") {
-        throw new TRPCError({ code: "CONFLICT", message: "이미 사용된 초대코드입니다." });
+        throw await fail("CONFLICT", "이미 사용된 초대코드입니다.");
       }
       if (space.inviteCodeExpiresAt < new Date()) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "만료된 초대코드입니다." });
+        throw await fail("PRECONDITION_FAILED", "만료된 초대코드입니다.");
       }
 
       const spaceId = await prisma.$transaction(async (tx) => {

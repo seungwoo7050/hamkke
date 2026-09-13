@@ -1,13 +1,19 @@
 import "server-only";
+import type { Session } from "next-auth";
 import { auth } from "@/auth";
-import { getBaseUrl } from "@/lib/base-url";
+import { getBaseUrl, getClientIp } from "@/lib/base-url";
 
-export async function createTRPCContext() {
+export type TRPCContext = {
+  session: Session | null;
+  baseUrl: string;
+  /** 초대코드 rate limiting용(ARCHITECTURE.md §7). 테스트 caller는 생략 가능. */
+  ip?: string | null;
+};
+
+export async function createTRPCContext(): Promise<TRPCContext> {
   // next/headers는 요청 컨텍스트 밖(Vitest 등)에서 호출하면 에러를 던져서,
   // 라우터가 직접 부르지 않고 여기서 한 번 계산해 넘긴다 — 테스트에서는
   // caller를 만들 때 baseUrl을 원하는 값으로 그냥 채워 넣으면 된다.
-  const [session, baseUrl] = await Promise.all([auth(), getBaseUrl()]);
-  return { session, baseUrl };
+  const [session, baseUrl, ip] = await Promise.all([auth(), getBaseUrl(), getClientIp()]);
+  return { session, baseUrl, ip };
 }
-
-export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
