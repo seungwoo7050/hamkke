@@ -108,3 +108,18 @@ describe("기타", () => {
     expect(skyPhaseAtLongitude(-75, new Date("2026-10-14T03:00:00Z"))).toBe("night");
   });
 });
+
+describe("장면·카드가 다룰 항공편", () => {
+  const at = (h: number) => new Date(dep.getTime() + h * 3_600_000);
+  const later = {
+    scheduledDepartureAt: at(48),
+    scheduledArrivalAt: at(60),
+  };
+  it("비행 중 > 막 도착 > 곧 출발", async () => {
+    const { pickFlight } = await import("./flight");
+    expect(pickFlight([flight, later], at(5))?.phase).toBe("inFlight");
+    expect(pickFlight([flight, later], at(15))?.phase).toBe("arrived");
+    expect(pickFlight([flight, later], at(40))?.flight).toBe(later);
+    expect(pickFlight([flight], at(40))).toBeNull();
+  });
+});

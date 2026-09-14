@@ -10,14 +10,18 @@ import {
   Gift,
   Mail,
   MessageCircleQuestion,
+  PlaneLanding,
+  PlaneTakeoff,
 } from "lucide-react";
-import { dateOnly, daysBetween, nextOccurrence, todayIn } from "@/lib/datetime";
+import { dateOnly, daysBetween, formatTime, nextOccurrence, todayIn } from "@/lib/datetime";
+import { bestTimes, pickFlight } from "@/lib/flight";
 import { selectContextCards, type ContextCard } from "@/lib/context-cards";
 import { josa } from "@/lib/josa";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { formatDday } from "./countdown-tracker";
 import { QuestionSheet, useTodayQuestion } from "./daily-question";
+import { useFlights, type FlightView } from "./flights";
 import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
 // 캡슐이 "새로 도착했다"고 보여줄 기간 — 그 뒤엔 기억 › 지나온에만 남는다.
@@ -60,7 +64,21 @@ export function ContextCards() {
   const countdowns = useQuery(trpc.countdown.list.queryOptions());
   const capsules = useQuery(trpc.capsule.list.queryOptions());
   const question = useTodayQuestion();
+  const flights = useFlights();
   const [questionOpen, setQuestionOpen] = useState(false);
+
+  const picked = flights.data ? pickFlight(flights.data, now) : null;
+  const flightCard = picked
+    ? {
+        kind:
+          picked.phase === "inFlight"
+            ? ("flight-inflight" as const)
+            : picked.phase === "arrived"
+              ? ("flight-arrived" as const)
+              : ("flight-departing" as const),
+        flightId: picked.flight.id,
+      }
+    : null;
 
   const cards = useMemo(() => {
     const today = todayIn(myTz, now);
@@ -82,6 +100,7 @@ export function ContextCards() {
         .sort((a, b) => a.days - b.days)[0] ?? null;
 
     return selectContextCards({
+      flight: flightCard,
       todayAnniversaries,
       arrivedCapsules,
       pendingQuestion:
@@ -98,13 +117,31 @@ export function ContextCards() {
             }
           : undefined,
     });
-  }, [anniversaries.data, capsules.data, countdowns.data, question.data, currentUserId, now, myTz]);
+    // flightCard는 flights.data·now에서 매 렌더 새로 만들어지므로 그 원천을 의존성으로 둔다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    anniversaries.data,
+    capsules.data,
+    countdowns.data,
+    question.data,
+    flights.data,
+    currentUserId,
+    now,
+    myTz,
+  ]);
 
   const sheet = <QuestionSheet open={questionOpen} onOpenChange={setQuestionOpen} />;
   if (cards.length === 0) return sheet;
 
   function render(card: ContextCard) {
     switch (card.kind) {
+      case "flight-inflight":
+      case "flight-arrived":
+      case "flight-departing": {
+        const f = flights.data?.find((x) => x.id === card.flightId);
+        if (!f) return null;
+        return <FlightCard key={card.kind} kind={card.kind} flight={f} />;
+      }
       case "anniversary":
         return (
           <Card
@@ -182,5 +219,68 @@ export function ContextCards() {
       <section className="mt-8 flex flex-col gap-3 px-4">{cards.map(render)}</section>
       {sheet}
     </>
+  );
+}
+
+// 비행 카드(PRD §3.3.1). 실제 이륙·착륙을 모르므로(무료 범위) 도착은 "도착했을
+// 시간이에요"라고 말하고, 시각은 그 공항 현지 시각으로 적는다.
+function FlightCard({
+  kind,
+  flight: f,
+}: {
+  kind: "flight-inflight" | "flight-arrived" | "flight-departing";
+  flight: FlightView;
+}) {
+  const trpc = useTRPC();
+  const { currentUserId, summary } = useSpace();
+  const now = useNow();
+  const capsules = useQuery(trpc.capsule.list.queryOptions());
+  const mine = f.travelerId === currentUserId;
+  const name = displayName(summary.partner, "상대");
+  const { departureAt, arrivalAt, estimated } = bestTimes(f);
+  const letters = (capsules.data ?? []).filter(
+    (c) => c.flightId === f.id && new Date(c.deliverAt) > now,
+  ).length;
+  // 착륙 편지는 타는 사람에게 남기는 것 — 내가 타는 비행이면 권하지 않는다.
+  const letterHint = mine
+    ? null
+    : letters > 0
+      ? `편지 ${letters}통이 착륙을 기다려요`
+      : "착륙 편지를 남겨둘 수 있어요";
+  const withHint = (text: string) => (letterHint ? `${text} · ${letterHint}` : text);
+
+  if (kind === "flight-inflight") {
+    return (
+      <Card
+        href="/home/memories"
+        icon={<PlaneLanding className="size-6" />}
+        title={`도착하면 거기는 ${formatTime(arrivalAt, f.to.timeZone)}`}
+        sub={withHint(`${f.to.name} 도착${estimated ? " 예정" : ""}`)}
+      />
+    );
+  }
+  if (kind === "flight-arrived") {
+    return (
+      <Card
+        href="/home/memories?tab=past"
+        icon={<PlaneLanding className="size-6" />}
+        title={
+          mine
+            ? `${f.to.city}에 도착했을 시간이에요`
+            : `${josa(name, "이/가")} ${f.to.city}에 도착했을 시간이에요`
+        }
+        sub={`${formatTime(arrivalAt, f.to.timeZone)} 착륙 ${estimated ? "예정이었어요" : "했어요"}`}
+      />
+    );
+  }
+  const depToday = todayIn(f.from.timeZone, departureAt);
+  const dayWord = daysBetween(todayIn(f.from.timeZone, now), depToday) === 0 ? "오늘" : "내일";
+  return (
+    <Card
+      href="/home/memories"
+      icon={<PlaneTakeoff className="size-6" />}
+      title={`${mine ? "" : `${josa(name, "이/가")} `}${dayWord} ${formatTime(departureAt, f.from.timeZone)}에 출발해요`}
+      sub={withHint(`${f.flightNumber} ${f.from.city} → ${f.to.city}`)}
+    />
   );
 }

@@ -54,4 +54,25 @@ describe("selectContextCards", () => {
       ),
     ).toEqual(["question", "setup-meetup"]);
   });
+
+  it("비행: 비행 중·막 도착은 맨 앞, 곧 출발은 도착한 캡슐 다음", () => {
+    const base: ContextInputs = {
+      ...none,
+      todayAnniversaries: ["우리 300일"],
+      arrivedCapsules: 1,
+      nextCountdown: { title: "다음 만남", days: 18 },
+    };
+    expect(
+      selectContextCards({ ...base, flight: { kind: "flight-inflight", flightId: "f" } }).map(
+        (c) => c.kind,
+      ),
+    ).toEqual(["flight-inflight", "anniversary"]);
+    expect(
+      selectContextCards({
+        ...base,
+        todayAnniversaries: [],
+        flight: { kind: "flight-departing", flightId: "f" },
+      }).map((c) => c.kind),
+    ).toEqual(["capsule", "flight-departing"]);
+  });
 });

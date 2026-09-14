@@ -2,6 +2,7 @@ import { distanceKm } from "@/lib/geo";
 import { prisma } from "@/lib/prisma";
 import { fetchWeather } from "@/lib/weather";
 import { router, spaceProcedure } from "../init";
+import { serializeFlight, type FlightView } from "./flight";
 
 const personSelect = {
   id: true,
@@ -30,7 +31,7 @@ export const homeRouter = router({
   // 실시간 갱신(위치·터치·메시지)은 기존처럼 Broadcast 구독으로 받는다.
   summary: spaceProcedure.query(async ({ ctx }) => {
     const myId = ctx.session.user.id;
-    const [me, partner, lastTouch, unreadCount] = await Promise.all([
+    const [me, partner, lastTouch, unreadCount, flights] = await Promise.all([
       prisma.user.findUniqueOrThrow({ where: { id: myId }, select: personSelect }),
       prisma.user.findFirst({
         where: { spaceId: ctx.space.id, id: { not: myId } },
@@ -43,6 +44,12 @@ export const homeRouter = router({
       }),
       prisma.message.count({
         where: { spaceId: ctx.space.id, senderId: { not: myId }, readAt: null },
+      }),
+      // 비행 중이면 장면 자체가 바뀌므로(PRD §3.3.1) 첫 렌더부터 알아야 한다 —
+      // flight.list의 초기값. 커플 둘의 항공편이라 양이 적다.
+      prisma.flight.findMany({
+        where: { spaceId: ctx.space.id },
+        orderBy: { scheduledDepartureAt: "asc" },
       }),
     ]);
 
@@ -61,6 +68,7 @@ export const homeRouter = router({
       distanceKm: myPing && partnerPing ? distanceKm(myPing, partnerPing) : null,
       lastTouchReceivedAt: lastTouch?.createdAt ?? null,
       unreadCount,
+      flights: flights.map(serializeFlight).filter((f): f is FlightView => f !== null),
     };
   }),
 

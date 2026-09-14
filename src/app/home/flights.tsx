@@ -25,7 +25,8 @@ type AirportView = FlightView["from"];
 /** 항공편 목록 — 기억 탭·우리 장면·위치 시트가 같은 쿼리를 쓴다. */
 export function useFlights() {
   const trpc = useTRPC();
-  return useQuery(trpc.flight.list.queryOptions());
+  const { summary } = useSpace();
+  return useQuery({ ...trpc.flight.list.queryOptions(), initialData: summary.flights });
 }
 
 /** "지우" 또는 "나" */

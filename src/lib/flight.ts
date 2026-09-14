@@ -133,3 +133,20 @@ export function normalizeFlightNumber(input: string) {
   const v = input.replace(/\s+/g, "").toUpperCase();
   return /^[A-Z0-9]{2}[0-9]{1,4}[A-Z]?$/.test(v) ? v : null;
 }
+
+/**
+ * 우리 장면·상황 카드가 다룰 항공편 하나(PRD §3.3.1). 비행 중 > 막 도착 >
+ * 곧 출발 순 — 비행 중이면 장면이 바뀌고, 나머지는 카드로 간다.
+ */
+export function pickFlight<F extends FlightTimes>(flights: F[], now: Date) {
+  const withPhase = flights.map((f) => ({ flight: f, phase: flightPhase(f, now) }));
+  const inFlight = withPhase.find((x) => x.phase === "inFlight");
+  if (inFlight) return inFlight;
+  const arrived = withPhase
+    .filter((x) => x.phase === "arrived")
+    .sort(
+      (a, b) => bestTimes(b.flight).arrivalAt.getTime() - bestTimes(a.flight).arrivalAt.getTime(),
+    )[0];
+  if (arrived) return arrived;
+  return withPhase.find((x) => x.phase === "departingSoon") ?? null;
+}

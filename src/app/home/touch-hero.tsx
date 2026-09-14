@@ -5,10 +5,12 @@ import { useMutation } from "@tanstack/react-query";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { pickFlight } from "@/lib/flight";
 import { josa } from "@/lib/josa";
 import { relativeTimeAdverb } from "@/lib/relative-time";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
+import { useFlights } from "./flights";
 import { useSpaceBroadcast } from "./realtime-context";
 import { displayName, useSpace } from "./space-context";
 
@@ -26,6 +28,9 @@ export function TouchHero() {
     summary.lastTouchReceivedAt ? new Date(summary.lastTouchReceivedAt) : null,
   );
   const [justSent, setJustSent] = useState(false);
+  const flights = useFlights();
+  const picked = flights.data ? pickFlight(flights.data, now) : null;
+  const partnerFlying = picked?.phase === "inFlight" && picked.flight.travelerId !== currentUserId;
 
   const sendMutation = useMutation(
     trpc.touch.send.mutationOptions({
@@ -57,9 +62,12 @@ export function TouchHero() {
         {justSent ? `${partnerName}에게 전했어요` : "생각하고 있어요"}
       </Button>
       <p className="font-handwritten text-dusk-ink mt-2.5 min-h-7 text-lg" suppressHydrationWarning>
-        {lastReceivedAt
-          ? `${relativeTimeAdverb(lastReceivedAt, now)} ${josa(partnerName, "이/가")} 생각해줬어요`
-          : `생각날 때 눌러보세요. ${partnerName}에게 바로 닿아요`}
+        {partnerFlying
+          ? // 비행 중엔 인터넷이 없을 수 있다 — 보낸 마음이 사라지지 않는다는 걸 먼저 말한다.
+            "보낸 마음은 착륙하면 받아볼 거예요"
+          : lastReceivedAt
+            ? `${relativeTimeAdverb(lastReceivedAt, now)} ${josa(partnerName, "이/가")} 생각해줬어요`
+            : `생각날 때 눌러보세요. ${partnerName}에게 바로 닿아요`}
       </p>
     </section>
   );

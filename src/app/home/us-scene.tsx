@@ -1,15 +1,23 @@
 "use client";
 
-import { Moon } from "lucide-react";
+import { Moon, Plane } from "lucide-react";
 import { cn } from "cn";
 import { Wordmark } from "@/components/brand/wordmark";
 import { formatDistanceKm } from "@/lib/geo";
 import { josa } from "@/lib/josa";
 import { formatTime } from "@/lib/datetime";
-import { skyPhase, type SkyPhase } from "@/lib/sky";
+import {
+  bestTimes,
+  flightProgress,
+  formatRemaining,
+  greatCirclePoint,
+  pickFlight,
+} from "@/lib/flight";
+import { skyPhase, skyPhaseAtLongitude, type SkyPhase } from "@/lib/sky";
 import { isLikelySleeping } from "@/lib/timezone";
 import { useNow } from "@/lib/use-now";
 import { isRainOrSnowCode, WeatherIcon } from "@/lib/weather-codes";
+import { useFlights, type FlightView } from "./flights";
 import { useDistance } from "./location-context";
 import { LocationSheet } from "./location-sheet";
 import { usePartnerPresent } from "./presence-context";
@@ -89,6 +97,74 @@ function Side({
   );
 }
 
+// 비행 중인 쪽(PRD §3.3.1) — 시각·날씨 대신 "하늘 위"와 진행. 하늘색은
+// 추정 위치 경도의 태양시. 실제 이륙·착륙을 모르면 "예정 기준"이라고 밝힌다.
+function FlightSide({
+  label,
+  flight,
+  now,
+  className,
+}: {
+  label: string;
+  flight: FlightView;
+  now: Date;
+  className?: string;
+}) {
+  // 서버 렌더와 하이드레이션이 같은 값을 내도록 분 단위로 내린 시각으로 계산한다
+  // (진행 막대 폭·위치는 속성이라 글자처럼 조용히 넘어가지 않는다).
+  const minute = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
+  const progress = flightProgress(flight, minute);
+  const { arrivalAt, estimated } = bestTimes(flight);
+  const here = greatCirclePoint(flight.from, flight.to, progress);
+  const sky = SKY_CLASS[skyPhaseAtLongitude(here.lng, minute)];
+
+  return (
+    <div
+      className={cn(
+        "duration-slow ease-standard flex min-h-48 flex-col gap-1 px-4 pt-5 pb-20 transition-colors",
+        sky,
+        className,
+      )}
+    >
+      <span className="flex items-center gap-1.5 text-sm font-medium">
+        <span className="opacity-75">{label}</span>
+        <Plane className="size-3.5 opacity-75" aria-hidden />
+      </span>
+      <span className="mt-1 text-3xl font-bold tracking-tight">하늘 위</span>
+      <span className="flex justify-between text-sm opacity-85">
+        <span>{flight.from.city}</span>
+        <span>{flight.to.city}</span>
+      </span>
+      <span
+        className="relative mt-1 h-4"
+        role="progressbar"
+        aria-label={`${flight.from.city}에서 ${flight.to.city}까지`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progress * 100)}
+        suppressHydrationWarning
+      >
+        <span className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-current opacity-30" />
+        <span
+          className="absolute top-1/2 left-0 border-t-2 border-current"
+          style={{ width: `${progress * 100}%` }}
+          suppressHydrationWarning
+        />
+        <Plane
+          aria-hidden
+          className="absolute top-0 size-4 rotate-45"
+          style={{ left: `calc(${progress * 100}% - 8px)` }}
+          suppressHydrationWarning
+        />
+      </span>
+      <span className="text-sm" suppressHydrationWarning>
+        {formatRemaining(arrivalAt.getTime() - minute.getTime())} 남음
+      </span>
+      {estimated && <span className="text-xs opacity-70">예정 기준</span>}
+    </div>
+  );
+}
+
 // "곧 만나요" — 거리가 임계값 안으로 들어오면(src/lib/geo.ts) 둘로 나뉜 장면
 // 대신 두 사람이 한 장면에 모인다. 상황 카드보다 우선하는 최상위 상태라
 // 카드가 아니라 장면 자체를 바꾼다(PRD §3.3 만남 모드, §3.7 우선순위).
@@ -119,11 +195,15 @@ function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolea
 // 사람이 나란히 선 한 장면으로 압축한다. 가운데 기댄 모티프(§1)가 두 영역을
 // 잇고, 누르면 위치 시트가 열린다.
 export function UsScene() {
-  const { summary } = useSpace();
+  const { currentUserId, summary } = useSpace();
   const { km, approaching, meetingSoon } = useDistance();
   const partnerPresent = usePartnerPresent();
   const now = useNow(30_000);
   const partnerName = displayName(summary.partner, "상대");
+  const flights = useFlights();
+  const picked = flights.data ? pickFlight(flights.data, now) : null;
+  const flying = picked?.phase === "inFlight" ? picked.flight : null;
+  const iAmFlying = flying?.travelerId === currentUserId;
   // 내 시간대는 서버 저장값보다 지금 이 브라우저가 아는 값이 더 정확하다.
   const myTz = useMyTimeZone();
 
@@ -138,24 +218,44 @@ export function UsScene() {
   return (
     <section aria-label="지금 우리" className="px-4">
       <div className="relative grid grid-cols-2 overflow-hidden rounded-xl">
-        <Side label="나" timeZone={myTz} weather={summary.me.weather} now={now} />
-        <Side
-          label={partnerName}
-          timeZone={summary.partner?.timezone ?? null}
-          weather={summary.partner?.weather ?? null}
-          now={now}
-          present={partnerPresent}
-          placeholder={`${josa(partnerName, "이/가")} 앱을 열면 시간과 날씨가 여기 채워져요`}
-        />
+        {flying && iAmFlying ? (
+          <FlightSide label="나" flight={flying} now={now} />
+        ) : (
+          <Side label="나" timeZone={myTz} weather={summary.me.weather} now={now} />
+        )}
+        {flying && !iAmFlying ? (
+          <FlightSide label={partnerName} flight={flying} now={now} />
+        ) : (
+          <Side
+            label={partnerName}
+            timeZone={summary.partner?.timezone ?? null}
+            weather={summary.partner?.weather ?? null}
+            now={now}
+            present={partnerPresent}
+            placeholder={`${josa(partnerName, "이/가")} 앱을 열면 시간과 날씨가 여기 채워져요`}
+          />
+        )}
         <LocationSheet>
-          <button
-            type="button"
-            aria-label="위치 보기"
-            className="bg-background shadow-soft text-foreground absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full py-1.5 pr-4 pl-2 text-sm font-semibold"
-          >
-            <Wordmark className="size-9" />
-            {km !== null ? formatDistanceKm(km) : "위치 보기"}
-          </button>
+          {flying ? (
+            // 비행 중엔 두 사람 사이 거리 대신 비행 경로를 연다.
+            <button
+              type="button"
+              aria-label="비행 경로 보기"
+              className="bg-background shadow-soft text-foreground absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full py-2.5 pr-4 pl-3 text-sm font-semibold"
+            >
+              <Plane className="text-dusk-ink size-5" />
+              경로 보기
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label="위치 보기"
+              className="bg-background shadow-soft text-foreground absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full py-1.5 pr-4 pl-2 text-sm font-semibold"
+            >
+              <Wordmark className="size-9" />
+              {km !== null ? formatDistanceKm(km) : "위치 보기"}
+            </button>
+          )}
         </LocationSheet>
       </div>
       {partnerPresent && (
