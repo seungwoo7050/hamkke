@@ -15,6 +15,7 @@ import { flightPhase } from "@/lib/flight";
 import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
+import { BoardingPassScan } from "./boarding-pass-scan";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { displayName, useSpace } from "./space-context";
 
@@ -150,16 +151,7 @@ function initialValues(initial: FlightView | undefined, currentUserId: string): 
   };
 }
 
-export function FlightForm({
-  initial,
-  onDone,
-  scanSlot,
-}: {
-  initial?: FlightView;
-  onDone: () => void;
-  /** 탑승권 바코드 스캔 버튼 자리 — 스캔 결과로 값을 채운다. */
-  scanSlot?: (fill: (patch: Partial<FlightFormValues>) => void) => React.ReactNode;
-}) {
+export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: () => void }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { currentUserId, summary } = useSpace();
@@ -201,7 +193,26 @@ export function FlightForm({
       <p className="text-muted-foreground text-sm">
         탑승 전에 등록하면 비행 중에도 서로 어디쯤인지 볼 수 있어요
       </p>
-      {scanSlot?.(set)}
+      {!initial && (
+        <BoardingPassScan
+          onScanned={async (leg) => {
+            // 바코드엔 공항 코드만 있다 — 한국어 도시명을 붙이려고 서버에서 찾는다.
+            const find = async (iata: string) =>
+              (
+                await queryClient.fetchQuery(trpc.flight.searchAirports.queryOptions({ q: iata }))
+              ).find((a) => a.iata === iata) ?? null;
+            const [from, to] = await Promise.all([find(leg.fromIata), find(leg.toIata)]);
+            set({
+              flightNumber: leg.flightNumber,
+              departureDate: leg.departureDate,
+              from,
+              to,
+              source: "barcode",
+            });
+            toast.success("탑승권에서 편명·공항·날짜를 채웠어요. 시각을 확인해 주세요");
+          }}
+        />
+      )}
       <div className="flex flex-col gap-1">
         <span className="text-muted-foreground text-sm">누가 타나요</span>
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="누가 타나요">
