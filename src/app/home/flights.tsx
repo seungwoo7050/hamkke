@@ -1,0 +1,345 @@
+"use client";
+
+import { useDeferredValue, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { inferRouterOutputs } from "@trpc/server";
+import { Plane, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "cn";
+import { Button } from "@/components/ui/button";
+import { DateField, TimeField, localTodayValue } from "@/components/ui/date-field";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { formatDateTime, toZonedLocal } from "@/lib/datetime";
+import { flightPhase } from "@/lib/flight";
+import { useNow } from "@/lib/use-now";
+import type { AppRouter } from "@/server/trpc/routers/_app";
+import { useTRPC } from "@/trpc/client";
+import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
+import { displayName, useSpace } from "./space-context";
+
+export type FlightView = inferRouterOutputs<AppRouter>["flight"]["list"][number];
+type AirportView = FlightView["from"];
+
+/** 항공편 목록 — 기억 탭·우리 장면·위치 시트가 같은 쿼리를 쓴다. */
+export function useFlights() {
+  const trpc = useTRPC();
+  return useQuery(trpc.flight.list.queryOptions());
+}
+
+/** "지우" 또는 "나" */
+export function useTravelerName() {
+  const { currentUserId, summary } = useSpace();
+  return (travelerId: string) =>
+    travelerId === currentUserId ? "나" : displayName(summary.partner, "상대");
+}
+
+/** "10월 14일 (수) 오전 10:30" — 출발 공항 현지 시각(탑승권에 적힌 그대로). */
+export function formatDeparture(f: FlightView) {
+  return formatDateTime(new Date(f.scheduledDepartureAt), f.from.timeZone);
+}
+
+// 기억 탭 "다가올"의 비행(PRD §3.3.1). 아직 끝나지 않은(출발 전·비행 중)
+// 항공편만. 지난 비행은 "지나온"의 비행 기록으로 간다.
+export function UpcomingFlights() {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const travelerName = useTravelerName();
+  const now = useNow();
+  const listQuery = useFlights();
+  const [editing, setEditing] = useState<FlightView | null>(null);
+  const deleteMutation = useMutation(
+    trpc.flight.delete.mutationOptions({
+      onSuccess: () => queryClient.invalidateQueries(trpc.flight.pathFilter()),
+    }),
+  );
+
+  const upcoming = (listQuery.data ?? []).filter((f) =>
+    ["upcoming", "departingSoon", "inFlight"].includes(flightPhase(f, now)),
+  );
+
+  return (
+    <Section title="비행" addTitle="비행 등록" renderAdd={(close) => <FlightForm onDone={close} />}>
+      {listQuery.isPending ? (
+        <LoadingRow />
+      ) : upcoming.length === 0 ? (
+        <EmptyRow>탑승 전에 등록해두면 비행 중에도 서로 어디쯤인지 볼 수 있어요</EmptyRow>
+      ) : (
+        upcoming.map((f) => (
+          <div
+            key={f.id}
+            role="button"
+            tabIndex={0}
+            className="block w-full cursor-pointer text-left"
+            onClick={() => setEditing(f)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") setEditing(f);
+            }}
+            aria-label={`${f.flightNumber} 수정`}
+          >
+            <Row
+              icon={<Plane className="text-dusk-ink size-5" />}
+              title={`${travelerName(f.travelerId)} · ${f.from.city} → ${f.to.city}`}
+              sub={`${formatDeparture(f)} · ${f.flightNumber}`}
+              end={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${f.flightNumber} 삭제`}
+                  className="text-muted-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteMutation.mutate({ id: f.id });
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              }
+            />
+          </div>
+        ))
+      )}
+      <Drawer open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
+        <DrawerContent>
+          <DrawerHeader className="pb-4">
+            <DrawerTitle>비행 수정</DrawerTitle>
+          </DrawerHeader>
+          {editing && <FlightForm initial={editing} onDone={() => setEditing(null)} />}
+        </DrawerContent>
+      </Drawer>
+    </Section>
+  );
+}
+
+export type FlightFormValues = {
+  traveler: "me" | "partner";
+  flightNumber: string;
+  departureDate: string;
+  from: Pick<AirportView, "iata" | "city"> | null;
+  to: Pick<AirportView, "iata" | "city"> | null;
+  departureTime: string;
+  arrivalTime: string;
+  source: "manual" | "barcode";
+};
+
+function initialValues(initial: FlightView | undefined, currentUserId: string): FlightFormValues {
+  if (!initial) {
+    return {
+      traveler: "me",
+      flightNumber: "",
+      departureDate: localTodayValue(),
+      from: null,
+      to: null,
+      departureTime: "10:00",
+      arrivalTime: "12:00",
+      source: "manual",
+    };
+  }
+  const dep = toZonedLocal(new Date(initial.scheduledDepartureAt), initial.from.timeZone);
+  const arr = toZonedLocal(new Date(initial.scheduledArrivalAt), initial.to.timeZone);
+  return {
+    traveler: initial.travelerId === currentUserId ? "me" : "partner",
+    flightNumber: initial.flightNumber,
+    departureDate: dep.slice(0, 10),
+    from: initial.from,
+    to: initial.to,
+    departureTime: dep.slice(11, 16),
+    arrivalTime: arr.slice(11, 16),
+    source: "manual",
+  };
+}
+
+export function FlightForm({
+  initial,
+  onDone,
+  scanSlot,
+}: {
+  initial?: FlightView;
+  onDone: () => void;
+  /** 탑승권 바코드 스캔 버튼 자리 — 스캔 결과로 값을 채운다. */
+  scanSlot?: (fill: (patch: Partial<FlightFormValues>) => void) => React.ReactNode;
+}) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { currentUserId, summary } = useSpace();
+  const partnerName = displayName(summary.partner, "상대");
+  const [v, setV] = useState(() => initialValues(initial, currentUserId));
+  const set = (patch: Partial<FlightFormValues>) => setV((prev) => ({ ...prev, ...patch }));
+
+  const onSuccess = () => {
+    void queryClient.invalidateQueries(trpc.flight.pathFilter());
+    void queryClient.invalidateQueries(trpc.capsule.pathFilter());
+    onDone();
+  };
+  const onError = (err: { message: string }) => toast.error(err.message);
+  const create = useMutation(trpc.flight.create.mutationOptions({ onSuccess, onError }));
+  const update = useMutation(trpc.flight.update.mutationOptions({ onSuccess, onError }));
+  const pending = create.isPending || update.isPending;
+  const ready = v.flightNumber.trim() && v.from && v.to;
+
+  return (
+    <form
+      className="flex min-h-0 flex-col gap-3 overflow-y-auto"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!v.from || !v.to) return;
+        const payload = {
+          traveler: v.traveler,
+          flightNumber: v.flightNumber,
+          departureDate: v.departureDate,
+          fromIata: v.from.iata,
+          toIata: v.to.iata,
+          departureTime: v.departureTime,
+          arrivalTime: v.arrivalTime,
+          source: v.source,
+        };
+        if (initial) update.mutate({ ...payload, id: initial.id });
+        else create.mutate(payload);
+      }}
+    >
+      <p className="text-muted-foreground text-sm">
+        탑승 전에 등록하면 비행 중에도 서로 어디쯤인지 볼 수 있어요
+      </p>
+      {scanSlot?.(set)}
+      <div className="flex flex-col gap-1">
+        <span className="text-muted-foreground text-sm">누가 타나요</span>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="누가 타나요">
+          {(
+            [
+              ["me", "나"],
+              ["partner", partnerName],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={v.traveler === value}
+              onClick={() => set({ traveler: value })}
+              className={cn(
+                "border-input duration-base ease-standard h-11 rounded-lg border text-base transition-colors",
+                v.traveler === value && "border-primary bg-primary/10 font-semibold",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-sm">편명</span>
+          <Input
+            value={v.flightNumber}
+            onChange={(e) => set({ flightNumber: e.target.value.toUpperCase() })}
+            placeholder="KE081"
+            autoCapitalize="characters"
+          />
+        </label>
+        <DateField
+          label="출발 날짜"
+          value={v.departureDate}
+          onChange={(departureDate) => set({ departureDate })}
+        />
+      </div>
+      <AirportField label="출발" value={v.from} onChange={(from) => set({ from })} />
+      <AirportField label="도착" value={v.to} onChange={(to) => set({ to })} />
+      <TimeField
+        label={`출발 시각${v.from ? `(${v.from.city})` : ""}`}
+        value={v.departureTime}
+        onChange={(departureTime) => set({ departureTime })}
+      />
+      <TimeField
+        label={`도착 시각${v.to ? `(${v.to.city})` : ""}`}
+        value={v.arrivalTime}
+        onChange={(arrivalTime) => set({ arrivalTime })}
+      />
+      <Button type="submit" size="lg" className="mt-2" disabled={!ready || pending}>
+        {initial ? "저장하기" : "등록하기"}
+      </Button>
+    </form>
+  );
+}
+
+/** 공항 고르기 — 접힌 상태엔 고른 공항, 누르면 그 자리에서 검색(DateField와 같은 문법). */
+function AirportField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: Pick<AirportView, "iata" | "city"> | null;
+  onChange: (value: Pick<AirportView, "iata" | "city">) => void;
+}) {
+  const trpc = useTRPC();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const deferred = useDeferredValue(q.trim());
+  const results = useQuery({
+    ...trpc.flight.searchAirports.queryOptions({ q: deferred }),
+    enabled: open && deferred.length >= 2,
+    placeholderData: (prev) => prev,
+  });
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-muted-foreground text-sm">{label}</span>
+      {open ? (
+        <div className="border-ring flex flex-col rounded-lg border">
+          <div className="flex items-center gap-2 px-3">
+            <Search className="text-muted-foreground size-4" />
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="도시·공항 이름이나 코드(ICN)"
+              aria-label={`${label} 공항 검색`}
+              className="h-11 flex-1 bg-transparent text-base outline-none"
+            />
+          </div>
+          {deferred.length >= 2 && (
+            <ul className="border-border max-h-56 overflow-y-auto border-t">
+              {(results.data ?? []).map((a) => (
+                <li key={a.iata}>
+                  <button
+                    type="button"
+                    className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-left"
+                    onClick={() => {
+                      onChange({ iata: a.iata, city: a.city });
+                      setOpen(false);
+                      setQ("");
+                    }}
+                  >
+                    <span className="text-foreground w-10 font-semibold">{a.iata}</span>
+                    <span className="text-muted-foreground truncate text-sm">{a.name}</span>
+                  </button>
+                </li>
+              ))}
+              {results.data?.length === 0 && (
+                <li className="text-muted-foreground px-3 py-2 text-sm">찾는 공항이 없어요</li>
+              )}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(
+            "border-input flex h-11 items-center gap-2 rounded-lg border px-3.5 text-left text-base",
+            !value && "text-muted-foreground",
+          )}
+        >
+          {value ? (
+            <>
+              <span className="font-semibold">{value.iata}</span> {value.city}
+            </>
+          ) : (
+            `${label} 공항 고르기`
+          )}
+        </button>
+      )}
+    </div>
+  );
+}

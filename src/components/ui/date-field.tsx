@@ -136,6 +136,59 @@ export function DateTimeField({
   );
 }
 
+const FIVE_MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
+
+/**
+ * 시·분만("HH:mm"). 비행 시각처럼 날짜가 따로 정해진 경우 — 항공편 시각은
+ * 5분 단위로 적혀 있어 분은 5분 단위.
+ */
+export function TimeField({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+}) {
+  const hour = Number(value.slice(0, 2));
+  const minute = Math.floor(Number(value.slice(3, 5)) / 5) * 5;
+  const compose = (h: number, m: number) =>
+    `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <div className="grid grid-cols-2 gap-2">
+        <Select value={String(hour)} onValueChange={(h) => onChange(compose(Number(h), minute))}>
+          <SelectTrigger aria-label={`${label} 시`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {HOURS.map((h) => (
+              <SelectItem key={h} value={String(h)}>
+                {hourLabel(h)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={String(minute)} onValueChange={(m) => onChange(compose(hour, Number(m)))}>
+          <SelectTrigger aria-label={`${label} 분`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FIVE_MINUTES.map((m) => (
+              <SelectItem key={m} value={String(m)}>
+                {String(m).padStart(2, "0")}분
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
+
 /** 폼 기본값용 "오늘"(이 기기의 로컬 날짜). toISOString()은 UTC라 새벽엔 하루 전이 된다. */
 export function localTodayValue(now: Date = new Date()) {
   return toValue({ y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() });
