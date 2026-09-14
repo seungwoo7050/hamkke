@@ -295,3 +295,18 @@
     filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5);
   }
 }
+
+/* 비행 경로(src/app/home/flight-map.tsx) — SVG 속성엔 CSS 변수를 못 써서 클래스로
+   색을 준다. 다크 모드에서도 보이게 dusk-ink. */
+.hamkke-map .flight-path-flown {
+  stroke: var(--dusk-ink);
+  stroke-width: 3;
+  fill: none;
+}
+.hamkke-map .flight-path-remaining {
+  stroke: var(--dusk-ink);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 6;
+  stroke-opacity: 0.5;
+  fill: none;
+}
