@@ -9,7 +9,20 @@ export function localHour(timeZone: string, date: Date = new Date()) {
 }
 
 export function skyPhase(timeZone: string, date: Date = new Date()): SkyPhase {
-  const hour = localHour(timeZone, date);
+  return phaseForHour(localHour(timeZone, date));
+}
+
+/**
+ * 비행 중인 쪽의 하늘(PRD §3.3.1) — 시간대가 없는 하늘 위라, 추정 위치의
+ * 경도로 계산한 태양시(UTC + 경도/15)를 쓴다.
+ */
+export function skyPhaseAtLongitude(lng: number, date: Date = new Date()): SkyPhase {
+  const utcHours = date.getUTCHours() + date.getUTCMinutes() / 60;
+  const solar = (((utcHours + lng / 15) % 24) + 24) % 24;
+  return phaseForHour(Math.floor(solar));
+}
+
+function phaseForHour(hour: number): SkyPhase {
   if (hour >= 7 && hour < 17) return "day";
   if ((hour >= 5 && hour < 7) || (hour >= 17 && hour < 20)) return "dusk";
   return "night";

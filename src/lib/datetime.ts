@@ -110,3 +110,29 @@ export function nextOccurrence(date: YMD, recurring: boolean, today: YMD): YMD {
   const thisYear = { ...date, y: today.y };
   return daysBetween(today, thisYear) >= 0 ? thisYear : { ...date, y: today.y + 1 };
 }
+
+/**
+ * 그 시간대의 벽시계 값("2026-10-14T10:30")을 실제 순간(UTC)으로. 공항 현지
+ * 시각으로 입력받는 비행 시각에 쓴다. 오프셋을 한 번 추정하고 DST 경계를
+ * 위해 한 번 더 보정한다.
+ */
+export function fromZonedLocal(value: string, timeZone: string): Date {
+  const [datePart, timePart = "00:00"] = value.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [hh, mm] = timePart.split(":").map(Number);
+  const wall = Date.UTC(y, m - 1, d, hh, mm);
+  let guess = wall;
+  for (let i = 0; i < 2; i++) {
+    const p = partsIn(new Date(guess), timeZone);
+    const seen = Date.UTC(p.y, p.m - 1, p.d, p.hour, p.minute);
+    guess += wall - seen;
+  }
+  return new Date(guess);
+}
+
+/** 그 시간대에서 본 "YYYY-MM-DDTHH:mm" — fromZonedLocal의 반대(수정 폼 채우기). */
+export function toZonedLocal(date: Date, timeZone: string): string {
+  const p = partsIn(date, timeZone);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${p.y}-${pad(p.m)}-${pad(p.d)}T${pad(p.hour)}:${pad(p.minute)}`;
+}

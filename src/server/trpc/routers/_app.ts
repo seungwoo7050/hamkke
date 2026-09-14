@@ -5,6 +5,7 @@ import { calendarRouter } from "./calendar";
 import { capsuleRouter } from "./capsule";
 import { chatRouter } from "./chat";
 import { countdownRouter } from "./countdown";
+import { flightRouter } from "./flight";
 import { geofenceRouter } from "./geofence";
 import { homeRouter } from "./home";
 import { healthRouter } from "./health";
@@ -39,6 +40,7 @@ export const appRouter = router({
   billing: billingRouter,
   home: homeRouter,
   question: questionRouter,
+  flight: flightRouter,
 });
 
 export type AppRouter = typeof appRouter;
