@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Gaegu } from "next/font/google";
 import { LucideProvider } from "lucide-react";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import "pretendard/dist/web/static/pretendard-dynamic-subset.css";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -13,20 +15,24 @@ const gaegu = Gaegu({
   subsets: ["latin"], // next/font 메타데이터상 라벨은 latin뿐이지만 실제 폰트 파일에 한글 글리프 포함
 });
 
-export const metadata: Metadata = {
-  title: "Hamkke (함께)",
-  description: "장거리 연애 커플을 위한 2인 전용 프라이빗 공간",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return { title: t("title"), description: t("description") };
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // <html lang>은 언어별 폰트 토큰(globals.css :lang())과 스크린 리더 발음의 기준이다.
+  const locale = await getLocale();
   return (
-    <html lang="ko" className={`${gaegu.variable} h-full antialiased`}>
+    <html lang={locale} className={`${gaegu.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         {/* DESIGN.md §9: 아이콘 stroke-width 1.5 고정 — 아이콘마다 prop을
             반복하지 않고 전역 하나로 강제한다. */}
         <LucideProvider strokeWidth={1.5}>
-          <TRPCClientProvider>{children}</TRPCClientProvider>
-          <Toaster />
+          <NextIntlClientProvider>
+            <TRPCClientProvider>{children}</TRPCClientProvider>
+            <Toaster />
+          </NextIntlClientProvider>
         </LucideProvider>
       </body>
     </html>
