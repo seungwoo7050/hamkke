@@ -2,7 +2,7 @@ import { AnniversaryTracker } from "../anniversary-tracker";
 import { CalendarView } from "../calendar-view";
 import { OpenedCapsules, UpcomingCapsules } from "../capsule-notes";
 import { CountdownTracker } from "../countdown-tracker";
-import { UpcomingFlights } from "../flights";
+import { FlightHistory, UpcomingFlights } from "../flights";
 import { QuestionHistory } from "../daily-question";
 import { MeetupTimeline } from "../meetup-timeline";
 import { MomentFeed } from "../moment-feed";
@@ -37,6 +37,7 @@ export default async function MemoriesPage({ searchParams }: PageProps<"/home/me
             <>
               <MomentFeed />
               <MeetupTimeline />
+              <FlightHistory />
               <OpenedCapsules />
               <QuestionHistory />
             </>

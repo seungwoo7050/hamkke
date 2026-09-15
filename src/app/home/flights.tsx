@@ -10,14 +10,15 @@ import { Button } from "@/components/ui/button";
 import { DateField, TimeField, localTodayValue } from "@/components/ui/date-field";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { formatDateTime, toZonedLocal } from "@/lib/datetime";
-import { flightPhase } from "@/lib/flight";
+import { formatDateTime, formatYMD, partsIn, todayIn, toZonedLocal } from "@/lib/datetime";
+import { bestTimes, flightPhase } from "@/lib/flight";
+import { formatDistanceKm } from "@/lib/geo";
 import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
 import { BoardingPassScan } from "./boarding-pass-scan";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
-import { displayName, useSpace } from "./space-context";
+import { displayName, useMyTimeZone, useSpace } from "./space-context";
 
 export type FlightView = inferRouterOutputs<AppRouter>["flight"]["list"][number];
 type AirportView = FlightView["from"];
@@ -353,5 +354,68 @@ function AirportField({
         </button>
       )}
     </div>
+  );
+}
+
+const EARTH_CIRCUMFERENCE_KM = 40_075;
+
+// 기억 › 지나온 › "함께 난 하늘"(PRD §3.3.1) — 도착 시각이 지난 비행과 올해
+// 서로에게 날아간 거리(공항 사이 대권거리 합). 기록이 없으면 섹션을 숨긴다.
+export function FlightHistory() {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const travelerName = useTravelerName();
+  const myTz = useMyTimeZone();
+  const now = useNow();
+  const listQuery = useFlights();
+  const deleteMutation = useMutation(
+    trpc.flight.delete.mutationOptions({
+      onSuccess: () => queryClient.invalidateQueries(trpc.flight.pathFilter()),
+    }),
+  );
+
+  const flown = (listQuery.data ?? []).filter((f) => bestTimes(f).arrivalAt <= now).reverse();
+  if (flown.length === 0) return null;
+
+  const thisYear = todayIn(myTz, now).y;
+  const thisYearFlights = flown.filter((f) => todayIn(myTz, bestTimes(f).arrivalAt).y === thisYear);
+  const km = thisYearFlights.reduce((sum, f) => sum + f.distanceKm, 0);
+  const laps = km / EARTH_CIRCUMFERENCE_KM;
+
+  return (
+    <Section title="함께 난 하늘">
+      {thisYearFlights.length > 0 && (
+        <div className="bg-dusk mb-2 rounded-xl p-5 text-zinc-50">
+          <p className="text-sm opacity-80">올해 서로에게 날아간 거리</p>
+          <p className="mt-1 text-4xl font-bold tracking-tight">{formatDistanceKm(km)}</p>
+          <p className="mt-0.5 text-sm opacity-80">
+            비행 {thisYearFlights.length}번{laps >= 0.1 && ` · 지구 ${laps.toFixed(1)}바퀴`}
+          </p>
+        </div>
+      )}
+      {flown.map((f) => {
+        const dep = partsIn(new Date(f.scheduledDepartureAt), f.from.timeZone);
+        return (
+          <Row
+            key={f.id}
+            icon={<Plane className="text-dusk-ink size-5" />}
+            title={`${travelerName(f.travelerId)} · ${f.from.city} → ${f.to.city}`}
+            sub={`${formatYMD(dep, { year: dep.y !== thisYear })} · ${f.flightNumber} · ${formatDistanceKm(f.distanceKm)}`}
+            end={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`${f.flightNumber} 기록 삭제`}
+                className="text-muted-foreground"
+                onClick={() => deleteMutation.mutate({ id: f.id })}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            }
+          />
+        );
+      })}
+    </Section>
   );
 }
