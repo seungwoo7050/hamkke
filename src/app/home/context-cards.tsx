@@ -130,6 +130,14 @@ export function ContextCards() {
     myTz,
   ]);
 
+  // 새로 도착한 캡슐 중 착륙 편지가 있으면 카드에서 그렇게 부른다.
+  const landingArrived = (capsules.data ?? []).some(
+    (c) =>
+      c.flightId &&
+      c.senderId !== currentUserId &&
+      c.deliveredAt &&
+      now.getTime() - new Date(c.deliveredAt).getTime() < CAPSULE_FRESH_MS,
+  );
   const sheet = <QuestionSheet open={questionOpen} onOpenChange={setQuestionOpen} />;
   if (cards.length === 0) return sheet;
 
@@ -158,7 +166,7 @@ export function ContextCards() {
             key="capsule"
             href="/home/memories?tab=past"
             icon={<Mail className="size-6" />}
-            title={`${josa(partnerName, "이/가")} 보낸 캡슐이 열렸어요`}
+            title={`${josa(partnerName, "이/가")} 보낸 ${landingArrived ? "착륙 편지가" : "캡슐이"} 열렸어요`}
             sub={card.count > 1 ? `${card.count}통이 도착했어요` : "지금 열어볼 수 있어요"}
           />
         );
@@ -241,6 +249,9 @@ function FlightCard({
   const letters = (capsules.data ?? []).filter(
     (c) => c.flightId === f.id && new Date(c.deliverAt) > now,
   ).length;
+  const sentLetters = (capsules.data ?? []).filter(
+    (c) => c.flightId === f.id && c.senderId === currentUserId,
+  ).length;
   // 착륙 편지는 타는 사람에게 남기는 것 — 내가 타는 비행이면 권하지 않는다.
   const letterHint = mine
     ? null
@@ -249,10 +260,11 @@ function FlightCard({
       : "착륙 편지를 남겨둘 수 있어요";
   const withHint = (text: string) => (letterHint ? `${text} · ${letterHint}` : text);
 
+  const letterHref = mine ? "/home/memories" : `/home/memories?add=capsule&flight=${f.id}`;
   if (kind === "flight-inflight") {
     return (
       <Card
-        href="/home/memories"
+        href={letterHref}
         icon={<PlaneLanding className="size-6" />}
         title={`도착하면 거기는 ${formatTime(arrivalAt, f.to.timeZone)}`}
         sub={withHint(`${f.to.name} 도착${estimated ? " 예정" : ""}`)}
@@ -269,7 +281,9 @@ function FlightCard({
             ? `${f.to.city}에 도착했을 시간이에요`
             : `${josa(name, "이/가")} ${f.to.city}에 도착했을 시간이에요`
         }
-        sub={`${formatTime(arrivalAt, f.to.timeZone)} 착륙 ${estimated ? "예정이었어요" : "했어요"}`}
+        sub={`${formatTime(arrivalAt, f.to.timeZone)} 착륙 ${estimated ? "예정이었어요" : "했어요"}${
+          sentLetters > 0 ? " · 보낸 편지가 열렸어요" : ""
+        }`}
       />
     );
   }
@@ -277,7 +291,7 @@ function FlightCard({
   const dayWord = daysBetween(todayIn(f.from.timeZone, now), depToday) === 0 ? "오늘" : "내일";
   return (
     <Card
-      href="/home/memories"
+      href={letterHref}
       icon={<PlaneTakeoff className="size-6" />}
       title={`${mine ? "" : `${josa(name, "이/가")} `}${dayWord} ${formatTime(departureAt, f.from.timeZone)}에 출발해요`}
       sub={withHint(`${f.flightNumber} ${f.from.city} → ${f.to.city}`)}

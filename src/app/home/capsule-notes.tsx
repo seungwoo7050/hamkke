@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Lock, Mail, MailOpen, Trash2 } from "lucide-react";
+import { Lock, Mail, MailOpen, PlaneLanding, Trash2 } from "lucide-react";
+import { cn } from "cn";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { josa } from "@/lib/josa";
 import { formatDateTime } from "@/lib/datetime";
+import { bestTimes } from "@/lib/flight";
 import { SPRING } from "@/lib/motion";
 import { markCapsuleUnsealed, useUnsealedCapsules } from "@/lib/unsealed-capsules";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
+import { useFlights } from "./flights";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 import { displayName, useMyTimeZone, useSpace } from "./space-context";
@@ -39,8 +42,16 @@ function useCapsules() {
   return useQuery(trpc.capsule.list.queryOptions());
 }
 
-export function UpcomingCapsules() {
+export function UpcomingCapsules({
+  openAdd = false,
+  flightId,
+}: {
+  /** 비행 카드에서 "착륙 편지를 남겨둘 수 있어요"로 들어오면 바로 연다. */
+  openAdd?: boolean;
+  flightId?: string;
+}) {
   const trpc = useTRPC();
+  const flights = useFlights();
   const myTz = useMyTimeZone();
   const { currentUserId, summary } = useSpace();
   const partnerName = displayName(summary.partner, "상대");
@@ -56,7 +67,14 @@ export function UpcomingCapsules() {
     <Section
       title="도착 예정 캡슐"
       addTitle="캡슐 예약하기"
-      renderAdd={(close) => <CapsuleForm onDone={close} onCreated={() => listQuery.refetch()} />}
+      defaultAddOpen={openAdd}
+      renderAdd={(close) => (
+        <CapsuleForm
+          onDone={close}
+          onCreated={() => listQuery.refetch()}
+          initialFlightId={flightId}
+        />
+      )}
     >
       {listQuery.isPending ? (
         <LoadingRow />
@@ -67,12 +85,25 @@ export function UpcomingCapsules() {
       ) : (
         waiting.map((capsule) => {
           const mine = capsule.senderId === currentUserId;
+          const flight = capsule.flightId
+            ? flights.data?.find((f) => f.id === capsule.flightId)
+            : undefined;
           return (
             <Row
               key={capsule.id}
-              icon={<Lock className="text-dusk-ink size-5" />}
+              icon={
+                flight ? (
+                  <PlaneLanding className="text-dusk-ink size-5" />
+                ) : (
+                  <Lock className="text-dusk-ink size-5" />
+                )
+              }
               title={mine ? `${partnerName}에게 보낸 편지` : `${partnerName}의 편지`}
-              sub={`${formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false })}에 열려요`}
+              sub={
+                flight
+                  ? `${josa(flight.flightNumber, "이/가")} ${flight.to.city}에 착륙하면 열려요`
+                  : `${formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false })}에 열려요`
+              }
               end={
                 mine && (
                   <Button
@@ -122,7 +153,7 @@ export function OpenedCapsules() {
               onOpen={() => markCapsuleUnsealed(capsule.id)}
               from={mine ? `${partnerName}에게` : `${partnerName}로부터`}
               when={when}
-              sealedTitle={`${partnerName}의 편지`}
+              sealedTitle={`${partnerName}의 ${capsule.flightId ? "착륙 " : ""}편지`}
               content={capsule.content ?? ""}
             />
           );
@@ -207,10 +238,29 @@ function CapsuleLetter({
   );
 }
 
-function CapsuleForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
+function CapsuleForm({
+  onDone,
+  onCreated,
+  initialFlightId,
+}: {
+  onDone: () => void;
+  onCreated: () => void;
+  initialFlightId?: string;
+}) {
   const trpc = useTRPC();
+  const { currentUserId, summary } = useSpace();
+  const partnerName = displayName(summary.partner, "상대");
+  const now = useNow();
+  const flights = useFlights();
+  // 착륙 편지를 걸 수 있는 비행 — 상대가 타고, 아직 착륙 전(PRD §3.3.1).
+  const landable = (flights.data ?? []).filter(
+    (f) => f.travelerId !== currentUserId && bestTimes(f).arrivalAt > now,
+  );
   const [content, setContent] = useState("");
   const [deliverAt, setDeliverAt] = useState(defaultDeliverAt);
+  const [flightId, setFlightId] = useState<string | null>(
+    initialFlightId && landable.some((f) => f.id === initialFlightId) ? initialFlightId : null,
+  );
   const createMutation = useMutation(
     trpc.capsule.create.mutationOptions({
       onSuccess: () => {
@@ -227,19 +277,53 @@ function CapsuleForm({ onDone, onCreated }: { onDone: () => void; onCreated: () 
       onSubmit={(e) => {
         e.preventDefault();
         if (!content.trim()) return;
-        createMutation.mutate({
-          content: content.trim(),
-          deliverAt: new Date(deliverAt).toISOString(),
-        });
+        createMutation.mutate(
+          flightId
+            ? { content: content.trim(), flightId }
+            : { content: content.trim(), deliverAt: new Date(deliverAt).toISOString() },
+        );
       }}
     >
       <UpgradeHint usageKey="activeCapsules" />
       <Input
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="미래의 너에게"
+        placeholder={flightId ? "도착하면 읽을 한마디" : "미래의 너에게"}
       />
-      <DateTimeField label="열리는 날" value={deliverAt} onChange={setDeliverAt} />
+      {landable.length > 0 && (
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="열리는 때">
+          <span className="text-muted-foreground text-sm">열리는 때</span>
+          {[
+            { id: null, label: "날짜·시각 정하기" },
+            ...landable.map((f) => ({
+              id: f.id,
+              label: `${josa(partnerName, "이/가")} 탄 비행기가 착륙하면 · ${f.flightNumber}`,
+            })),
+          ].map((opt) => (
+            <button
+              key={opt.id ?? "time"}
+              type="button"
+              role="radio"
+              aria-checked={flightId === opt.id}
+              onClick={() => setFlightId(opt.id)}
+              className={cn(
+                "border-input duration-base ease-standard flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
+                flightId === opt.id && "border-primary bg-primary/10",
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "size-4 shrink-0 rounded-full border-2",
+                  flightId === opt.id ? "border-primary border-[5px]" : "border-muted-foreground",
+                )}
+              />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {!flightId && <DateTimeField label="열리는 날" value={deliverAt} onChange={setDeliverAt} />}
       <Button type="submit" size="lg" disabled={!content.trim() || createMutation.isPending}>
         예약 보내기
       </Button>

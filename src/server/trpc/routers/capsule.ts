@@ -1,15 +1,22 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { bestTimes } from "@/lib/flight";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { router, spaceProcedure } from "../init";
 
+// 여는 때는 정한 시각(deliverAt) 또는 "상대가 탄 비행기가 착륙하면"(flightId,
+// PRD §3.3.1) 둘 중 하나.
 const createInput = z
   .object({
     content: z.string().min(1).max(2000),
-    deliverAt: z.coerce.date(),
+    deliverAt: z.coerce.date().optional(),
+    flightId: z.string().optional(),
   })
-  .refine((data) => data.deliverAt > new Date(), {
+  .refine((data) => (data.deliverAt ? !data.flightId : !!data.flightId), {
+    message: "여는 때를 하나만 골라주세요",
+  })
+  .refine((data) => !data.deliverAt || data.deliverAt > new Date(), {
     message: "배달 시각은 미래여야 해요",
     path: ["deliverAt"],
   });
@@ -63,8 +70,30 @@ export const capsuleRouter = router({
       }
     }
 
+    let deliverAt = input.deliverAt;
+    if (input.flightId) {
+      const flight = await prisma.flight.findFirst({
+        where: { id: input.flightId, spaceId: ctx.space.id },
+      });
+      if (!flight) throw new TRPCError({ code: "NOT_FOUND", message: "항공편을 찾지 못했어요" });
+      // 착륙 편지는 타는 사람에게 남기는 것 — 내가 타는 비행기엔 걸 수 없다.
+      if (flight.travelerId === ctx.session.user.id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "상대가 탄 비행기에만 걸 수 있어요" });
+      }
+      deliverAt = bestTimes(flight).arrivalAt;
+      if (deliverAt <= new Date()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "이미 착륙한 비행이에요" });
+      }
+    }
+
     return prisma.capsule.create({
-      data: { spaceId: ctx.space.id, senderId: ctx.session.user.id, ...input },
+      data: {
+        spaceId: ctx.space.id,
+        senderId: ctx.session.user.id,
+        content: input.content,
+        deliverAt: deliverAt!,
+        flightId: input.flightId ?? null,
+      },
     });
   }),
 

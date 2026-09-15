@@ -142,4 +142,53 @@ describe("capsule 라우터 (통합)", () => {
       code: "FORBIDDEN",
     });
   });
+
+  describe("착륙하면 열리는 편지 (PRD §3.3.1)", () => {
+    async function flightOf(travelerId: string, arrivalInMs: number) {
+      return prisma.flight.create({
+        data: {
+          spaceId,
+          travelerId,
+          flightNumber: "KE081",
+          departureDate: new Date("2026-10-14T00:00:00Z"),
+          fromIata: "ICN",
+          toIata: "JFK",
+          scheduledDepartureAt: new Date(Date.now() - 60_000),
+          scheduledArrivalAt: new Date(Date.now() + arrivalInMs),
+        },
+      });
+    }
+
+    it("여는 시각은 그 항공편의 도착 시각을 따른다", async () => {
+      const f = await flightOf(userBId, 3 * 3_600_000);
+      const created = await (
+        await callerFor(userAId)
+      ).capsule.create({
+        content: "도착 축하해",
+        flightId: f.id,
+      });
+      expect(created.deliverAt).toEqual(f.scheduledArrivalAt);
+      expect(created.flightId).toBe(f.id);
+    });
+
+    it("내가 타는 비행기·이미 착륙한 비행기·여는 때 둘 다 주기는 거절", async () => {
+      const caller = await callerFor(userAId);
+      const mine = await flightOf(userAId, 3_600_000);
+      await expect(caller.capsule.create({ content: "x", flightId: mine.id })).rejects.toThrow(
+        /상대가 탄/,
+      );
+      const landed = await flightOf(userBId, -60_000);
+      await expect(caller.capsule.create({ content: "x", flightId: landed.id })).rejects.toThrow(
+        /이미 착륙/,
+      );
+      const f = await flightOf(userBId, 3_600_000);
+      await expect(
+        caller.capsule.create({
+          content: "x",
+          flightId: f.id,
+          deliverAt: new Date(Date.now() + 3_600_000).toISOString(),
+        }),
+      ).rejects.toThrow(/하나만/);
+    });
+  });
 });

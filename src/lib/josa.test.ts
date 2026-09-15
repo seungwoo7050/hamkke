@@ -14,3 +14,11 @@ describe("josa", () => {
     expect(josa("개발용-B", "이/가")).toBe("개발용-B가");
   });
 });
+
+describe("숫자로 끝나는 말(편명)", () => {
+  it("한국어 읽기로 받침을 판단한다", () => {
+    expect(josa("KE081", "이/가")).toBe("KE081이");
+    expect(josa("KE082", "이/가")).toBe("KE082가");
+    expect(josa("OZ220", "이/가")).toBe("OZ220이");
+  });
+});
