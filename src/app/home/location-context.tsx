@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { distanceKm, isMeetingSoon } from "@/lib/geo";
 import {
@@ -59,6 +60,7 @@ export function LocationProvider({
   children: React.ReactNode;
 }) {
   const trpc = useTRPC();
+  const t = useTranslations("location");
   const [sharing, setSharing] = useState(initialSharing);
   const [me, setMe] = useState<Point | null>(null);
   const [partnerSharing, setPartnerSharing] = useState(initialPartnerStatus?.sharing ?? false);
@@ -82,7 +84,7 @@ export function LocationProvider({
     }
 
     function handleError() {
-      toast.error("위치를 가져오지 못했어요. 위치 권한을 확인해주세요");
+      toast.error(t("geoFailed"));
       setSharing(false);
       setSharingMutation.mutate({ enabled: false });
     }
@@ -129,7 +131,7 @@ export function LocationProvider({
   async function toggleSharing() {
     const next = !sharing;
     if (next && !isNativeLocation() && !("geolocation" in navigator)) {
-      toast.error("이 브라우저는 위치공유를 지원하지 않아요");
+      toast.error(t("unsupported"));
       return;
     }
     try {
@@ -137,7 +139,7 @@ export function LocationProvider({
       setSharing(next);
       if (!next) setMe(null);
     } catch {
-      toast.error("위치공유 설정에 실패했어요");
+      toast.error(t("toggleFailed"));
     }
   }
 

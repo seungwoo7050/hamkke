@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "cn";
-import { formatYMD, type YMD } from "@/lib/datetime";
+import { useFormat } from "@/i18n/use-format";
+import { type YMD } from "@/lib/datetime";
 import { Calendar } from "./calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 
@@ -36,6 +38,7 @@ export function DateField({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
+  const fmt = useFormat();
   const ymd = parseYMD(value);
 
   return (
@@ -51,7 +54,7 @@ export function DateField({
         )}
       >
         <CalendarDays className="text-muted-foreground size-5" />
-        {formatYMD(ymd, { weekday: true, year: ymd.y !== new Date().getFullYear() })}
+        {fmt.ymd(ymd, { weekday: true, year: ymd.y !== new Date().getFullYear() })}
       </button>
       {open && (
         <div className="border-border mt-1 rounded-lg border p-2">
@@ -76,9 +79,11 @@ export function DateField({
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const MINUTES = [0, 10, 20, 30, 40, 50];
 
-function hourLabel(h: number) {
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h < 12 ? "오전" : "오후"} ${h12}시`;
+/** 시 선택지 — "오전 10시" / "10 AM" */
+function useHourLabel() {
+  const t = useTranslations("dateField");
+  return (h: number) =>
+    t("hourOption", { period: h < 12 ? "am" : "pm", hour: h % 12 === 0 ? 12 : h % 12 });
 }
 
 /** 날짜(달력) + 시·분(선택). 분은 10분 단위 — 약속 시각에 1분 단위는 필요 없다. */
@@ -91,6 +96,8 @@ export function DateTimeField({
   onChange: (value: string) => void;
   label: string;
 }) {
+  const t = useTranslations("dateField");
+  const hourLabel = useHourLabel();
   const date = value.slice(0, 10);
   const hour = Number(value.slice(11, 13));
   const minute = Math.floor(Number(value.slice(14, 16)) / 10) * 10;
@@ -105,7 +112,7 @@ export function DateTimeField({
           value={String(hour)}
           onValueChange={(h) => onChange(compose(date, Number(h), minute))}
         >
-          <SelectTrigger aria-label={`${label} 시`}>
+          <SelectTrigger aria-label={t("hour", { label })}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -120,13 +127,13 @@ export function DateTimeField({
           value={String(minute)}
           onValueChange={(m) => onChange(compose(date, hour, Number(m)))}
         >
-          <SelectTrigger aria-label={`${label} 분`}>
+          <SelectTrigger aria-label={t("minute", { label })}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {MINUTES.map((m) => (
               <SelectItem key={m} value={String(m)}>
-                {String(m).padStart(2, "0")}분
+                {t("minuteOption", { minute: String(m).padStart(2, "0") })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -151,6 +158,8 @@ export function TimeField({
   onChange: (value: string) => void;
   label: string;
 }) {
+  const t = useTranslations("dateField");
+  const hourLabel = useHourLabel();
   const hour = Number(value.slice(0, 2));
   const minute = Math.floor(Number(value.slice(3, 5)) / 5) * 5;
   const compose = (h: number, m: number) =>
@@ -161,7 +170,7 @@ export function TimeField({
       <span className="text-muted-foreground text-sm">{label}</span>
       <div className="grid grid-cols-2 gap-2">
         <Select value={String(hour)} onValueChange={(h) => onChange(compose(Number(h), minute))}>
-          <SelectTrigger aria-label={`${label} 시`}>
+          <SelectTrigger aria-label={t("hour", { label })}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -173,13 +182,13 @@ export function TimeField({
           </SelectContent>
         </Select>
         <Select value={String(minute)} onValueChange={(m) => onChange(compose(hour, Number(m)))}>
-          <SelectTrigger aria-label={`${label} 분`}>
+          <SelectTrigger aria-label={t("minute", { label })}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {FIVE_MINUTES.map((m) => (
               <SelectItem key={m} value={String(m)}>
-                {String(m).padStart(2, "0")}분
+                {t("minuteOption", { minute: String(m).padStart(2, "0") })}
               </SelectItem>
             ))}
           </SelectContent>

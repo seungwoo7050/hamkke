@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImageUp, ScanLine } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { BarcodeDetector as BarcodeDetectorType } from "barcode-detector/ponyfill";
 import { parseBoardingPass, type BoardingPassLeg } from "@/lib/bcbp";
@@ -29,6 +30,7 @@ async function getDetector(): Promise<Detector> {
  * 스크린샷·사진에서 읽는다. 편명·공항·날짜만 넘기고 나머지는 버린다.
  */
 export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassLeg) => void }) {
+  const t = useTranslations("scan");
   const [mode, setMode] = useState<"idle" | "choose" | "camera">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -44,7 +46,7 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
         return true;
       }
     }
-    if (values.length > 0) setMessage("탑승권 바코드가 아닌 것 같아요");
+    if (values.length > 0) setMessage(t("notPass"));
     return false;
   }
 
@@ -70,7 +72,7 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
         }
       } catch {
         if (!stopped) {
-          setMessage("카메라를 쓸 수 없어요. 탑승권 사진에서 읽어 보세요");
+          setMessage(t("noCamera"));
           setMode("choose");
         }
       }
@@ -90,10 +92,10 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
       const bitmap = await createImageBitmap(file);
       const found = await detector.detect(bitmap);
       if (!handle(found.map((b) => b.rawValue)) && found.length === 0) {
-        setMessage("바코드를 찾지 못했어요. 바코드가 크게 나온 사진으로 다시 해 보세요");
+        setMessage(t("notFound"));
       }
     } catch {
-      setMessage("사진을 읽지 못했어요");
+      setMessage(t("readFailed"));
     }
   }
 
@@ -102,7 +104,7 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
       {mode === "idle" ? (
         <Button type="button" variant="outline" size="lg" onClick={() => setMode("choose")}>
           <ScanLine className="size-5" />
-          탑승권 바코드로 채우기
+          {t("start")}
         </Button>
       ) : (
         <div className="border-border flex flex-col gap-2 rounded-lg border p-3">
@@ -111,7 +113,7 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
               ref={videoRef}
               muted
               playsInline
-              aria-label="탑승권 바코드를 비춰 주세요"
+              aria-label={t("aim")}
               className="bg-muted aspect-[4/3] w-full rounded-md object-cover"
             />
           )}
@@ -122,11 +124,11 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
               onClick={() => setMode(mode === "camera" ? "choose" : "camera")}
             >
               <Camera className="size-4" />
-              {mode === "camera" ? "카메라 끄기" : "카메라로 스캔"}
+              {mode === "camera" ? t("cameraOff") : t("cameraOn")}
             </Button>
             <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
               <ImageUp className="size-4" />
-              사진에서 읽기
+              {t("fromPhoto")}
             </Button>
           </div>
           <input
@@ -134,7 +136,7 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
             type="file"
             accept="image/*"
             className="hidden"
-            aria-label="탑승권 사진"
+            aria-label={t("photoLabel")}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void readFile(file);
@@ -142,7 +144,7 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
             }}
           />
           <p className="text-muted-foreground text-xs">
-            편명·공항·날짜만 가져와요. 이름·예약번호는 저장하지 않아요.
+            {t("privacy")}
           </p>
         </div>
       )}

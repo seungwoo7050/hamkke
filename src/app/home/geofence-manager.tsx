@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { BellRing, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import { useTRPC } from "@/trpc/client";
 // 한 번 등록하면 거의 안 건드리는 설정이라 설정 시트 안에 둔다(DESIGN.md §4).
 export function GeofenceManager() {
   const trpc = useTRPC();
+  const t = useTranslations("geofence");
+  const tm = useTranslations("memories");
   const [label, setLabel] = useState("");
   const [registering, setRegistering] = useState(false);
 
@@ -32,7 +35,7 @@ export function GeofenceManager() {
   function handleRegister() {
     if (!label.trim()) return;
     if (!("geolocation" in navigator)) {
-      toast.error("이 브라우저는 위치를 가져올 수 없어요");
+      toast.error(t("noGeo"));
       return;
     }
     setRegistering(true);
@@ -46,7 +49,7 @@ export function GeofenceManager() {
         setRegistering(false);
       },
       () => {
-        toast.error("현재 위치를 가져오지 못했어요");
+        toast.error(t("geoFailed"));
         setRegistering(false);
       },
     );
@@ -59,10 +62,8 @@ export function GeofenceManager() {
       <BellRing className="text-dusk-ink mt-0.5 size-5" />
       <div className="flex flex-1 flex-col gap-2">
         <div>
-          <p className="text-foreground text-base font-medium">도착 알림 장소</p>
-          <p className="text-muted-foreground text-sm">
-            지금 있는 곳을 등록하면, 상대가 도착했을 때 알려줘요
-          </p>
+          <p className="text-foreground text-base font-medium">{t("title")}</p>
+          <p className="text-muted-foreground text-sm">{t("sub")}</p>
         </div>
         {fences.length > 0 && (
           <ul className="flex flex-col">
@@ -73,7 +74,7 @@ export function GeofenceManager() {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${fence.label} 삭제`}
+                  aria-label={tm("delete", { title: fence.label })}
                   onClick={() => deleteMutation.mutate({ id: fence.id })}
                 >
                   <Trash2 className="size-4" />
@@ -86,7 +87,7 @@ export function GeofenceManager() {
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="예: 집, 공항"
+            placeholder={t("placeholder")}
           />
           <Button
             type="button"
@@ -94,7 +95,7 @@ export function GeofenceManager() {
             onClick={handleRegister}
             disabled={!label.trim() || registering || createMutation.isPending}
           >
-            여기로 등록
+            {t("register")}
           </Button>
         </div>
       </div>

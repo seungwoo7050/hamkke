@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { latLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useTranslations } from "next-intl";
 import { AttributionControl, MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { duskMarkerIcon, emberMarkerIcon } from "@/lib/map-markers";
 
@@ -16,6 +17,7 @@ const DEFAULT_CENTER: LatLng = { lat: 36.5, lng: 127.8 };
 // 두 사람이 모두 있으면 둘 다 보이게 범위를 맞추고(장거리라 한쪽 중심 고정
 // 줌이면 상대가 화면 밖에 있다), 한 명뿐이면 그 사람 중심으로 가까이 본다.
 export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLng | null }) {
+  const t = useTranslations("common");
   const center = me ?? partner ?? DEFAULT_CENTER;
   const hasAnyPoint = me !== null || partner !== null;
   const bounds =
@@ -47,12 +49,12 @@ export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLn
       <AttributionControl position="bottomright" prefix={false} />
       {me && (
         <Marker position={[me.lat, me.lng]} icon={emberMarkerIcon}>
-          <Popup>나</Popup>
+          <Popup>{t("me")}</Popup>
         </Marker>
       )}
       {partner && (
         <Marker position={[partner.lat, partner.lng]} icon={duskMarkerIcon}>
-          <Popup>상대</Popup>
+          <Popup>{t("partner")}</Popup>
         </Marker>
       )}
     </MapContainer>

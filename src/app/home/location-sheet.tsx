@@ -3,12 +3,11 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
-import { bestTimes, flightProgress, formatRemaining, pickFlight } from "@/lib/flight";
-import { formatDistanceKm } from "@/lib/geo";
-import { josa } from "@/lib/josa";
-import { relativeTime } from "@/lib/relative-time";
+import { useFormat } from "@/i18n/use-format";
+import { bestTimes, flightProgress, pickFlight } from "@/lib/flight";
 import { useNow } from "@/lib/use-now";
 import {
   Drawer,
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/drawer";
 import { useFlights } from "./flights";
 import { useDistance, useLocationSharing } from "./location-context";
-import { displayName, useSpace } from "./space-context";
+import { usePartnerName, useSpace } from "./space-context";
 
 // Leaflet은 window에 의존해 서버에서 렌더링할 수 없다.
 const LocationMap = dynamic(() => import("./location-map").then((m) => m.LocationMap), {
@@ -36,17 +35,27 @@ const FlightMap = dynamic(() => import("./flight-map").then((m) => m.FlightMap),
 const SNAP_POINTS = [0.4, 0.65, 1] as const;
 
 export function LocationSheet({ children }: { children: React.ReactNode }) {
-  const { currentUserId, summary } = useSpace();
+  const { currentUserId } = useSpace();
   const { me, sharing, partnerSharing, partnerLocation, toggleSharing, togglePending } =
     useLocationSharing();
   const { km, approaching, meetingSoon } = useDistance();
   const now = useNow();
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[1]);
-  const partnerName = displayName(summary.partner, "상대");
+  const t = useTranslations("location");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
+  const names = fmt.particles(partnerName);
   const flights = useFlights();
   const picked = flights.data ? pickFlight(flights.data, now) : null;
   // 비행 중이면 두 사람 위치 대신 비행 경로를 보여준다(PRD §3.3.1).
   const flying = picked?.phase === "inFlight" ? picked.flight : null;
+
+  function flightRemaining(f: NonNullable<typeof flying>) {
+    const { arrivalAt, estimated } = bestTimes(f);
+    const time = fmt.remaining(arrivalAt.getTime() - now.getTime());
+    if (!time) return t("landingSoon");
+    return t(estimated ? "flightRemainingScheduled" : "flightRemaining", { time });
+  }
 
   const partnerPoint =
     partnerSharing && partnerLocation
@@ -54,13 +63,13 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
       : null;
 
   const status = !partnerSharing
-    ? `${josa(partnerName, "이/가")} 위치공유를 꺼두었어요`
+    ? t("partnerOff", names)
     : !sharing
-      ? "내 위치공유를 켜면 거리를 볼 수 있어요"
+      ? t("turnOnMine")
       : [
-          km !== null && formatDistanceKm(km),
+          km !== null && fmt.distance(km),
           partnerLocation &&
-            `마지막 위치 ${relativeTime(new Date(partnerLocation.capturedAt), now)}`,
+            t("lastSeen", { when: fmt.relative(new Date(partnerLocation.capturedAt), now) }),
         ]
           .filter(Boolean)
           .join(" · ");
@@ -73,19 +82,22 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
           <DrawerTitle>
             {flying
               ? flying.travelerId === currentUserId
-                ? "하늘 위에 있어요"
-                : `${josa(partnerName, "은/는")} 하늘 위`
+                ? t("meInTheAir")
+                : t("partnerInTheAir", names)
               : meetingSoon
                 ? approaching
-                  ? "곧 만나요! 점점 가까워지고 있어요"
-                  : "곧 만나요! 가까이 있어요"
-                : `${partnerName}의 위치`}
+                  ? t("meetingApproaching")
+                  : t("meetingNear")
+                : t("partnerLocation", { name: partnerName })}
           </DrawerTitle>
           <DrawerDescription>
             {flying
-              ? `${flying.flightNumber} ${flying.from.city} → ${flying.to.city} · ${formatRemaining(
-                  bestTimes(flying).arrivalAt.getTime() - now.getTime(),
-                )} 남음${bestTimes(flying).estimated ? "(예정 기준)" : ""}`
+              ? t("flightStatus", {
+                  flight: flying.flightNumber,
+                  from: flying.from.city,
+                  to: flying.to.city,
+                  remaining: flightRemaining(flying),
+                })
               : status}
           </DrawerDescription>
         </DrawerHeader>
@@ -94,26 +106,24 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
             <div className="overflow-hidden rounded-lg">
               <FlightMap from={flying.from} to={flying.to} progress={flightProgress(flying, now)} />
             </div>
-            <p className="text-muted-foreground mt-3 text-sm">
-              최단 비행 경로 위의 추정 위치예요. 실제 항로와는 조금 다를 수 있어요.
-            </p>
+            <p className="text-muted-foreground mt-3 text-sm">{t("estimateNote")}</p>
           </>
         ) : me || partnerPoint ? (
           <div className="overflow-hidden rounded-lg">
             <LocationMap me={me} partner={partnerPoint} />
           </div>
         ) : (
-          <EmptyState caption="위치를 나누면 여기서 서로를 찾을 수 있어요" className="py-8" />
+          <EmptyState caption={t("empty")} className="py-8" />
         )}
         {!sharing && !flying && (
           // 첫날엔 여기가 막다른 곳이었다 — 설명만 하고 켜는 곳(설정 시트)은 따로
           // 있었음. 옵트인 원칙(ARCHITECTURE.md §5)대로 누르기 전엔 켜지 않는다.
           <div className="mt-4 flex flex-col gap-2">
             <Button size="lg" disabled={togglePending} onClick={() => void toggleSharing()}>
-              <MapPin className="size-5" /> 내 위치 나누기
+              <MapPin className="size-5" /> {t("share")}
             </Button>
             <p className="text-muted-foreground text-center text-xs">
-              {partnerName}에게만 보이고, 설정에서 언제든 끌 수 있어요
+              {t("shareNote", { name: partnerName })}
             </p>
           </div>
         )}

@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { DayPicker, type DayPickerProps } from "@daypicker/react";
-import { ko } from "@daypicker/react/locale";
+import { enUS, ko } from "@daypicker/react/locale";
+import { useLocale } from "next-intl";
 import { cn } from "cn";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -11,10 +12,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * 입힘). 브라우저 기본 날짜 입력창은 플랫폼마다 모양이 달라 토큰과 어긋났고
  * 다크 모드에서도 튀었다.
  */
+// 달력의 월·요일 이름은 DayPicker 자체 로케일을 쓴다(src/i18n/config.ts의 언어마다 하나).
+const DAYPICKER_LOCALES = { ko, en: enUS } as const;
+
 function Calendar({ className, classNames, ...props }: DayPickerProps) {
+  const locale = useLocale();
   return (
     <DayPicker
-      locale={ko}
+      locale={DAYPICKER_LOCALES[locale]}
       showOutsideDays
       className={cn("text-foreground w-full", className)}
       classNames={{

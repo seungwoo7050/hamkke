@@ -1,6 +1,7 @@
 "use client";
 
 import { LogOut, MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -16,7 +17,7 @@ import { BillingSection } from "./billing-section";
 import { GeofenceManager } from "./geofence-manager";
 import { useLocationSharing } from "./location-context";
 import { PersonAvatar } from "./person-avatar";
-import { displayName, useSpace } from "./space-context";
+import { displayName, usePartnerName, useSpace } from "./space-context";
 
 // 설정성 기능(위치공유·도착 알림 장소·구독·로그아웃)은 탭이나 홈 본문에 두지
 // 않고 우상단 아바타에서 여는 이 시트에만 모은다(DESIGN.md §4, Calm
@@ -24,21 +25,23 @@ import { displayName, useSpace } from "./space-context";
 export function SettingsSheet() {
   const { summary } = useSpace();
   const { sharing, toggleSharing, togglePending } = useLocationSharing();
-  const myName = displayName(summary.me, "나");
-  const partnerName = displayName(summary.partner, "상대");
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
+  const myName = displayName(summary.me, tc("me"));
+  const partnerName = usePartnerName();
 
   return (
     <Drawer>
-      <DrawerTrigger aria-label="설정 열기" className="rounded-full">
-        <PersonAvatar person={summary.me} who="me" fallback="나" />
+      <DrawerTrigger aria-label={t("open")} className="rounded-full">
+        <PersonAvatar person={summary.me} who="me" fallback={tc("me")} />
       </DrawerTrigger>
       <DrawerContent>
         <div className="overflow-y-auto">
           <DrawerHeader className="flex-row items-center gap-3 pb-3">
-            <PersonAvatar person={summary.me} who="me" size={48} fallback="나" />
+            <PersonAvatar person={summary.me} who="me" size={48} fallback={tc("me")} />
             <div>
               <DrawerTitle>{myName}</DrawerTitle>
-              <DrawerDescription>함께하는 사람 · {partnerName}</DrawerDescription>
+              <DrawerDescription>{t("together", { name: partnerName })}</DrawerDescription>
             </div>
           </DrawerHeader>
 
@@ -46,9 +49,9 @@ export function SettingsSheet() {
             <label className="flex items-center gap-3 py-3">
               <MapPin className="text-dusk-ink size-5" />
               <div className="flex-1">
-                <p className="text-foreground text-base font-medium">위치공유</p>
+                <p className="text-foreground text-base font-medium">{t("locationSharing")}</p>
                 <p className="text-muted-foreground text-sm">
-                  켜두면 거리·날씨가 {partnerName}에게 보여요
+                  {t("locationSharingSub", { name: partnerName })}
                 </p>
               </div>
               <Switch
@@ -61,7 +64,7 @@ export function SettingsSheet() {
             <BillingSection />
             <form action={signOutAction} className="py-2">
               <Button type="submit" variant="ghost" className="text-destructive -mx-3.5">
-                <LogOut className="size-5" /> 로그아웃
+                <LogOut className="size-5" /> {t("signOut")}
               </Button>
             </form>
           </div>

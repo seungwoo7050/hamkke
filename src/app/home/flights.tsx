@@ -4,21 +4,23 @@ import { useDeferredValue, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { Plane, Search, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { DateField, TimeField, localTodayValue } from "@/components/ui/date-field";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { formatDateTime, formatYMD, partsIn, todayIn, toZonedLocal } from "@/lib/datetime";
+import { type Formatters } from "@/i18n/format";
+import { useFormat } from "@/i18n/use-format";
+import { partsIn, todayIn, toZonedLocal } from "@/lib/datetime";
 import { bestTimes, flightPhase } from "@/lib/flight";
-import { formatDistanceKm } from "@/lib/geo";
 import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
 import { BoardingPassScan } from "./boarding-pass-scan";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
-import { displayName, useMyTimeZone, useSpace } from "./space-context";
+import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
 export type FlightView = inferRouterOutputs<AppRouter>["flight"]["list"][number];
 type AirportView = FlightView["from"];
@@ -30,16 +32,17 @@ export function useFlights() {
   return useQuery({ ...trpc.flight.list.queryOptions(), initialData: summary.flights });
 }
 
-/** "지우" 또는 "나" */
+/** "지우" 또는 "나" / "Jiwoo" or "Me" */
 export function useTravelerName() {
-  const { currentUserId, summary } = useSpace();
-  return (travelerId: string) =>
-    travelerId === currentUserId ? "나" : displayName(summary.partner, "상대");
+  const { currentUserId } = useSpace();
+  const tc = useTranslations("common");
+  const partnerName = usePartnerName();
+  return (travelerId: string) => (travelerId === currentUserId ? tc("me") : partnerName);
 }
 
 /** "10월 14일 (수) 오전 10:30" — 출발 공항 현지 시각(탑승권에 적힌 그대로). */
-export function formatDeparture(f: FlightView) {
-  return formatDateTime(new Date(f.scheduledDepartureAt), f.from.timeZone);
+export function formatDeparture(fmt: Formatters, f: FlightView) {
+  return fmt.dateTime(new Date(f.scheduledDepartureAt), f.from.timeZone);
 }
 
 // 기억 탭 "다가올"의 비행(PRD §3.3.1). 아직 끝나지 않은(출발 전·비행 중)
@@ -48,6 +51,8 @@ export function UpcomingFlights() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const travelerName = useTravelerName();
+  const t = useTranslations("flights");
+  const fmt = useFormat();
   const now = useNow();
   const listQuery = useFlights();
   const [editing, setEditing] = useState<FlightView | null>(null);
@@ -62,11 +67,15 @@ export function UpcomingFlights() {
   );
 
   return (
-    <Section title="비행" addTitle="비행 등록" renderAdd={(close) => <FlightForm onDone={close} />}>
+    <Section
+      title={t("title")}
+      addTitle={t("addTitle")}
+      renderAdd={(close) => <FlightForm onDone={close} />}
+    >
       {listQuery.isPending ? (
         <LoadingRow />
       ) : upcoming.length === 0 ? (
-        <EmptyRow>탑승 전에 등록해두면 비행 중에도 서로 어디쯤인지 볼 수 있어요</EmptyRow>
+        <EmptyRow>{t("empty")}</EmptyRow>
       ) : (
         upcoming.map((f) => (
           <div
@@ -78,18 +87,22 @@ export function UpcomingFlights() {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") setEditing(f);
             }}
-            aria-label={`${f.flightNumber} 수정`}
+            aria-label={t("edit", { flight: f.flightNumber })}
           >
             <Row
               icon={<Plane className="text-dusk-ink size-5" />}
-              title={`${travelerName(f.travelerId)} · ${f.from.city} → ${f.to.city}`}
-              sub={`${formatDeparture(f)} · ${f.flightNumber}`}
+              title={t("row", {
+                who: travelerName(f.travelerId),
+                from: f.from.city,
+                to: f.to.city,
+              })}
+              sub={`${formatDeparture(fmt, f)} · ${f.flightNumber}`}
               end={
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${f.flightNumber} 삭제`}
+                  aria-label={t("delete", { flight: f.flightNumber })}
                   className="text-muted-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -106,7 +119,7 @@ export function UpcomingFlights() {
       <Drawer open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
         <DrawerContent>
           <DrawerHeader className="pb-4">
-            <DrawerTitle>비행 수정</DrawerTitle>
+            <DrawerTitle>{t("editTitle")}</DrawerTitle>
           </DrawerHeader>
           {editing && <FlightForm initial={editing} onDone={() => setEditing(null)} />}
         </DrawerContent>
@@ -156,8 +169,10 @@ function initialValues(initial: FlightView | undefined, currentUserId: string): 
 export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: () => void }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { currentUserId, summary } = useSpace();
-  const partnerName = displayName(summary.partner, "상대");
+  const { currentUserId } = useSpace();
+  const t = useTranslations("flights");
+  const tc = useTranslations("common");
+  const partnerName = usePartnerName();
   const [v, setV] = useState(() => initialValues(initial, currentUserId));
   const set = (patch: Partial<FlightFormValues>) => setV((prev) => ({ ...prev, ...patch }));
 
@@ -192,9 +207,7 @@ export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: 
         else create.mutate(payload);
       }}
     >
-      <p className="text-muted-foreground text-sm">
-        탑승 전에 등록하면 비행 중에도 서로 어디쯤인지 볼 수 있어요
-      </p>
+      <p className="text-muted-foreground text-sm">{t("intro")}</p>
       {!initial && (
         <BoardingPassScan
           onScanned={async (leg) => {
@@ -211,16 +224,16 @@ export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: 
               to,
               source: "barcode",
             });
-            toast.success("탑승권에서 편명·공항·날짜를 채웠어요. 시각을 확인해 주세요");
+            toast.success(t("scanned"));
           }}
         />
       )}
       <div className="flex flex-col gap-1">
-        <span className="text-muted-foreground text-sm">누가 타나요</span>
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="누가 타나요">
+        <span className="text-muted-foreground text-sm">{t("whoFlies")}</span>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("whoFlies")}>
           {(
             [
-              ["me", "나"],
+              ["me", tc("me")],
               ["partner", partnerName],
             ] as const
           ).map(([value, label]) => (
@@ -242,7 +255,7 @@ export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: 
       </div>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-sm">편명</span>
+          <span className="text-muted-foreground text-sm">{t("flightNumber")}</span>
           <Input
             value={v.flightNumber}
             onChange={(e) => set({ flightNumber: e.target.value.toUpperCase() })}
@@ -251,25 +264,25 @@ export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: 
           />
         </label>
         <DateField
-          label="출발 날짜"
+          label={t("departureDate")}
           value={v.departureDate}
           onChange={(departureDate) => set({ departureDate })}
         />
       </div>
-      <AirportField label="출발" value={v.from} onChange={(from) => set({ from })} />
-      <AirportField label="도착" value={v.to} onChange={(to) => set({ to })} />
+      <AirportField label={t("from")} value={v.from} onChange={(from) => set({ from })} />
+      <AirportField label={t("to")} value={v.to} onChange={(to) => set({ to })} />
       <TimeField
-        label={`출발 시각${v.from ? `(${v.from.city})` : ""}`}
+        label={v.from ? t("departureTimeAt", { city: v.from.city }) : t("departureTime")}
         value={v.departureTime}
         onChange={(departureTime) => set({ departureTime })}
       />
       <TimeField
-        label={`도착 시각${v.to ? `(${v.to.city})` : ""}`}
+        label={v.to ? t("arrivalTimeAt", { city: v.to.city }) : t("arrivalTime")}
         value={v.arrivalTime}
         onChange={(arrivalTime) => set({ arrivalTime })}
       />
       <Button type="submit" size="lg" className="mt-2" disabled={!ready || pending}>
-        {initial ? "저장하기" : "등록하기"}
+        {initial ? t("save") : t("register")}
       </Button>
     </form>
   );
@@ -286,6 +299,7 @@ function AirportField({
   onChange: (value: Pick<AirportView, "iata" | "city">) => void;
 }) {
   const trpc = useTRPC();
+  const t = useTranslations("flights");
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const deferred = useDeferredValue(q.trim());
@@ -306,8 +320,8 @@ function AirportField({
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="도시·공항 이름이나 코드(ICN)"
-              aria-label={`${label} 공항 검색`}
+              placeholder={t("airportSearchPlaceholder")}
+              aria-label={t("airportSearch", { label })}
               className="h-11 flex-1 bg-transparent text-base outline-none"
             />
           </div>
@@ -330,7 +344,7 @@ function AirportField({
                 </li>
               ))}
               {results.data?.length === 0 && (
-                <li className="text-muted-foreground px-3 py-2 text-sm">찾는 공항이 없어요</li>
+                <li className="text-muted-foreground px-3 py-2 text-sm">{t("airportNone")}</li>
               )}
             </ul>
           )}
@@ -349,7 +363,7 @@ function AirportField({
               <span className="font-semibold">{value.iata}</span> {value.city}
             </>
           ) : (
-            `${label} 공항 고르기`
+            t("airportPick", { label })
           )}
         </button>
       )}
@@ -365,6 +379,8 @@ export function FlightHistory() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const travelerName = useTravelerName();
+  const t = useTranslations("flights");
+  const fmt = useFormat();
   const myTz = useMyTimeZone();
   const now = useNow();
   const listQuery = useFlights();
@@ -383,13 +399,18 @@ export function FlightHistory() {
   const laps = km / EARTH_CIRCUMFERENCE_KM;
 
   return (
-    <Section title="함께 난 하늘">
+    <Section title={t("historyTitle")}>
       {thisYearFlights.length > 0 && (
         <div className="bg-dusk mb-2 rounded-xl p-5 text-zinc-50">
-          <p className="text-sm opacity-80">올해 서로에게 날아간 거리</p>
-          <p className="mt-1 text-4xl font-bold tracking-tight">{formatDistanceKm(km)}</p>
+          <p className="text-sm opacity-80">{t("yearDistance")}</p>
+          <p className="mt-1 text-4xl font-bold tracking-tight">{fmt.distance(km)}</p>
           <p className="mt-0.5 text-sm opacity-80">
-            비행 {thisYearFlights.length}번{laps >= 0.1 && ` · 지구 ${laps.toFixed(1)}바퀴`}
+            {[
+              t("yearCount", { count: thisYearFlights.length }),
+              laps >= 0.1 && t("laps", { laps: laps.toFixed(1) }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
       )}
@@ -399,14 +420,14 @@ export function FlightHistory() {
           <Row
             key={f.id}
             icon={<Plane className="text-dusk-ink size-5" />}
-            title={`${travelerName(f.travelerId)} · ${f.from.city} → ${f.to.city}`}
-            sub={`${formatYMD(dep, { year: dep.y !== thisYear })} · ${f.flightNumber} · ${formatDistanceKm(f.distanceKm)}`}
+            title={t("row", { who: travelerName(f.travelerId), from: f.from.city, to: f.to.city })}
+            sub={`${fmt.ymd(dep, { year: dep.y !== thisYear })} · ${f.flightNumber} · ${fmt.distance(f.distanceKm)}`}
             end={
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`${f.flightNumber} 기록 삭제`}
+                aria-label={t("historyDelete", { flight: f.flightNumber })}
                 className="text-muted-foreground"
                 onClick={() => deleteMutation.mutate({ id: f.id })}
               >

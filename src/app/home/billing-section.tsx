@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Crown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { isNearLimit } from "@/lib/plan-usage";
@@ -12,6 +13,7 @@ import { useTRPC } from "@/trpc/client";
 // 기능이라 홈이 아니라 설정 시트의 한 줄로 둔다(DESIGN.md §4).
 export function BillingSection() {
   const trpc = useTRPC();
+  const t = useTranslations("billing");
   const { data: subscription } = useQuery(trpc.billing.status.queryOptions());
   const { data: usage } = useQuery(trpc.billing.usage.queryOptions());
   const checkoutMutation = useMutation(
@@ -19,7 +21,7 @@ export function BillingSection() {
       onSuccess: ({ url }) => {
         window.location.assign(url);
       },
-      onError: () => toast.error("결제 페이지로 이동하지 못했어요"),
+      onError: () => toast.error(t("checkoutFailed")),
     }),
   );
   const portalMutation = useMutation(
@@ -27,7 +29,7 @@ export function BillingSection() {
       onSuccess: ({ url }) => {
         window.location.assign(url);
       },
-      onError: () => toast.error("구독 관리 페이지로 이동하지 못했어요"),
+      onError: () => toast.error(t("portalFailed")),
     }),
   );
 
@@ -39,12 +41,10 @@ export function BillingSection() {
         <Crown className="text-dusk-ink size-5" />
         <div className="flex-1">
           <p className="text-foreground text-base font-medium">
-            {premium ? "Hamkke Premium" : "무료 플랜"}
+            {premium ? t("premium") : t("free")}
           </p>
           <p className="text-muted-foreground text-sm">
-            {premium
-              ? "두 사람 모두 프리미엄 혜택을 받고 있어요"
-              : "프리미엄이면 전부 무제한이에요"}
+            {premium ? t("premiumSub") : t("freeSub")}
           </p>
         </div>
         {premium ? (
@@ -55,7 +55,7 @@ export function BillingSection() {
             onClick={() => portalMutation.mutate()}
             disabled={portalMutation.isPending}
           >
-            구독 관리
+            {t("manage")}
           </Button>
         ) : (
           <Button
@@ -64,7 +64,7 @@ export function BillingSection() {
             onClick={() => checkoutMutation.mutate()}
             disabled={checkoutMutation.isPending}
           >
-            프리미엄
+            {t("upgrade")}
           </Button>
         )}
       </div>
@@ -77,7 +77,7 @@ export function BillingSection() {
             return (
               <div key={item.key} className="flex flex-col gap-1">
                 <div className="flex justify-between text-sm">
-                  <dt className="text-muted-foreground">{item.label}</dt>
+                  <dt className="text-muted-foreground">{t(`usage.${item.key}`)}</dt>
                   <dd className={near ? "text-primary font-semibold" : "text-foreground"}>
                     {item.used}/{item.limit}
                   </dd>
