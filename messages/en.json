@@ -140,5 +140,31 @@
     "historyEmpty": "Answer today's question and both your answers will collect here",
     "missing": "A question that's no longer here",
     "notYet": "Hasn't answered yet"
+  },
+  "chat": {
+    "imageTypes": "You can send JPG, PNG, WebP or GIF images",
+    "imageFailed": "Couldn't send the photo",
+    "voiceFailed": "Couldn't send the voice message",
+    "micPermission": "Hamkke needs microphone access for that",
+    "empty": "Nothing here yet. Say hi.",
+    "loadingOlder": "Loading…",
+    "loadOlder": "Show earlier messages",
+    "touchSent": "You sent a thought",
+    "touchReceived": "{name} is thinking of you",
+    "photoAlt": "Shared photo",
+    "read": "Read",
+    "typing": "{name} is typing…",
+    "sendPhoto": "Send a photo",
+    "stopRecording": "Stop and send",
+    "recordVoice": "Record a voice message",
+    "placeholder": "Message",
+    "send": "Send",
+    "sendTouch": "Send a thought",
+    "presentNow": "Here now",
+    "sleeping": "Probably asleep",
+    "voicePause": "Pause voice message",
+    "voicePlay": "Play voice message",
+    "voicePosition": "Playback position",
+    "voiceMessage": "Voice message"
   }
 }

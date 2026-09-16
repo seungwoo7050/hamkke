@@ -6,20 +6,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { ArrowUp, Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { cn } from "cn";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { josa } from "@/lib/josa";
+import { useFormat } from "@/i18n/use-format";
 import { groupPositions } from "@/lib/chat-grouping";
-import { daysBetween, formatDayLabel, formatTime, todayIn } from "@/lib/datetime";
+import { daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
 import { VoiceMessage } from "./voice-message";
 import { useSpaceBroadcast, useSpaceRealtime } from "./realtime-context";
-import { displayName, useMyTimeZone, useSpace } from "./space-context";
+import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
 type ChatMessage = inferRouterOutputs<AppRouter>["chat"]["list"]["messages"][number];
 type Touch = inferRouterOutputs<AppRouter>["touch"]["list"][number];
@@ -76,11 +77,14 @@ export function ChatView({
   const trpc = useTRPC();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
-  const { currentUserId, summary } = useSpace();
+  const { currentUserId } = useSpace();
   const { send: sendRealtime, connected: realtimeConnected } = useSpaceRealtime();
   const myTz = useMyTimeZone();
   const now = useNow();
-  const partnerName = displayName(summary.partner, "상대");
+  const t = useTranslations("chat");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
+  const names = fmt.particles(partnerName);
   const [messages, setMessages] = useState(initialMessages);
   const [olderCursor, setOlderCursor] = useState(initialNextCursor);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -224,7 +228,7 @@ export function ChatView({
     if (!file) return;
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type as AllowedImageType)) {
-      toast.error("jpg, png, webp, gif 이미지만 보낼 수 있어요");
+      toast.error(t("imageTypes"));
       return;
     }
 
@@ -241,7 +245,7 @@ export function ChatView({
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendImageMutation.mutateAsync({ key });
     } catch {
-      toast.error("이미지 전송에 실패했어요");
+      toast.error(t("imageFailed"));
     } finally {
       setUploadingImage(false);
     }
@@ -274,7 +278,7 @@ export function ChatView({
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendVoiceMutation.mutateAsync({ key });
     } catch {
-      toast.error("음성 메시지 전송에 실패했어요");
+      toast.error(t("voiceFailed"));
     } finally {
       setUploadingVoice(false);
     }
@@ -300,7 +304,7 @@ export function ChatView({
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
     } catch {
-      toast.error("마이크 권한이 필요해요");
+      toast.error(t("micPermission"));
     }
   }
 
@@ -338,9 +342,7 @@ export function ChatView({
     <div className="flex min-h-0 flex-1 flex-col">
       <ChatHeader />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-1 pb-4">
-        {timeline.length === 0 && (
-          <EmptyState caption="아직 나눈 이야기가 없어요" className="flex-1" />
-        )}
+        {timeline.length === 0 && <EmptyState caption={t("empty")} className="flex-1" />}
         {olderCursor && (
           <Button
             variant="ghost"
@@ -349,7 +351,7 @@ export function ChatView({
             onClick={loadOlder}
             disabled={loadingOlder}
           >
-            {loadingOlder ? "불러오는 중..." : "이전 메시지 더 보기"}
+            {loadingOlder ? t("loadingOlder") : t("loadOlder")}
           </Button>
         )}
         {timeline.map((item, i) => {
@@ -358,7 +360,7 @@ export function ChatView({
           const newDay = !prev || daysBetween(todayIn(myTz, prev.at), todayIn(myTz, item.at)) !== 0;
           const divider = newDay && (
             <p className="text-muted-foreground mt-4 mb-1 text-center text-xs">
-              {formatDayLabel(item.at, myTz, now)}
+              {fmt.dayLabel(item.at, myTz, now)}
             </p>
           );
 
@@ -369,10 +371,8 @@ export function ChatView({
                 {divider}
                 <p className="bg-glow/30 text-dusk-ink font-handwritten mt-3 flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-lg">
                   <Heart className="size-4" />
-                  {fromMe
-                    ? "생각하고 있다고 전했어요"
-                    : `${josa(partnerName, "이/가")} 생각하고 있어요`}
-                  <span className="text-base">· {formatTime(item.at, myTz)}</span>
+                  {fromMe ? t("touchSent") : t("touchReceived", names)}
+                  <span className="text-base">· {fmt.time(item.at, myTz)}</span>
                 </p>
               </div>
             );
@@ -391,7 +391,7 @@ export function ChatView({
               dateTime={item.at.toISOString()}
               className="text-muted-foreground shrink-0 pb-0.5 text-xs"
             >
-              {formatTime(item.at, myTz)}
+              {fmt.time(item.at, myTz)}
             </time>
           );
           return (
@@ -410,7 +410,7 @@ export function ChatView({
                   {message.type === "image" ? (
                     <Image
                       src={message.content}
-                      alt="공유한 사진"
+                      alt={t("photoAlt")}
                       width={240}
                       height={240}
                       unoptimized
@@ -434,15 +434,13 @@ export function ChatView({
                   {time}
                 </div>
                 {isMine && message.id === lastReadMineId && (
-                  <span className="text-muted-foreground text-xs">읽음</span>
+                  <span className="text-muted-foreground text-xs">{t("read")}</span>
                 )}
               </div>
             </div>
           );
         })}
-        {partnerTyping && (
-          <p className="text-muted-foreground text-xs">{josa(partnerName, "이/가")} 입력 중...</p>
-        )}
+        {partnerTyping && <p className="text-muted-foreground text-xs">{t("typing", names)}</p>}
         <div ref={bottomRef} />
       </div>
 
@@ -465,7 +463,7 @@ export function ChatView({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label="사진 보내기"
+          aria-label={t("sendPhoto")}
           className="text-muted-foreground"
           disabled={uploadingImage}
           onClick={() => fileInputRef.current?.click()}
@@ -476,7 +474,7 @@ export function ChatView({
           type="button"
           variant={isRecording ? "default" : "ghost"}
           size="icon"
-          aria-label={isRecording ? "녹음 중지 및 보내기" : "음성 메시지 녹음"}
+          aria-label={isRecording ? t("stopRecording") : t("recordVoice")}
           className={isRecording ? undefined : "text-muted-foreground"}
           disabled={uploadingVoice}
           onClick={() => (isRecording ? stopRecording() : startRecording())}
@@ -486,13 +484,18 @@ export function ChatView({
         <Input
           value={draft}
           onChange={(e) => handleDraftChange(e.target.value)}
-          placeholder="메시지"
+          placeholder={t("placeholder")}
           className="mx-1"
         />
         {/* 입력 중이 아닐 땐 전송 버튼 자리를 터치가 차지한다 — 대화 중에도
             한 번에 "생각하고 있어요"를 보낼 수 있게(DESIGN.md §2 Kaye). */}
         {draft.trim() ? (
-          <Button type="submit" size="icon" aria-label="보내기" disabled={sendMutation.isPending}>
+          <Button
+            type="submit"
+            size="icon"
+            aria-label={t("send")}
+            disabled={sendMutation.isPending}
+          >
             <ArrowUp className="size-5" />
           </Button>
         ) : (
@@ -500,7 +503,7 @@ export function ChatView({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="생각하고 있어요 보내기"
+            aria-label={t("sendTouch")}
             className="text-primary"
             disabled={sendTouchMutation.isPending}
             onClick={() => sendTouchMutation.mutate()}

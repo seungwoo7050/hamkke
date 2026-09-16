@@ -140,5 +140,31 @@
     "historyEmpty": "오늘의 질문에 답하면 여기에 둘의 답이 쌓여요",
     "missing": "사라진 질문",
     "notYet": "아직 답하지 않았어요"
+  },
+  "chat": {
+    "imageTypes": "jpg, png, webp, gif 이미지만 보낼 수 있어요",
+    "imageFailed": "이미지 전송에 실패했어요",
+    "voiceFailed": "음성 메시지 전송에 실패했어요",
+    "micPermission": "마이크 권한이 필요해요",
+    "empty": "아직 나눈 이야기가 없어요",
+    "loadingOlder": "불러오는 중...",
+    "loadOlder": "이전 메시지 더 보기",
+    "touchSent": "생각하고 있다고 전했어요",
+    "touchReceived": "{nameSubj} 생각하고 있어요",
+    "photoAlt": "공유한 사진",
+    "read": "읽음",
+    "typing": "{nameSubj} 입력 중...",
+    "sendPhoto": "사진 보내기",
+    "stopRecording": "녹음 중지 및 보내기",
+    "recordVoice": "음성 메시지 녹음",
+    "placeholder": "메시지",
+    "send": "보내기",
+    "sendTouch": "생각하고 있어요 보내기",
+    "presentNow": "지금 보고 있어요",
+    "sleeping": "자고 있을 시간이에요",
+    "voicePause": "음성 메시지 일시정지",
+    "voicePlay": "음성 메시지 재생",
+    "voicePosition": "재생 위치",
+    "voiceMessage": "음성 메시지"
   }
 }

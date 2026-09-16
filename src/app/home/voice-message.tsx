@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "cn";
 
 function formatSeconds(total: number) {
@@ -22,6 +23,7 @@ export function VoiceMessage({
   mine: boolean;
   className?: string;
 }) {
+  const t = useTranslations("chat");
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -77,7 +79,7 @@ export function VoiceMessage({
       <button
         type="button"
         onClick={toggle}
-        aria-label={playing ? "음성 메시지 일시정지" : "음성 메시지 재생"}
+        aria-label={playing ? t("voicePause") : t("voicePlay")}
         className={cn(
           "duration-fast ease-standard grid size-9 shrink-0 place-items-center rounded-full transition-colors",
           mine ? "bg-zinc-900/10 hover:bg-zinc-900/15" : "bg-background hover:bg-background/80",
@@ -89,7 +91,7 @@ export function VoiceMessage({
         <div
           className="h-1 overflow-hidden rounded-full bg-current/20"
           role="progressbar"
-          aria-label="재생 위치"
+          aria-label={t("voicePosition")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(progress * 100)}
@@ -101,7 +103,7 @@ export function VoiceMessage({
             ? formatSeconds(current)
             : duration !== null
               ? formatSeconds(duration)
-              : "음성 메시지"}
+              : t("voiceMessage")}
         </span>
       </div>
     </div>
