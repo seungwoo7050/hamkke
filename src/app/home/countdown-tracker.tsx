@@ -3,24 +3,24 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Hourglass, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DateField, localTodayValue } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
-import { dateOnly, daysBetween, formatYMD, todayIn } from "@/lib/datetime";
+import { useFormat } from "@/i18n/use-format";
+import { dateOnly, daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone } from "./space-context";
 
-export function formatDday(days: number) {
-  if (days === 0) return "오늘";
-  return days > 0 ? `D-${days}` : `D+${-days}`;
-}
-
 // PRD.md §3.4 "다음 만남까지 카운트다운" — 가장 가까운 목표일 하나를 크게
 // (DESIGN.md §2 M3 Expressive 크기 대비), 나머지는 작은 줄로.
 export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
   const trpc = useTRPC();
+  const t = useTranslations("countdown");
+  const tm = useTranslations("memories");
+  const fmt = useFormat();
   const myTz = useMyTimeZone();
   const now = useNow();
   const listQuery = useQuery(trpc.countdown.list.queryOptions());
@@ -44,8 +44,8 @@ export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
 
   return (
     <Section
-      title="다음 만남"
-      addTitle="카운트다운 추가"
+      title={t("title")}
+      addTitle={t("addTitle")}
       defaultAddOpen={openAdd}
       renderAdd={(close) => <CountdownForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
@@ -55,17 +55,17 @@ export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
         <div className="bg-sky-dusk rounded-xl p-5">
           <p className="text-dusk-ink text-sm font-medium">{next.title}</p>
           <p className="text-foreground mt-1 text-5xl font-bold tracking-tight">
-            {formatDday(next.days)}
+            {fmt.ddayBig(next.days)}
           </p>
           <div className="mt-1 flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
-              {formatYMD(next.target, { weekday: true })}
+              {fmt.ymd(next.target, { weekday: true })}
             </p>
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label={`${next.title} 삭제`}
+              aria-label={tm("delete", { title: next.title })}
               className="text-muted-foreground"
               onClick={() => deleteMutation.mutate({ id: next.id })}
             >
@@ -74,7 +74,7 @@ export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
           </div>
         </div>
       ) : (
-        <EmptyRow>다음에 만나는 날을 정해두면 여기서 세어줄게요</EmptyRow>
+        <EmptyRow>{t("empty")}</EmptyRow>
       )}
       {rest.map((c) => (
         <Row
@@ -83,12 +83,12 @@ export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
           title={c.title}
           end={
             <>
-              <span className="text-dusk-ink text-sm font-semibold">{formatDday(c.days)}</span>
+              <span className="text-dusk-ink text-sm font-semibold">{fmt.dday(c.days)}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`${c.title} 삭제`}
+                aria-label={tm("delete", { title: c.title })}
                 className="text-muted-foreground"
                 onClick={() => deleteMutation.mutate({ id: c.id })}
               >
@@ -104,7 +104,9 @@ export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
 
 function CountdownForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
-  const [title, setTitle] = useState("다음 만남");
+  const t = useTranslations("countdown");
+  const tm = useTranslations("memories");
+  const [title, setTitle] = useState(() => t("defaultTitle"));
   const [targetDate, setTargetDate] = useState(() => localTodayValue());
   const createMutation = useMutation(
     trpc.countdown.create.mutationOptions({
@@ -124,10 +126,14 @@ function CountdownForm({ onDone, onCreated }: { onDone: () => void; onCreated: (
         createMutation.mutate({ title: title.trim(), targetDate });
       }}
     >
-      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 다음 만남" />
-      <DateField label="만나는 날" value={targetDate} onChange={setTargetDate} />
+      <Input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={t("placeholder")}
+      />
+      <DateField label={t("dateLabel")} value={targetDate} onChange={setTargetDate} />
       <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
-        추가
+        {tm("add")}
       </Button>
     </form>
   );

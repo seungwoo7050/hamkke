@@ -166,5 +166,88 @@
     "voicePlay": "음성 메시지 재생",
     "voicePosition": "재생 위치",
     "voiceMessage": "음성 메시지"
+  },
+  "memories": {
+    "title": "기억",
+    "tabsLabel": "기억 보기 방식",
+    "upcoming": "다가올",
+    "past": "지나온",
+    "loadMore": "더 보기",
+    "delete": "{title} 삭제",
+    "add": "추가"
+  },
+  "countdown": {
+    "title": "다음 만남",
+    "addTitle": "카운트다운 추가",
+    "empty": "다음에 만나는 날을 정해두면 여기서 세어줄게요",
+    "defaultTitle": "다음 만남",
+    "placeholder": "예: 다음 만남",
+    "dateLabel": "만나는 날"
+  },
+  "anniversary": {
+    "title": "기념일",
+    "addTitle": "기념일 추가",
+    "empty": "처음 만난 날, 생일 같은 날을 적어두세요",
+    "everyYear": "{date} · 매년",
+    "placeholder": "예: 생일",
+    "dateLabel": "날짜",
+    "recurring": "매년 반복"
+  },
+  "calendar": {
+    "title": "일정",
+    "addTitle": "일정 추가",
+    "empty": "영상통화 데이트 같은 약속을 잡아보세요",
+    "partnerTime": "{name} {time}",
+    "saveFailed": "일정 저장에 실패했어요(종료 시각을 확인해주세요)",
+    "placeholder": "예: 영상통화",
+    "start": "시작",
+    "end": "끝"
+  },
+  "capsule": {
+    "title": "도착 예정 캡슐",
+    "addTitle": "캡슐 예약하기",
+    "empty": "정해둔 날에 열리는 편지를 {nameSubj} 받게 할 수 있어요",
+    "toPartner": "{name}에게 보낸 편지",
+    "fromPartner": "{name}의 편지",
+    "opensOnLanding": "{flightSubj} {city}에 착륙하면 열려요",
+    "opensAt": "{when}에 열려요",
+    "delete": "캡슐 삭제",
+    "openedTitle": "열린 캡슐",
+    "toLabel": "{name}에게",
+    "fromLabel": "{name}로부터",
+    "sealedTitle": "{name}의 편지",
+    "sealedLandingTitle": "{name}의 착륙 편지",
+    "arrivedAt": "{when}에 도착했어요",
+    "open": "열어보기",
+    "placeholderLanding": "도착하면 읽을 한마디",
+    "placeholder": "미래의 너에게",
+    "whenLabel": "열리는 때",
+    "whenTime": "날짜·시각 정하기",
+    "whenLanding": "{nameSubj} 탄 비행기가 착륙하면 · {flight}",
+    "dateLabel": "열리는 날",
+    "submit": "예약 보내기"
+  },
+  "moments": {
+    "title": "사진",
+    "addTitle": "사진 올리기",
+    "empty": "오늘 본 하늘, 먹은 것 — 사소한 장면일수록 좋아요",
+    "altDefault": "오늘의 사진",
+    "delete": "사진 삭제",
+    "imageTypes": "jpg, png, webp, gif 이미지만 올릴 수 있어요",
+    "uploadFailed": "사진 업로드에 실패했어요",
+    "captionPlaceholder": "한 줄 남기기(선택)",
+    "uploading": "올리는 중...",
+    "choose": "사진 고르기"
+  },
+  "meetups": {
+    "title": "함께한 곳",
+    "titleCount": "함께한 곳 {count}곳",
+    "addTitle": "지금 있는 곳 기록하기",
+    "empty": "만났을 때 지금 있는 곳을 남겨두면 지도에 쌓여요",
+    "noGeo": "이 브라우저는 위치를 가져올 수 없어요",
+    "geoFailed": "현재 위치를 가져오지 못했어요",
+    "placeholder": "예: 첫 데이트 카페",
+    "dateLabel": "만난 날",
+    "saveHere": "지금 있는 곳으로 기록"
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Tabs } from "radix-ui";
 
 // 기억 탭 상단 세그먼트 — 장거리 연애의 두 시간축(Stafford & Merolla 2007):
@@ -13,15 +14,16 @@ export function MemoriesTabs({
   upcoming: React.ReactNode;
   past: React.ReactNode;
 }) {
+  const t = useTranslations("memories");
   return (
     <Tabs.Root defaultValue={defaultTab} className="flex flex-col">
       <Tabs.List
-        aria-label="기억 보기 방식"
+        aria-label={t("tabsLabel")}
         className="bg-muted mx-4 mb-5 grid grid-cols-2 rounded-md p-1"
       >
         {[
-          ["upcoming", "다가올"],
-          ["past", "지나온"],
+          ["upcoming", t("upcoming")],
+          ["past", t("past")],
         ].map(([value, label]) => (
           <Tabs.Trigger
             key={value}

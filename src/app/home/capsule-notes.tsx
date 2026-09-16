@@ -5,12 +5,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Lock, Mail, MailOpen, PlaneLanding, Trash2 } from "lucide-react";
 import { cn } from "cn";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
-import { josa } from "@/lib/josa";
-import { formatDateTime } from "@/lib/datetime";
+import { useFormat } from "@/i18n/use-format";
 import { bestTimes } from "@/lib/flight";
 import { SPRING } from "@/lib/motion";
 import { markCapsuleUnsealed, useUnsealedCapsules } from "@/lib/unsealed-capsules";
@@ -19,7 +19,7 @@ import { useTRPC } from "@/trpc/client";
 import { useFlights } from "./flights";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
-import { displayName, useMyTimeZone, useSpace } from "./space-context";
+import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
 function toLocalInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -53,8 +53,10 @@ export function UpcomingCapsules({
   const trpc = useTRPC();
   const flights = useFlights();
   const myTz = useMyTimeZone();
-  const { currentUserId, summary } = useSpace();
-  const partnerName = displayName(summary.partner, "상대");
+  const { currentUserId } = useSpace();
+  const t = useTranslations("capsule");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
   const listQuery = useCapsules();
   const deleteMutation = useMutation(
     trpc.capsule.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
@@ -65,8 +67,8 @@ export function UpcomingCapsules({
 
   return (
     <Section
-      title="도착 예정 캡슐"
-      addTitle="캡슐 예약하기"
+      title={t("title")}
+      addTitle={t("addTitle")}
       defaultAddOpen={openAdd}
       renderAdd={(close) => (
         <CapsuleForm
@@ -79,9 +81,7 @@ export function UpcomingCapsules({
       {listQuery.isPending ? (
         <LoadingRow />
       ) : waiting.length === 0 ? (
-        <EmptyRow>
-          정해둔 날에 열리는 편지를 {josa(partnerName, "이/가")} 받게 할 수 있어요
-        </EmptyRow>
+        <EmptyRow>{t("empty", fmt.particles(partnerName))}</EmptyRow>
       ) : (
         waiting.map((capsule) => {
           const mine = capsule.senderId === currentUserId;
@@ -98,11 +98,16 @@ export function UpcomingCapsules({
                   <Lock className="text-dusk-ink size-5" />
                 )
               }
-              title={mine ? `${partnerName}에게 보낸 편지` : `${partnerName}의 편지`}
+              title={t(mine ? "toPartner" : "fromPartner", { name: partnerName })}
               sub={
                 flight
-                  ? `${josa(flight.flightNumber, "이/가")} ${flight.to.city}에 착륙하면 열려요`
-                  : `${formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false })}에 열려요`
+                  ? t("opensOnLanding", {
+                      ...fmt.particles(flight.flightNumber, "flight"),
+                      city: flight.to.city,
+                    })
+                  : t("opensAt", {
+                      when: fmt.dateTime(new Date(capsule.deliverAt), myTz, { weekday: false }),
+                    })
               }
               end={
                 mine && (
@@ -110,7 +115,7 @@ export function UpcomingCapsules({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="캡슐 삭제"
+                    aria-label={t("delete")}
                     className="text-muted-foreground"
                     onClick={() => deleteMutation.mutate({ id: capsule.id })}
                   >
@@ -128,8 +133,10 @@ export function UpcomingCapsules({
 
 export function OpenedCapsules() {
   const myTz = useMyTimeZone();
-  const { currentUserId, summary } = useSpace();
-  const partnerName = displayName(summary.partner, "상대");
+  const { currentUserId } = useSpace();
+  const t = useTranslations("capsule");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
   const listQuery = useCapsules();
   const unsealed = useUnsealedCapsules();
 
@@ -141,19 +148,21 @@ export function OpenedCapsules() {
   if (opened.length === 0) return null;
 
   return (
-    <Section title="열린 캡슐">
+    <Section title={t("openedTitle")}>
       <div className="flex flex-col gap-3">
         {opened.map((capsule) => {
           const mine = capsule.senderId === currentUserId;
-          const when = formatDateTime(new Date(capsule.deliverAt), myTz, { weekday: false });
+          const when = fmt.dateTime(new Date(capsule.deliverAt), myTz, { weekday: false });
           return (
             <CapsuleLetter
               key={capsule.id}
               sealed={!mine && !unsealed.has(capsule.id)}
               onOpen={() => markCapsuleUnsealed(capsule.id)}
-              from={mine ? `${partnerName}에게` : `${partnerName}로부터`}
+              from={t(mine ? "toLabel" : "fromLabel", { name: partnerName })}
               when={when}
-              sealedTitle={`${partnerName}의 ${capsule.flightId ? "착륙 " : ""}편지`}
+              sealedTitle={t(capsule.flightId ? "sealedLandingTitle" : "sealedTitle", {
+                name: partnerName,
+              })}
               content={capsule.content ?? ""}
             />
           );
@@ -182,6 +191,7 @@ function CapsuleLetter({
   sealedTitle: string;
   content: string;
 }) {
+  const t = useTranslations("capsule");
   const reduce = useReducedMotion();
   // 이 화면에서 직접 연 경우에만 펼침 모션 — 이미 열어둔 편지는 그대로 보인다.
   const [justOpened, setJustOpened] = useState(false);
@@ -206,9 +216,9 @@ function CapsuleLetter({
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-foreground font-semibold">{sealedTitle}</span>
-              <span className="text-muted-foreground text-sm">{when}에 도착했어요</span>
+              <span className="text-muted-foreground text-sm">{t("arrivedAt", { when })}</span>
             </span>
-            <span className="text-primary text-sm font-semibold">열어보기</span>
+            <span className="text-primary text-sm font-semibold">{t("open")}</span>
           </motion.button>
         ) : (
           <motion.div
@@ -248,8 +258,10 @@ function CapsuleForm({
   initialFlightId?: string;
 }) {
   const trpc = useTRPC();
-  const { currentUserId, summary } = useSpace();
-  const partnerName = displayName(summary.partner, "상대");
+  const { currentUserId } = useSpace();
+  const t = useTranslations("capsule");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
   const now = useNow();
   const flights = useFlights();
   // 착륙 편지를 걸 수 있는 비행 — 상대가 타고, 아직 착륙 전(PRD §3.3.1).
@@ -288,16 +300,16 @@ function CapsuleForm({
       <Input
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder={flightId ? "도착하면 읽을 한마디" : "미래의 너에게"}
+        placeholder={flightId ? t("placeholderLanding") : t("placeholder")}
       />
       {landable.length > 0 && (
-        <div className="flex flex-col gap-2" role="radiogroup" aria-label="열리는 때">
-          <span className="text-muted-foreground text-sm">열리는 때</span>
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label={t("whenLabel")}>
+          <span className="text-muted-foreground text-sm">{t("whenLabel")}</span>
           {[
-            { id: null, label: "날짜·시각 정하기" },
+            { id: null, label: t("whenTime") },
             ...landable.map((f) => ({
               id: f.id,
-              label: `${josa(partnerName, "이/가")} 탄 비행기가 착륙하면 · ${f.flightNumber}`,
+              label: t("whenLanding", { ...fmt.particles(partnerName), flight: f.flightNumber }),
             })),
           ].map((opt) => (
             <button
@@ -323,9 +335,11 @@ function CapsuleForm({
           ))}
         </div>
       )}
-      {!flightId && <DateTimeField label="열리는 날" value={deliverAt} onChange={setDeliverAt} />}
+      {!flightId && (
+        <DateTimeField label={t("dateLabel")} value={deliverAt} onChange={setDeliverAt} />
+      )}
       <Button type="submit" size="lg" disabled={!content.trim() || createMutation.isPending}>
-        예약 보내기
+        {t("submit")}
       </Button>
     </form>
   );

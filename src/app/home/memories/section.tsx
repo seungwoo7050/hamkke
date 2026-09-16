@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { LoadingMotif } from "@/components/brand/loading-motif";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,6 +110,7 @@ export function LoadMore({
   loading: boolean;
   onLoad: () => void;
 }) {
+  const t = useTranslations("memories");
   if (!hasMore) return null;
   return (
     <div className="mt-2 flex justify-center">
@@ -116,7 +118,7 @@ export function LoadMore({
         <LoadingMotif compact />
       ) : (
         <Button type="button" variant="ghost" size="sm" onClick={onLoad}>
-          더 보기
+          {t("loadMore")}
         </Button>
       )}
     </div>

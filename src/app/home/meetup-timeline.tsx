@@ -4,11 +4,13 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { MapPin, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DateField, localTodayValue } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
-import { dateOnly, formatYMD } from "@/lib/datetime";
+import { useFormat } from "@/i18n/use-format";
+import { dateOnly } from "@/lib/datetime";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
@@ -18,6 +20,9 @@ const MeetupMap = dynamic(() => import("./meetup-map").then((m) => m.MeetupMap),
 // 실제로 같이 만났던 장소를 지도 핀 + 타임라인으로 기록한다(PRD.md §3.3).
 export function MeetupTimeline() {
   const trpc = useTRPC();
+  const t = useTranslations("meetups");
+  const tm = useTranslations("memories");
+  const fmt = useFormat();
   const listQuery = useQuery(trpc.meetup.list.queryOptions());
   const deleteMutation = useMutation(
     trpc.meetup.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
@@ -26,14 +31,14 @@ export function MeetupTimeline() {
 
   return (
     <Section
-      title={pins.length > 0 ? `함께한 곳 ${pins.length}곳` : "함께한 곳"}
-      addTitle="지금 있는 곳 기록하기"
+      title={pins.length > 0 ? t("titleCount", { count: pins.length }) : t("title")}
+      addTitle={t("addTitle")}
       renderAdd={(close) => <MeetupForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
       {listQuery.isPending ? (
         <LoadingRow />
       ) : pins.length === 0 ? (
-        <EmptyRow>만났을 때 지금 있는 곳을 남겨두면 지도에 쌓여요</EmptyRow>
+        <EmptyRow>{t("empty")}</EmptyRow>
       ) : (
         <>
           <div className="overflow-hidden rounded-lg">
@@ -45,13 +50,13 @@ export function MeetupTimeline() {
                 key={pin.id}
                 icon={<MapPin className="text-ember size-5" />}
                 title={pin.label}
-                sub={formatYMD(dateOnly(pin.date), { year: true })}
+                sub={fmt.ymd(dateOnly(pin.date), { year: true })}
                 end={
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`${pin.label} 삭제`}
+                    aria-label={tm("delete", { title: pin.label })}
                     className="text-muted-foreground"
                     onClick={() => deleteMutation.mutate({ id: pin.id })}
                   >
@@ -69,6 +74,7 @@ export function MeetupTimeline() {
 
 function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
+  const t = useTranslations("meetups");
   const [label, setLabel] = useState("");
   const [date, setDate] = useState(() => localTodayValue());
   const [registering, setRegistering] = useState(false);
@@ -85,7 +91,7 @@ function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
   function handleRegister() {
     if (!label.trim()) return;
     if (!("geolocation" in navigator)) {
-      toast.error("이 브라우저는 위치를 가져올 수 없어요");
+      toast.error(t("noGeo"));
       return;
     }
     setRegistering(true);
@@ -100,7 +106,7 @@ function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
         setRegistering(false);
       },
       () => {
-        toast.error("현재 위치를 가져오지 못했어요");
+        toast.error(t("geoFailed"));
         setRegistering(false);
       },
     );
@@ -112,16 +118,16 @@ function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
       <Input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        placeholder="예: 첫 데이트 카페"
+        placeholder={t("placeholder")}
       />
-      <DateField label="만난 날" value={date} onChange={setDate} />
+      <DateField label={t("dateLabel")} value={date} onChange={setDate} />
       <Button
         type="button"
         size="lg"
         onClick={handleRegister}
         disabled={!label.trim() || registering || createMutation.isPending}
       >
-        <MapPin className="size-5" /> 지금 있는 곳으로 기록
+        <MapPin className="size-5" /> {t("saveHere")}
       </Button>
     </div>
   );

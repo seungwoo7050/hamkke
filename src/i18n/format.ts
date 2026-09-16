@@ -10,6 +10,7 @@ import {
   formatYMD as koYMD,
   daysBetween,
   todayIn,
+  weekdayOf,
   type YMD,
 } from "@/lib/datetime";
 import { formatDistanceKm as koDistance } from "@/lib/geo";
@@ -102,6 +103,11 @@ export function formatters(locale: Locale) {
       if (ko) return h === 0 ? `${m}분` : m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
       return h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
     },
+    /** 요일 한 글자 "화" · "Tue" */
+    weekday: (ymd: YMD) =>
+      ko
+        ? weekdayOf(ymd)
+        : new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" }).format(ymdDate(ymd)),
     /** "11,053km" · "11,053 km" */
     distance: (km: number) =>
       ko

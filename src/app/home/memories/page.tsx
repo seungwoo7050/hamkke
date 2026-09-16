@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { AnniversaryTracker } from "../anniversary-tracker";
 import { CalendarView } from "../calendar-view";
 import { OpenedCapsules, UpcomingCapsules } from "../capsule-notes";
@@ -13,10 +14,11 @@ import { MemoriesTabs } from "./memories-tabs";
 export default async function MemoriesPage({ searchParams }: PageProps<"/home/memories">) {
   // 상황 카드가 "지나온"(도착한 캡슐)이나 추가 시트(첫날 안내)로 바로 데려올 수 있게.
   const { tab, add, flight } = await searchParams;
+  const t = await getTranslations("memories");
   return (
     <>
       <TopBar>
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">기억</h1>
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">{t("title")}</h1>
       </TopBar>
       <main className="flex flex-1 flex-col">
         <MemoriesTabs

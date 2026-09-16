@@ -4,13 +4,15 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { ImagePlus, Trash2 } from "lucide-react";
+import { TRPCClientError } from "@trpc/client";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, LoadMore, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
-import { displayName, useSpace } from "./space-context";
+import { usePartnerName, useSpace } from "./space-context";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
@@ -28,6 +30,7 @@ type Moment = {
 export function MomentFeed() {
   const trpc = useTRPC();
   const { currentUserId } = useSpace();
+  const t = useTranslations("moments");
   const listQuery = useInfiniteQuery(
     trpc.moment.list.infiniteQueryOptions(
       { limit: 20 },
@@ -49,14 +52,14 @@ export function MomentFeed() {
 
   return (
     <Section
-      title="사진"
-      addTitle="사진 올리기"
+      title={t("title")}
+      addTitle={t("addTitle")}
       renderAdd={(close) => <MomentForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
       {listQuery.isPending ? (
         <LoadingRow />
       ) : !latest ? (
-        <EmptyRow>오늘 본 하늘, 먹은 것 — 사소한 장면일수록 좋아요</EmptyRow>
+        <EmptyRow>{t("empty")}</EmptyRow>
       ) : (
         <div className="flex flex-col gap-2">
           <MomentTile
@@ -102,8 +105,10 @@ function MomentTile({
   mine: boolean;
   onDelete: (id: string) => void;
 }) {
-  const { summary } = useSpace();
-  const who = mine ? "나" : displayName(summary.partner, "상대");
+  const t = useTranslations("moments");
+  const tc = useTranslations("common");
+  const partnerName = usePartnerName();
+  const who = mine ? tc("me") : partnerName;
   return (
     // 2:1 줄의 두 칸은 폭이 달라도 높이가 같아야 한 줄로 읽힌다 — 줄 칸은 높이를
     // 고정하고 사진을 그 안에 채운다(폭 비율로 높이를 정하면 좁은 칸이 짧아짐).
@@ -112,7 +117,7 @@ function MomentTile({
     >
       <Image
         src={moment.mediaUrl}
-        alt={moment.caption ?? "오늘의 사진"}
+        alt={moment.caption ?? t("altDefault")}
         width={large ? 720 : 360}
         height={large ? 540 : 240}
         unoptimized
@@ -130,7 +135,7 @@ function MomentTile({
           variant="ghost"
           size="icon-sm"
           className="bg-background/80 duration-fast ease-standard absolute top-1.5 right-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-          aria-label="사진 삭제"
+          aria-label={t("delete")}
           onClick={() => onDelete(moment.id)}
         >
           <Trash2 className="size-4" />
@@ -143,6 +148,7 @@ function MomentTile({
 // presigned PUT 패턴은 chat-view.tsx의 이미지 업로드와 동일(moment 전용 URL).
 function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
+  const t = useTranslations("moments");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -155,7 +161,7 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
     if (!file) return;
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type as AllowedImageType)) {
-      toast.error("jpg, png, webp, gif 이미지만 올릴 수 있어요");
+      toast.error(t("imageTypes"));
       return;
     }
 
@@ -174,8 +180,9 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
       onCreated();
       onDone();
     } catch (err) {
-      // 무료 티어 한도 초과 같은 안내는 그대로 보여준다(src/lib/plan.ts).
-      toast.error(err instanceof Error ? err.message : "사진 업로드에 실패했어요");
+      // 무료 티어 한도 초과 같은 서버 안내는 그대로(src/lib/plan.ts), 업로드
+      // 자체의 실패(R2 응답 등 내부 에러)는 사람이 읽을 문구로.
+      toast.error(err instanceof TRPCClientError ? err.message : t("uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -194,7 +201,7 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
       <Input
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
-        placeholder="한 줄 남기기(선택)"
+        placeholder={t("captionPlaceholder")}
       />
       <Button
         type="button"
@@ -202,7 +209,7 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
         disabled={uploading}
         onClick={() => fileInputRef.current?.click()}
       >
-        <ImagePlus className="size-5" /> {uploading ? "올리는 중..." : "사진 고르기"}
+        <ImagePlus className="size-5" /> {uploading ? t("uploading") : t("choose")}
       </Button>
     </div>
   );

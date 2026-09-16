@@ -3,14 +3,15 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Gift, Heart, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateField, localTodayValue } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
-import { dateOnly, daysBetween, formatYMD, nextOccurrence, todayIn } from "@/lib/datetime";
+import { useFormat } from "@/i18n/use-format";
+import { dateOnly, daysBetween, nextOccurrence, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
-import { formatDday } from "./countdown-tracker";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone } from "./space-context";
 
@@ -19,6 +20,9 @@ import { useMyTimeZone } from "./space-context";
 // 계산한다(src/lib/datetime.ts). 지난 단발 기념일은 "다가올"에서 뺀다.
 export function AnniversaryTracker({ openAdd = false }: { openAdd?: boolean }) {
   const trpc = useTRPC();
+  const t = useTranslations("anniversary");
+  const tm = useTranslations("memories");
+  const fmt = useFormat();
   const myTz = useMyTimeZone();
   const now = useNow();
   const listQuery = useQuery(trpc.anniversary.list.queryOptions());
@@ -40,8 +44,8 @@ export function AnniversaryTracker({ openAdd = false }: { openAdd?: boolean }) {
 
   return (
     <Section
-      title="기념일"
-      addTitle="기념일 추가"
+      title={t("title")}
+      addTitle={t("addTitle")}
       defaultAddOpen={openAdd}
       renderAdd={(close) => (
         <AnniversaryForm onDone={close} onCreated={() => listQuery.refetch()} />
@@ -50,7 +54,7 @@ export function AnniversaryTracker({ openAdd = false }: { openAdd?: boolean }) {
       {listQuery.isPending ? (
         <LoadingRow />
       ) : sorted.length === 0 ? (
-        <EmptyRow>처음 만난 날, 생일 같은 날을 적어두세요</EmptyRow>
+        <EmptyRow>{t("empty")}</EmptyRow>
       ) : (
         sorted.map((a) => (
           <Row
@@ -63,15 +67,17 @@ export function AnniversaryTracker({ openAdd = false }: { openAdd?: boolean }) {
               )
             }
             title={a.title}
-            sub={`${formatYMD(a.occurrence)}${a.recurring ? " · 매년" : ""}`}
+            sub={
+              a.recurring ? t("everyYear", { date: fmt.ymd(a.occurrence) }) : fmt.ymd(a.occurrence)
+            }
             end={
               <>
-                <span className="text-dusk-ink text-sm font-semibold">{formatDday(a.days)}</span>
+                <span className="text-dusk-ink text-sm font-semibold">{fmt.dday(a.days)}</span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${a.title} 삭제`}
+                  aria-label={tm("delete", { title: a.title })}
                   className="text-muted-foreground"
                   onClick={() => deleteMutation.mutate({ id: a.id })}
                 >
@@ -88,6 +94,8 @@ export function AnniversaryTracker({ openAdd = false }: { openAdd?: boolean }) {
 
 function AnniversaryForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
+  const t = useTranslations("anniversary");
+  const tm = useTranslations("memories");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => localTodayValue());
   const [recurring, setRecurring] = useState(true);
@@ -109,14 +117,18 @@ function AnniversaryForm({ onDone, onCreated }: { onDone: () => void; onCreated:
         createMutation.mutate({ title: title.trim(), date, recurring });
       }}
     >
-      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 생일" />
-      <DateField label="날짜" value={date} onChange={setDate} />
+      <Input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={t("placeholder")}
+      />
+      <DateField label={t("dateLabel")} value={date} onChange={setDate} />
       <label className="text-foreground flex items-center gap-2 text-sm">
         <Checkbox checked={recurring} onCheckedChange={(checked) => setRecurring(!!checked)} />
-        매년 반복
+        {t("recurring")}
       </label>
       <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
-        추가
+        {tm("add")}
       </Button>
     </form>
   );

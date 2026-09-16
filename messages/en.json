@@ -166,5 +166,88 @@
     "voicePlay": "Play voice message",
     "voicePosition": "Playback position",
     "voiceMessage": "Voice message"
+  },
+  "memories": {
+    "title": "Memories",
+    "tabsLabel": "View",
+    "upcoming": "Coming up",
+    "past": "Looking back",
+    "loadMore": "Show more",
+    "delete": "Delete {title}",
+    "add": "Add"
+  },
+  "countdown": {
+    "title": "Next time we meet",
+    "addTitle": "Add a countdown",
+    "empty": "Pick the next day you'll meet and we'll count down to it here",
+    "defaultTitle": "Next time we meet",
+    "placeholder": "e.g. Next visit",
+    "dateLabel": "The day you meet"
+  },
+  "anniversary": {
+    "title": "Anniversaries",
+    "addTitle": "Add an anniversary",
+    "empty": "Save days like when you first met, or birthdays",
+    "everyYear": "{date} · every year",
+    "placeholder": "e.g. Birthday",
+    "dateLabel": "Date",
+    "recurring": "Repeats every year"
+  },
+  "calendar": {
+    "title": "Plans",
+    "addTitle": "Add a plan",
+    "empty": "Plan something, like a video-call date",
+    "partnerTime": "{name}: {time}",
+    "saveFailed": "Couldn't save the plan. Check the end time.",
+    "placeholder": "e.g. Video call",
+    "start": "Starts",
+    "end": "Ends"
+  },
+  "capsule": {
+    "title": "Letters on the way",
+    "addTitle": "Schedule a letter",
+    "empty": "Write {name} a letter that opens on a day you choose",
+    "toPartner": "Letter to {name}",
+    "fromPartner": "Letter from {name}",
+    "opensOnLanding": "Opens when {flight} lands in {city}",
+    "opensAt": "Opens {when}",
+    "delete": "Delete letter",
+    "openedTitle": "Opened letters",
+    "toLabel": "To {name}",
+    "fromLabel": "From {name}",
+    "sealedTitle": "Letter from {name}",
+    "sealedLandingTitle": "{name}'s landing letter",
+    "arrivedAt": "Arrived {when}",
+    "open": "Open",
+    "placeholderLanding": "A few words for when they land",
+    "placeholder": "To you, later",
+    "whenLabel": "Opens",
+    "whenTime": "On a date and time",
+    "whenLanding": "When {name}'s flight lands · {flight}",
+    "dateLabel": "Opens on",
+    "submit": "Schedule it"
+  },
+  "moments": {
+    "title": "Photos",
+    "addTitle": "Add a photo",
+    "empty": "Today's sky, what you had for lunch — the small moments are the best ones",
+    "altDefault": "Photo of the day",
+    "delete": "Delete photo",
+    "imageTypes": "You can upload JPG, PNG, WebP or GIF images",
+    "uploadFailed": "Couldn't upload the photo",
+    "captionPlaceholder": "Add a caption (optional)",
+    "uploading": "Uploading…",
+    "choose": "Choose a photo"
+  },
+  "meetups": {
+    "title": "Places we've been",
+    "titleCount": "{count, plural, one {# place} other {# places}} we've been",
+    "addTitle": "Save where you are",
+    "empty": "When you're together, save where you are and it'll show up on the map",
+    "noGeo": "This browser can't get your location",
+    "geoFailed": "Couldn't get your current location",
+    "placeholder": "e.g. The café from our first date",
+    "dateLabel": "The day",
+    "saveHere": "Save this spot"
   }
 }

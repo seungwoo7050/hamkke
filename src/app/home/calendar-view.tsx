@@ -3,15 +3,18 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Calendar, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
-import { daysBetween, formatDateTime, formatTime, todayIn, weekdayOf } from "@/lib/datetime";
+import { type Formatters } from "@/i18n/format";
+import { useFormat } from "@/i18n/use-format";
+import { daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
-import { displayName, useMyTimeZone, useSpace } from "./space-context";
+import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
 // datetime-local input은 "YYYY-MM-DDTHH:mm"를 로컬 시간 기준으로 받는다
 // (toISOString()은 UTC라 그대로 쓰면 시간대만큼 어긋난다).
@@ -28,11 +31,11 @@ function hoursFromNow(h: number) {
 }
 
 // 상대 쪽은 시각만 — 날짜가 내 쪽과 달라질 때만 요일을 붙인다(한 줄에 담기게).
-function formatPartner(date: Date, myTz: string, partnerTz: string) {
+function formatPartner(fmt: Formatters, date: Date, myTz: string, partnerTz: string) {
   const mine = todayIn(myTz, date);
   const theirs = todayIn(partnerTz, date);
-  const time = formatTime(date, partnerTz);
-  return daysBetween(mine, theirs) === 0 ? time : `${weekdayOf(theirs)} ${time}`;
+  const time = fmt.time(date, partnerTz);
+  return daysBetween(mine, theirs) === 0 ? time : `${fmt.weekday(theirs)} ${time}`;
 }
 
 // 달력 그리드 대신 다가오는 순 리스트로 단순화했다(PRD.md §3.4 범위).
@@ -42,7 +45,10 @@ export function CalendarView() {
   const myTz = useMyTimeZone();
   const { summary } = useSpace();
   const partnerTz = summary.partner?.timezone ?? null;
-  const partnerName = displayName(summary.partner, "상대");
+  const partnerName = usePartnerName();
+  const t = useTranslations("calendar");
+  const tm = useTranslations("memories");
+  const fmt = useFormat();
 
   const listQuery = useQuery(trpc.calendar.list.queryOptions());
   const deleteMutation = useMutation(
@@ -57,21 +63,24 @@ export function CalendarView() {
 
   return (
     <Section
-      title="일정"
-      addTitle="일정 추가"
+      title={t("title")}
+      addTitle={t("addTitle")}
       renderAdd={(close) => <CalendarForm onDone={close} onCreated={() => listQuery.refetch()} />}
     >
       {listQuery.isPending ? (
         <LoadingRow />
       ) : upcoming.length === 0 ? (
-        <EmptyRow>영상통화 데이트 같은 약속을 잡아보세요</EmptyRow>
+        <EmptyRow>{t("empty")}</EmptyRow>
       ) : (
         upcoming.map((event) => {
           const start = new Date(event.startAt);
-          const mine = formatDateTime(start, myTz);
+          const mine = fmt.dateTime(start, myTz);
           const theirs =
             partnerTz && partnerTz !== myTz
-              ? ` · ${partnerName} ${formatPartner(start, myTz, partnerTz)}`
+              ? ` · ${t("partnerTime", {
+                  name: partnerName,
+                  time: formatPartner(fmt, start, myTz, partnerTz),
+                })}`
               : "";
           return (
             <Row
@@ -84,7 +93,7 @@ export function CalendarView() {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${event.title} 삭제`}
+                  aria-label={tm("delete", { title: event.title })}
                   className="text-muted-foreground"
                   onClick={() => deleteMutation.mutate({ id: event.id })}
                 >
@@ -101,6 +110,8 @@ export function CalendarView() {
 
 function CalendarForm({ onDone, onCreated }: { onDone: () => void; onCreated: () => void }) {
   const trpc = useTRPC();
+  const t = useTranslations("calendar");
+  const tm = useTranslations("memories");
   const [title, setTitle] = useState("");
   const [startAt, setStartAt] = useState(() => hoursFromNow(1));
   const [endAt, setEndAt] = useState(() => hoursFromNow(2));
@@ -118,7 +129,7 @@ function CalendarForm({ onDone, onCreated }: { onDone: () => void; onCreated: ()
         onCreated();
         onDone();
       },
-      onError: () => toast.error("일정 저장에 실패했어요(종료 시각을 확인해주세요)"),
+      onError: () => toast.error(t("saveFailed")),
     }),
   );
 
@@ -136,11 +147,15 @@ function CalendarForm({ onDone, onCreated }: { onDone: () => void; onCreated: ()
         });
       }}
     >
-      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 영상통화" />
-      <DateTimeField label="시작" value={startAt} onChange={changeStart} />
-      <DateTimeField label="끝" value={endAt} onChange={setEndAt} />
+      <Input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={t("placeholder")}
+      />
+      <DateTimeField label={t("start")} value={startAt} onChange={changeStart} />
+      <DateTimeField label={t("end")} value={endAt} onChange={setEndAt} />
       <Button type="submit" size="lg" disabled={!title.trim() || createMutation.isPending}>
-        추가
+        {tm("add")}
       </Button>
     </form>
   );
