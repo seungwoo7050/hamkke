@@ -2,5 +2,35 @@
   "meta": {
     "title": "Hamkke",
     "description": "A private space for two, for couples in long-distance relationships"
+  },
+  "common": {
+    "loading": "Loading",
+    "back": "Back"
+  },
+  "landing": {
+    "tagline": "Apart, but together.",
+    "description": "A private space just for the two of you, wherever you are.",
+    "start": "Get started"
+  },
+  "login": {
+    "title": "Sign in",
+    "description": "Hamkke is only for two people connected by an invite code.",
+    "google": "Continue with Google",
+    "or": "or",
+    "emailPlaceholder": "Email address",
+    "emailSubmit": "Email me a sign-in link"
+  },
+  "onboarding": {
+    "title": "Connect with your person",
+    "description": "Create an invite code to share, or enter the one you were given.",
+    "shareCode": "Share this code with your person.",
+    "codeExpiry": "It works for 24 hours. You'll be connected as soon as they enter it.",
+    "waiting": "Waiting for them to join…",
+    "codePlaceholder": "6-character invite code",
+    "checking": "Checking…",
+    "connect": "Connect",
+    "creating": "Creating…",
+    "createCode": "Create an invite code",
+    "enterCode": "I have a code"
   }
 }

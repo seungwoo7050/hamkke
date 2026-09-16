@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { cn } from "cn";
 
 /**
@@ -15,10 +16,12 @@ export function LoadingMotif({
   compact?: boolean;
   className?: string;
 }) {
+  // 서버·클라이언트 컴포넌트 양쪽에서 쓰인다 — useTranslations는 둘 다 지원.
+  const t = useTranslations("common");
   return (
     <div
       role="status"
-      aria-label={label ?? "불러오는 중"}
+      aria-label={label ?? t("loading")}
       className={cn(
         "flex flex-col gap-4",
         compact ? "h-9 w-11 items-start" : "items-center",

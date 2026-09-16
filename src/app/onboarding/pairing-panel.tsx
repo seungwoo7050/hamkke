@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { inferRouterOutputs } from "@trpc/server";
 import { LoadingMotif } from "@/components/brand/loading-motif";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,8 @@ type PairingStatus = inferRouterOutputs<AppRouter>["pairing"]["getStatus"];
 
 export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }) {
   const trpc = useTRPC();
+  const t = useTranslations("onboarding");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [mode, setMode] = useState<"choose" | "redeem">("choose");
   const [code, setCode] = useState("");
@@ -57,15 +60,13 @@ export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4">
-          <p className="text-muted-foreground">이 코드를 상대에게 공유하세요.</p>
+          <p className="text-muted-foreground">{t("shareCode")}</p>
           <p className="text-foreground text-4xl font-semibold tracking-widest">
             {status.inviteCode}
           </p>
-          <p className="text-muted-foreground text-sm">
-            24시간 안에 입력해야 해요. 상대가 입력하면 자동으로 연결돼요.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("codeExpiry")}</p>
         </div>
-        <LoadingMotif label="상대를 기다리는 중…" />
+        <LoadingMotif label={t("waiting")} />
       </div>
     );
   }
@@ -83,16 +84,16 @@ export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }
         <Input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="초대코드 6자리"
+          placeholder={t("codePlaceholder")}
           maxLength={6}
           required
         />
         {redeemError && <p className="text-danger text-sm">{redeemError}</p>}
         <Button type="submit" disabled={redeemInviteCode.isPending}>
-          {redeemInviteCode.isPending ? "확인 중..." : "연결하기"}
+          {redeemInviteCode.isPending ? t("checking") : t("connect")}
         </Button>
         <Button type="button" variant="ghost" onClick={() => setMode("choose")}>
-          뒤로
+          {tc("back")}
         </Button>
       </form>
     );
@@ -101,10 +102,10 @@ export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }
   return (
     <div className="flex flex-col gap-3">
       <Button onClick={() => createInviteCode.mutate()} disabled={createInviteCode.isPending}>
-        {createInviteCode.isPending ? "생성 중..." : "초대코드 만들기"}
+        {createInviteCode.isPending ? t("creating") : t("createCode")}
       </Button>
       <Button variant="outline" onClick={() => setMode("redeem")}>
-        받은 코드 입력하기
+        {t("enterCode")}
       </Button>
     </div>
   );
