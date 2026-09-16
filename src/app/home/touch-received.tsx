@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { TouchMotif } from "@/components/brand/touch-motif";
-import { josa } from "@/lib/josa";
+import { useFormat } from "@/i18n/use-format";
 import { SPRING } from "@/lib/motion";
-import { displayName, useSpace } from "./space-context";
+import { usePartnerName } from "./space-context";
 
 export const TOUCH_RECEIVED_EVENT = "hamkke:touch-received";
 const VISIBLE_MS = 2600;
@@ -15,8 +16,9 @@ const VISIBLE_MS = 2600;
 // 중심으로 올라오는 순간"이라 이때만 손글씨(§2 Maggie Appleton)를 쓴다.
 // 수신 자체는 app-effects.tsx가 Broadcast로 받아 이 이벤트로 알린다.
 export function TouchReceived() {
-  const { summary } = useSpace();
-  const partnerName = displayName(summary.partner, "상대");
+  const t = useTranslations("touch");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
   const [shownAt, setShownAt] = useState<number | null>(null);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function TouchReceived() {
           <div className="bg-background shadow-elevated flex flex-col items-center gap-2 rounded-xl px-8 pt-6 pb-5">
             <TouchMotif />
             <p className="font-handwritten text-dusk-ink text-xl">
-              {josa(partnerName, "이/가")} 생각하고 있어요
+              {t("received", fmt.particles(partnerName))}
             </p>
           </div>
         </motion.div>

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Flame } from "lucide-react";
 import { cn } from "cn";
 import { computeStreak } from "@/lib/streak";
@@ -11,6 +12,7 @@ import { useTRPC } from "@/trpc/client";
 // (PRD.md §3.4 "연속 접속/대화 일수"). 연속 계산은 로컬 타임존 기준으로
 // 클라이언트에서 한다(src/lib/streak.ts).
 export function StreakBadge() {
+  const t = useTranslations("streak");
   const trpc = useTRPC();
   const { data } = useQuery(trpc.streak.activeDates.queryOptions());
 
@@ -29,10 +31,10 @@ export function StreakBadge() {
         "text-foreground flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
         activeToday ? "bg-glow/40" : "bg-muted text-muted-foreground",
       )}
-      title={activeToday ? "오늘도 대화했어요" : "오늘 대화하면 스트릭이 이어져요"}
+      title={activeToday ? t("activeToday") : t("keepGoing")}
     >
       <Flame className={cn("size-4", activeToday && "text-primary")} />
-      {streak}일 연속
+      {t("days", { count: streak })}
     </span>
   );
 }

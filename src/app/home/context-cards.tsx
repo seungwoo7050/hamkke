@@ -13,16 +13,16 @@ import {
   PlaneLanding,
   PlaneTakeoff,
 } from "lucide-react";
-import { dateOnly, daysBetween, formatTime, nextOccurrence, todayIn } from "@/lib/datetime";
+import { useTranslations } from "next-intl";
+import { useFormat } from "@/i18n/use-format";
+import { dateOnly, daysBetween, nextOccurrence, todayIn } from "@/lib/datetime";
 import { bestTimes, pickFlight } from "@/lib/flight";
 import { selectContextCards, type ContextCard } from "@/lib/context-cards";
-import { josa } from "@/lib/josa";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
-import { formatDday } from "./countdown-tracker";
 import { QuestionSheet, useTodayQuestion } from "./daily-question";
 import { useFlights, type FlightView } from "./flights";
-import { displayName, useMyTimeZone, useSpace } from "./space-context";
+import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
 // 캡슐이 "새로 도착했다"고 보여줄 기간 — 그 뒤엔 기억 › 지나온에만 남는다.
 const CAPSULE_FRESH_MS = 24 * 60 * 60 * 1000;
@@ -55,10 +55,13 @@ function Card({ href, ...body }: { href: string } & React.ComponentProps<typeof 
 // (선택 규칙은 src/lib/context-cards.ts).
 export function ContextCards() {
   const trpc = useTRPC();
-  const { currentUserId, summary } = useSpace();
+  const { currentUserId } = useSpace();
+  const t = useTranslations("cards");
+  const fmt = useFormat();
   const myTz = useMyTimeZone();
   const now = useNow();
-  const partnerName = displayName(summary.partner, "상대");
+  const partnerName = usePartnerName();
+  const names = fmt.particles(partnerName);
 
   const anniversaries = useQuery(trpc.anniversary.list.queryOptions());
   const countdowns = useQuery(trpc.countdown.list.queryOptions());
@@ -156,8 +159,8 @@ export function ContextCards() {
             key={`a-${card.title}`}
             href="/home/memories"
             icon={<Gift className="size-6" />}
-            title={`오늘은 ${card.title}`}
-            sub={`${partnerName}에게 한마디 남겨볼까요`}
+            title={t("anniversaryTitle", { title: card.title })}
+            sub={t("anniversarySub", { name: partnerName })}
           />
         );
       case "capsule":
@@ -166,8 +169,8 @@ export function ContextCards() {
             key="capsule"
             href="/home/memories?tab=past"
             icon={<Mail className="size-6" />}
-            title={`${josa(partnerName, "이/가")} 보낸 ${landingArrived ? "착륙 편지가" : "캡슐이"} 열렸어요`}
-            sub={card.count > 1 ? `${card.count}통이 도착했어요` : "지금 열어볼 수 있어요"}
+            title={t(landingArrived ? "landingLetterTitle" : "capsuleTitle", names)}
+            sub={card.count > 1 ? t("capsuleMany", { count: card.count }) : t("capsuleOne")}
           />
         );
       case "countdown":
@@ -176,8 +179,8 @@ export function ContextCards() {
             key="countdown"
             href="/home/memories"
             icon={<Calendar className="size-6" />}
-            title={`${card.title}까지 ${formatDday(card.days)}`}
-            sub="기억 탭에서 일정·캡슐을 준비해요"
+            title={t("countdownTitle", { title: card.title, dday: fmt.ddayBig(card.days) })}
+            sub={t("countdownSub")}
           />
         );
       case "setup-meetup":
@@ -186,8 +189,8 @@ export function ContextCards() {
             key="setup-meetup"
             href="/home/memories?add=countdown"
             icon={<CalendarHeart className="size-6" />}
-            title="다음에 만나는 날을 정해볼까요"
-            sub="정해두면 여기서 D-day를 세어줄게요"
+            title={t("setupMeetupTitle")}
+            sub={t("setupMeetupSub")}
           />
         );
       case "setup-anniversary":
@@ -196,8 +199,8 @@ export function ContextCards() {
             key="setup-anniversary"
             href="/home/memories?add=anniversary"
             icon={<Gift className="size-6" />}
-            title="처음 만난 날을 적어주세요"
-            sub="기념일이 되면 여기서 먼저 알려줄게요"
+            title={t("setupAnniversaryTitle")}
+            sub={t("setupAnniversarySub")}
           />
         );
       case "question":
@@ -210,10 +213,10 @@ export function ContextCards() {
           >
             <CardBody
               icon={<MessageCircleQuestion className="size-6" />}
-              title="오늘의 질문"
+              title={t("questionTitle")}
               sub={
                 card.partnerAnswered
-                  ? `${josa(partnerName, "은/는")} 답했어요 · 내가 답하면 볼 수 있어요`
+                  ? t("questionPartnerAnswered", names)
                   : (question.data?.question.text ?? "")
               }
             />
@@ -240,11 +243,13 @@ function FlightCard({
   flight: FlightView;
 }) {
   const trpc = useTRPC();
-  const { currentUserId, summary } = useSpace();
+  const { currentUserId } = useSpace();
+  const t = useTranslations("cards");
+  const fmt = useFormat();
   const now = useNow();
   const capsules = useQuery(trpc.capsule.list.queryOptions());
   const mine = f.travelerId === currentUserId;
-  const name = displayName(summary.partner, "상대");
+  const names = fmt.particles(usePartnerName());
   const { departureAt, arrivalAt, estimated } = bestTimes(f);
   const letters = (capsules.data ?? []).filter(
     (c) => c.flightId === f.id && new Date(c.deliverAt) > now,
@@ -256,8 +261,8 @@ function FlightCard({
   const letterHint = mine
     ? null
     : letters > 0
-      ? `편지 ${letters}통이 착륙을 기다려요`
-      : "착륙 편지를 남겨둘 수 있어요";
+      ? t("lettersWaiting", { count: letters })
+      : t("leaveLetter");
   const withHint = (text: string) => (letterHint ? `${text} · ${letterHint}` : text);
 
   const letterHref = mine ? "/home/memories" : `/home/memories?add=capsule&flight=${f.id}`;
@@ -266,8 +271,10 @@ function FlightCard({
       <Card
         href={letterHref}
         icon={<PlaneLanding className="size-6" />}
-        title={`도착하면 거기는 ${formatTime(arrivalAt, f.to.timeZone)}`}
-        sub={withHint(`${f.to.name} 도착${estimated ? " 예정" : ""}`)}
+        title={t("flightLandsAt", { time: fmt.time(arrivalAt, f.to.timeZone) })}
+        sub={withHint(
+          t(estimated ? "flightArrivingScheduled" : "flightArriving", { airport: f.to.name }),
+        )}
       />
     );
   }
@@ -276,24 +283,29 @@ function FlightCard({
       <Card
         href="/home/memories?tab=past"
         icon={<PlaneLanding className="size-6" />}
-        title={
-          mine
-            ? `${f.to.city}에 도착했을 시간이에요`
-            : `${josa(name, "이/가")} ${f.to.city}에 도착했을 시간이에요`
-        }
-        sub={`${formatTime(arrivalAt, f.to.timeZone)} 착륙 ${estimated ? "예정이었어요" : "했어요"}${
-          sentLetters > 0 ? " · 보낸 편지가 열렸어요" : ""
-        }`}
+        title={t(mine ? "arrivedMine" : "arrivedPartner", { ...names, city: f.to.city })}
+        sub={[
+          t(estimated ? "arrivedScheduled" : "arrivedActual", {
+            time: fmt.time(arrivalAt, f.to.timeZone),
+          }),
+          sentLetters > 0 && t("letterOpened"),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       />
     );
   }
   const depToday = todayIn(f.from.timeZone, departureAt);
-  const dayWord = daysBetween(todayIn(f.from.timeZone, now), depToday) === 0 ? "오늘" : "내일";
+  const day = daysBetween(todayIn(f.from.timeZone, now), depToday) === 0 ? "today" : "tomorrow";
   return (
     <Card
       href={letterHref}
       icon={<PlaneTakeoff className="size-6" />}
-      title={`${mine ? "" : `${josa(name, "이/가")} `}${dayWord} ${formatTime(departureAt, f.from.timeZone)}에 출발해요`}
+      title={t(mine ? "departingMine" : "departingPartner", {
+        ...names,
+        day,
+        time: fmt.time(departureAt, f.from.timeZone),
+      })}
       sub={withHint(`${f.flightNumber} ${f.from.city} → ${f.to.city}`)}
     />
   );

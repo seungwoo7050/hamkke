@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { BookHeart, MessageCircle, UsersRound } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "cn";
 import { useTRPC } from "@/trpc/client";
 import { useSpaceBroadcast } from "./realtime-context";
@@ -13,9 +14,9 @@ import { useSpace } from "./space-context";
 // Material 3 내비게이션 바 문법(DESIGN.md §2) — 활성 탭은 아이콘 뒤 pill로
 // 표시한다. "홈" 대신 범위가 분명한 이름을 쓴다(Apple HIG, DESIGN.md §4).
 const TABS = [
-  { href: "/home", label: "우리", Icon: UsersRound },
-  { href: "/home/chat", label: "대화", Icon: MessageCircle },
-  { href: "/home/memories", label: "기억", Icon: BookHeart },
+  { href: "/home", key: "us", Icon: UsersRound },
+  { href: "/home/chat", key: "chat", Icon: MessageCircle },
+  { href: "/home/memories", key: "memories", Icon: BookHeart },
 ] as const;
 
 // 안 읽은 메시지 배지는 새 메시지 Broadcast가 올 때와 탭을 옮길 때 다시
@@ -41,15 +42,17 @@ function useUnreadCount(pathname: string) {
 }
 
 export function BottomNav() {
+  const t = useTranslations("nav");
   const pathname = usePathname();
   const unread = useUnreadCount(pathname);
 
   return (
     <nav
-      aria-label="주요 화면"
+      aria-label={t("label")}
       className="border-border bg-background grid shrink-0 grid-cols-3 border-t px-3 pt-2 pb-4"
     >
-      {TABS.map(({ href, label, Icon }) => {
+      {TABS.map(({ href, key, Icon }) => {
+        const label = t(key);
         const active = pathname === href;
         return (
           <Link
@@ -58,7 +61,7 @@ export function BottomNav() {
             aria-current={active ? "page" : undefined}
             aria-label={
               href === "/home/chat" && unread > 0
-                ? `${label}, 안 읽은 메시지 ${unread}개`
+                ? t("unread", { label, count: unread })
                 : undefined
             }
             className={cn(

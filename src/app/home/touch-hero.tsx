@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Heart } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { pickFlight } from "@/lib/flight";
-import { josa } from "@/lib/josa";
-import { relativeTimeAdverb } from "@/lib/relative-time";
+import { useFormat } from "@/i18n/use-format";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { useFlights } from "./flights";
 import { useSpaceBroadcast } from "./realtime-context";
-import { displayName, useSpace } from "./space-context";
+import { usePartnerName, useSpace } from "./space-context";
 
 const SENT_FEEDBACK_MS = 2400;
 
@@ -23,7 +23,9 @@ export function TouchHero() {
   const trpc = useTRPC();
   const { currentUserId, summary } = useSpace();
   const now = useNow();
-  const partnerName = displayName(summary.partner, "상대");
+  const t = useTranslations("touch");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
   const [lastReceivedAt, setLastReceivedAt] = useState<Date | null>(
     summary.lastTouchReceivedAt ? new Date(summary.lastTouchReceivedAt) : null,
   );
@@ -35,7 +37,7 @@ export function TouchHero() {
   const sendMutation = useMutation(
     trpc.touch.send.mutationOptions({
       onSuccess: () => setJustSent(true),
-      onError: () => toast.error("전하지 못했어요. 잠시 뒤 다시 눌러주세요"),
+      onError: () => toast.error(t("failed")),
     }),
   );
 
@@ -50,7 +52,7 @@ export function TouchHero() {
   });
 
   return (
-    <section aria-label="생각하고 있어요 보내기" className="mt-6 px-4">
+    <section aria-label={t("label")} className="mt-6 px-4">
       <Button
         type="button"
         size="lg"
@@ -59,15 +61,18 @@ export function TouchHero() {
         onClick={() => sendMutation.mutate()}
       >
         <Heart className="size-6" />
-        {justSent ? `${partnerName}에게 전했어요` : "생각하고 있어요"}
+        {justSent ? t("sent", { name: partnerName }) : t("send")}
       </Button>
       <p className="font-handwritten text-dusk-ink mt-2.5 min-h-7 text-lg" suppressHydrationWarning>
         {partnerFlying
           ? // 비행 중엔 인터넷이 없을 수 있다 — 보낸 마음이 사라지지 않는다는 걸 먼저 말한다.
-            "보낸 마음은 착륙하면 받아볼 거예요"
+            t("partnerFlying")
           : lastReceivedAt
-            ? `${relativeTimeAdverb(lastReceivedAt, now)} ${josa(partnerName, "이/가")} 생각해줬어요`
-            : `생각날 때 눌러보세요. ${partnerName}에게 바로 닿아요`}
+            ? t("lastReceived", {
+                ...fmt.particles(partnerName),
+                when: fmt.relativeAdverb(lastReceivedAt, now),
+              })
+            : t("empty", { name: partnerName })}
       </p>
     </section>
   );

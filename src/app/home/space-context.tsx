@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import { useTranslations } from "next-intl";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -38,6 +39,13 @@ export function useSpace() {
 /** 이름이 없으면(이메일 가입 직후 등) 호칭을 대신 쓴다. */
 export function displayName(person: { name: string | null } | null, fallback: string) {
   return person?.name?.trim() || fallback;
+}
+
+/** 상대 이름 — 없으면 현재 언어의 호칭("상대" / "Your person"). */
+export function usePartnerName() {
+  const { summary } = useSpace();
+  const t = useTranslations("common");
+  return displayName(summary.partner, t("partner"));
 }
 
 /**

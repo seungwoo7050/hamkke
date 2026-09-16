@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircleQuestion } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,11 +14,11 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
-import { josa } from "@/lib/josa";
+import { useFormat } from "@/i18n/use-format";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, LoadMore, Section } from "./memories/section";
 import { useSpaceBroadcast } from "./realtime-context";
-import { displayName, useSpace } from "./space-context";
+import { usePartnerName, useSpace } from "./space-context";
 
 export function useTodayQuestion() {
   const trpc = useTRPC();
@@ -54,8 +55,11 @@ export function QuestionSheet({
 }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { summary } = useSpace();
-  const partnerName = displayName(summary.partner, "상대");
+  const t = useTranslations("question");
+  const tc = useTranslations("common");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
+  const names = fmt.particles(partnerName);
   const today = useTodayQuestion();
   const [draft, setDraft] = useState("");
 
@@ -78,14 +82,14 @@ export function QuestionSheet({
         {data && (
           <div className="flex flex-col gap-4">
             <DrawerHeader>
-              <DrawerDescription>오늘의 질문</DrawerDescription>
+              <DrawerDescription>{t("today")}</DrawerDescription>
               <DrawerTitle className="leading-snug">{data.question.text}</DrawerTitle>
             </DrawerHeader>
             {data.myAnswer ? (
               <div className="bg-muted flex flex-col gap-2 rounded-lg px-4 py-3">
-                <Answer who="나">{data.myAnswer}</Answer>
+                <Answer who={tc("me")}>{data.myAnswer}</Answer>
                 <Answer who={partnerName}>
-                  {data.partnerAnswer ?? `${josa(partnerName, "이/가")} 답하면 여기 보여요`}
+                  {data.partnerAnswer ?? t("partnerWillShow", names)}
                 </Answer>
               </div>
             ) : (
@@ -102,18 +106,16 @@ export function QuestionSheet({
                   onChange={(e) => setDraft(e.target.value)}
                   maxLength={1000}
                   placeholder={
-                    data.partnerAnswered
-                      ? `${josa(partnerName, "은/는")} 답했어요. 내가 답하면 볼 수 있어요`
-                      : "생각나는 대로 적어보세요"
+                    data.partnerAnswered ? t("partnerAnswered", names) : t("placeholder")
                   }
                 />
-                <p className="text-muted-foreground text-xs">한 번 보내면 고칠 수 없어요</p>
+                <p className="text-muted-foreground text-xs">{t("noEdit")}</p>
                 <Button
                   type="submit"
                   size="lg"
                   disabled={!draft.trim() || answerMutation.isPending}
                 >
-                  답하기
+                  {t("submit")}
                 </Button>
               </form>
             )}
@@ -124,17 +126,19 @@ export function QuestionSheet({
   );
 }
 
-function formatDateKey(dateKey: string) {
-  // dateKey는 UTC 날짜(PRD §3.2)라 로컬 변환 없이 그대로 읽는다.
-  const [, m, d] = dateKey.split("-").map(Number);
-  return `${m}월 ${d}일`;
+// dateKey는 UTC 날짜(PRD §3.2)라 로컬 변환 없이 그대로 읽는다.
+function dateKeyToYMD(dateKey: string) {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return { y, m, d };
 }
 
 // 기억 › 지나온 — 내가 답한 날만(그래야 상대 답도 열려 있다).
 export function QuestionHistory() {
   const trpc = useTRPC();
-  const { summary } = useSpace();
-  const partnerName = displayName(summary.partner, "상대");
+  const t = useTranslations("question");
+  const tc = useTranslations("common");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
   const history = useInfiniteQuery(
     trpc.question.history.infiniteQueryOptions(
       { limit: 20 },
@@ -144,25 +148,25 @@ export function QuestionHistory() {
   const items = history.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <Section title="지난 질문">
+    <Section title={t("history")}>
       {history.isPending ? (
         <LoadingRow />
       ) : items.length === 0 ? (
-        <EmptyRow>오늘의 질문에 답하면 여기에 둘의 답이 쌓여요</EmptyRow>
+        <EmptyRow>{t("historyEmpty")}</EmptyRow>
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (
             <article key={item.dateKey} className="bg-muted rounded-lg px-4 py-3">
               <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <MessageCircleQuestion className="size-4" />
-                {formatDateKey(item.dateKey)}
+                {fmt.ymd(dateKeyToYMD(item.dateKey))}
               </p>
               <p className="text-foreground mt-1 mb-2 text-sm font-semibold">
-                {item.question?.text ?? "사라진 질문"}
+                {item.question?.text ?? t("missing")}
               </p>
               <div className="flex flex-col gap-1">
-                <Answer who="나">{item.myAnswer}</Answer>
-                <Answer who={partnerName}>{item.partnerAnswer ?? "아직 답하지 않았어요"}</Answer>
+                <Answer who={tc("me")}>{item.myAnswer}</Answer>
+                <Answer who={partnerName}>{item.partnerAnswer ?? t("notYet")}</Answer>
               </div>
             </article>
           ))}
