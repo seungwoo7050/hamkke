@@ -107,7 +107,9 @@ export function formatters(locale: Locale) {
     weekday: (ymd: YMD) =>
       ko
         ? weekdayOf(ymd)
-        : new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" }).format(ymdDate(ymd)),
+        : new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" }).format(
+            ymdDate(ymd),
+          ),
     /** "11,053km" · "11,053 km" */
     distance: (km: number) =>
       ko

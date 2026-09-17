@@ -255,7 +255,10 @@
     "together": "함께하는 사람 · {name}",
     "locationSharing": "위치공유",
     "locationSharingSub": "켜두면 거리·날씨가 {name}에게 보여요",
-    "signOut": "로그아웃"
+    "signOut": "로그아웃",
+    "language": "언어",
+    "languageSub": "나에게만 바뀌어요 — {name}의 화면은 그대로예요",
+    "languageFailed": "언어를 바꾸지 못했어요"
   },
   "location": {
     "partnerOff": "{nameSubj} 위치공유를 꺼두었어요",

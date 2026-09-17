@@ -143,9 +143,7 @@ export function BoardingPassScan({ onScanned }: { onScanned: (leg: BoardingPassL
               e.target.value = "";
             }}
           />
-          <p className="text-muted-foreground text-xs">
-            {t("privacy")}
-          </p>
+          <p className="text-muted-foreground text-xs">{t("privacy")}</p>
         </div>
       )}
       {message && <p className="text-danger text-sm">{message}</p>}

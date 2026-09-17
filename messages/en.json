@@ -255,7 +255,10 @@
     "together": "Together with {name}",
     "locationSharing": "Location sharing",
     "locationSharingSub": "{name} can see your distance and weather",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "language": "Language",
+    "languageSub": "Only changes the app for you — {name} keeps theirs",
+    "languageFailed": "Couldn't change the language"
   },
   "location": {
     "partnerOff": "{name} has location sharing off",

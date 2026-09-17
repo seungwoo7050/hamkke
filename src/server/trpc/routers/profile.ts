@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LOCALES } from "@/i18n/config";
 import { prisma } from "@/lib/prisma";
 import { protectedProcedure, router, spaceProcedure } from "../init";
 
@@ -13,6 +14,17 @@ export const profileRouter = router({
         data: { timezone: input.timezone },
       });
       return { timezone: input.timezone };
+    }),
+
+  // 화면·알림 언어(PRD §3.8). 사람마다 따로라 내 것만 바꾼다 — 상대 화면은 그대로.
+  setLocale: protectedProcedure
+    .input(z.object({ locale: z.enum(LOCALES) }))
+    .mutation(async ({ ctx, input }) => {
+      await prisma.user.update({
+        where: { id: ctx.session.user.id },
+        data: { locale: input.locale },
+      });
+      return { locale: input.locale };
     }),
 
   timezones: spaceProcedure.query(async ({ ctx }) => {

@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { signOutAction } from "./actions";
 import { BillingSection } from "./billing-section";
 import { GeofenceManager } from "./geofence-manager";
+import { LanguageSection } from "./language-section";
 import { useLocationSharing } from "./location-context";
 import { PersonAvatar } from "./person-avatar";
 import { displayName, usePartnerName, useSpace } from "./space-context";
@@ -61,6 +62,7 @@ export function SettingsSheet() {
               />
             </label>
             <GeofenceManager />
+            <LanguageSection />
             <BillingSection />
             <form action={signOutAction} className="py-2">
               <Button type="submit" variant="ghost" className="text-destructive -mx-3.5">
