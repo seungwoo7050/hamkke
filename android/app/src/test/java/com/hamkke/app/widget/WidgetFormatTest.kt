@@ -36,4 +36,16 @@ class WidgetFormatTest {
         assertEquals("어제 오전 11:12", WidgetFormat.lastTouch(at, "America/New_York", now))
         assertEquals("9월 20일", WidgetFormat.lastTouch(at - 7 * 86_400_000L - 3_600_000L, "Asia/Seoul", now))
     }
+
+    @Test
+    fun englishIsWrittenForEnglish() {
+        assertEquals("11,053 km", WidgetFormat.distance(11053, "en"))
+        assertEquals("13h behind you", WidgetFormat.timeDifference("Asia/Seoul", "America/New_York", at, "en"))
+        assertEquals("3h 30m behind you", WidgetFormat.timeDifference("Asia/Seoul", "Asia/Kolkata", at, "en"))
+        assertEquals("Same time zone", WidgetFormat.timeDifference("Asia/Seoul", "Asia/Tokyo", at, "en"))
+        assertEquals("12:12 AM", WidgetFormat.time(at, "Asia/Seoul", "en"))
+        val now = 1790571600000L
+        assertEquals("Today 12:12 AM", WidgetFormat.lastTouch(at, "Asia/Seoul", now, "en"))
+        assertEquals("Yesterday 11:12 AM", WidgetFormat.lastTouch(at, "America/New_York", now, "en"))
+    }
 }

@@ -62,6 +62,7 @@ class HamkkeWidgetReceiver : GlanceAppWidgetReceiver() {
 
 @Composable
 private fun WidgetContent(state: WidgetState) {
+    val strings = WidgetStrings(state.lang)
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -77,38 +78,43 @@ private fun WidgetContent(state: WidgetState) {
                 modifier = GlanceModifier.size(20.dp),
             )
             Spacer(GlanceModifier.width(6.dp))
-            Text("함께", style = TextStyle(color = ColorProvider(Cream), fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            Text(strings.appName, style = TextStyle(color = ColorProvider(Cream), fontSize = 13.sp, fontWeight = FontWeight.Bold))
             Spacer(GlanceModifier.defaultWeight())
             if (state is WidgetState.Ready && state.distanceKm != null) {
                 Text(
-                    WidgetFormat.distance(state.distanceKm),
+                    WidgetFormat.distance(state.distanceKm, state.lang),
                     style = TextStyle(color = ColorProvider(Cream), fontSize = 13.sp, fontWeight = FontWeight.Bold),
                 )
             }
         }
         Spacer(GlanceModifier.defaultWeight())
         when (state) {
-            is WidgetState.Ready -> ReadyBody(state)
-            WidgetState.SignedOut -> Message("앱을 열어 로그인하면\n여기에 우리가 보여요")
-            WidgetState.Unpaired -> Message("상대와 연결되면\n여기에 우리가 보여요")
-            WidgetState.Offline -> Message("인터넷에 연결되면 채워져요")
+            is WidgetState.Ready -> ReadyBody(state, strings)
+            is WidgetState.SignedOut -> Message(strings.signedOut)
+            is WidgetState.Unpaired -> Message(strings.unpaired)
+            is WidgetState.Offline -> Message(strings.offline)
         }
     }
 }
 
 @Composable
-private fun ReadyBody(state: WidgetState.Ready) {
-    val name = state.partnerName ?: "상대"
+private fun ReadyBody(state: WidgetState.Ready, strings: WidgetStrings) {
+    val name = state.partnerName ?: strings.partnerFallback
     val now = System.currentTimeMillis()
     val myTz = state.myTimezone ?: java.util.TimeZone.getDefault().id
 
     if (state.partnerTimezone == null) {
-        Message("${name}의 시간은 상대가 앱을 열면 채워져요")
+        Message(strings.waitingForPartner(name))
     } else {
-        Text("${name}의 지금", style = TextStyle(color = ColorProvider(CreamMuted), fontSize = 12.sp))
+        Text(strings.partnerNow(name), style = TextStyle(color = ColorProvider(CreamMuted), fontSize = 12.sp))
         AndroidRemoteViews(
             remoteViews = RemoteViews(LocalContext.current.packageName, R.layout.widget_partner_clock).apply {
                 setString(R.id.partner_clock, "setTimeZone", state.partnerTimezone)
+                // 어순만 언어에 맞춘다 — "오후/PM" 표시 자체는 RemoteViews로 로케일을
+                // 정할 수 없어 기기 언어를 따른다.
+                val pattern = if (state.lang == "ko") "a h:mm" else "h:mm a"
+                setCharSequence(R.id.partner_clock, "setFormat12Hour", pattern)
+                setCharSequence(R.id.partner_clock, "setFormat24Hour", pattern)
             },
         )
         Spacer(GlanceModifier.height(2.dp))
@@ -116,7 +122,7 @@ private fun ReadyBody(state: WidgetState.Ready) {
     Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (state.partnerTimezone != null) {
             Text(
-                WidgetFormat.timeDifference(myTz, state.partnerTimezone, now),
+                WidgetFormat.timeDifference(myTz, state.partnerTimezone, now, state.lang),
                 style = TextStyle(color = ColorProvider(CreamMuted), fontSize = 12.sp),
                 maxLines = 1,
             )
@@ -130,7 +136,8 @@ private fun ReadyBody(state: WidgetState.Ready) {
         )
         Spacer(GlanceModifier.width(4.dp))
         Text(
-            state.lastTouchMillis?.let { WidgetFormat.lastTouch(it, myTz, now) } ?: "아직 받은 터치가 없어요",
+            state.lastTouchMillis?.let { WidgetFormat.lastTouch(it, myTz, now, state.lang) }
+                ?: strings.noTouchYet,
             style = TextStyle(color = ColorProvider(Cream), fontSize = 12.sp),
             maxLines = 1,
         )

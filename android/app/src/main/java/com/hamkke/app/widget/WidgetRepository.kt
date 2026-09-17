@@ -8,10 +8,15 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 
 /** 위젯이 그릴 상태. */
 sealed interface WidgetState {
+    /** 문구 언어("ko" | "en") */
+    val lang: String
+
     data class Ready(
+        override val lang: String,
         val myTimezone: String?,
         val partnerName: String?,
         val partnerTimezone: String?,
@@ -19,9 +24,9 @@ sealed interface WidgetState {
         val lastTouchMillis: Long?,
     ) : WidgetState
 
-    data object SignedOut : WidgetState
-    data object Unpaired : WidgetState
-    data object Offline : WidgetState
+    data class SignedOut(override val lang: String) : WidgetState
+    data class Unpaired(override val lang: String) : WidgetState
+    data class Offline(override val lang: String) : WidgetState
 }
 
 /**
@@ -39,7 +44,7 @@ object WidgetRepository {
         val fresh = runCatching { fetch(context) }.getOrNull()
         return when {
             fresh == null -> prefs.getString(KEY_LAST, null)?.let { parse(JSONObject(it)) }
-                ?: WidgetState.Offline
+                ?: WidgetState.Offline(WidgetStrings.deviceLang())
             fresh.optString("status") == "ok" -> {
                 prefs.edit().putString(KEY_LAST, fresh.toString()).apply()
                 parse(fresh)
@@ -47,8 +52,9 @@ object WidgetRepository {
             else -> {
                 // 로그아웃·연결 해제는 캐시로 덮지 않는다 — 남의 화면이 남으면 안 됨.
                 prefs.edit().remove(KEY_LAST).apply()
-                if (fresh.optString("status") == "unpaired") WidgetState.Unpaired
-                else WidgetState.SignedOut
+                val lang = WidgetStrings.normalize(fresh.optStringOrNull("locale"))
+                if (fresh.optString("status") == "unpaired") WidgetState.Unpaired(lang)
+                else WidgetState.SignedOut(lang)
             }
         }
     }
@@ -64,6 +70,8 @@ object WidgetRepository {
                 conn.connectTimeout = 10_000
                 conn.readTimeout = 10_000
                 if (cookie != null) conn.setRequestProperty("Cookie", cookie)
+                // 로그인 전엔 기기 언어로 문구를 정하도록(서버 언어 결정 2순위).
+                conn.setRequestProperty("Accept-Language", Locale.getDefault().toLanguageTag())
                 val code = conn.responseCode
                 val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                 val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
@@ -78,6 +86,7 @@ object WidgetRepository {
     }
 
     private fun parse(json: JSONObject) = WidgetState.Ready(
+        lang = WidgetStrings.normalize(json.optStringOrNull("locale")),
         myTimezone = json.optStringOrNull("myTimezone"),
         partnerName = json.optStringOrNull("partnerName"),
         partnerTimezone = json.optStringOrNull("partnerTimezone"),
