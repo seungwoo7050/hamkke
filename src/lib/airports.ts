@@ -17,7 +17,9 @@ export type Airport = {
   timeZone: string;
 };
 
-// 한국어 UI라 자주 오가는 공항만 한국어 이름을 붙인다(나머지는 원문 도시명).
+// 한국어 화면에서만 자주 오가는 공항에 한국어 이름을 붙인다(나머지는 원문
+// 도시명). 다른 언어는 데이터의 영어 원문 그대로 — 새 언어에 현지 이름이
+// 필요하면 이런 표를 언어별로 하나 더 둔다(PRD §3.8).
 // [짧은 도시, 전체 이름]
 const KO: Record<string, [string, string]> = {
   ICN: ["인천", "인천국제공항"],
@@ -97,35 +99,35 @@ const KO: Record<string, [string, string]> = {
 
 type Row = [string, string, string, string, number, number, string];
 
-const byIata = new Map<string, Airport>();
+type Row0 = Omit<Airport, "city" | "name"> & { city: string; name: string };
+const byIata = new Map<string, Row0>();
 // 한국어 이름을 붙여도 영어 원문으로 검색되도록 검색어 텍스트를 따로 둔다.
 const searchText = new Map<string, string>();
 for (const [iata, city, name, country, lat, lng, timeZone] of data.rows as Row[]) {
   const ko = KO[iata];
   searchText.set(iata, [ko?.[0], ko?.[1], city, name].filter(Boolean).join("\n").toLowerCase());
-  byIata.set(iata, {
-    iata,
-    city: ko?.[0] ?? city,
-    name: ko?.[1] ?? name,
-    country,
-    lat,
-    lng,
-    timeZone,
-  });
+  byIata.set(iata, { iata, city, name, country, lat, lng, timeZone });
 }
 
-export function getAirport(iata: string): Airport | null {
-  return byIata.get(iata.trim().toUpperCase()) ?? null;
+/** 그 언어로 보여줄 공항 — 한국어면 한국어 이름을 덧씌운다. */
+function localized(a: Row0, locale: string): Airport {
+  const ko = locale === "ko" ? KO[a.iata] : undefined;
+  return ko ? { ...a, city: ko[0], name: ko[1] } : a;
+}
+
+export function getAirport(iata: string, locale = "ko"): Airport | null {
+  const a = byIata.get(iata.trim().toUpperCase());
+  return a ? localized(a, locale) : null;
 }
 
 /**
  * 등록 시트의 공항 검색. IATA 코드가 정확히 맞으면 맨 앞, 그다음 한국어 이름이
  * 붙은 주요 공항, 그다음 도시·이름이 검색어로 시작하는 곳, 포함하는 곳 순.
  */
-export function searchAirports(query: string, limit = 8): Airport[] {
+export function searchAirports(query: string, limit = 8, locale = "ko"): Airport[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  const scored: { a: Airport; score: number }[] = [];
+  const scored: { a: Row0; score: number }[] = [];
   for (const a of byIata.values()) {
     const text = searchText.get(a.iata)!;
     let score = -1;
@@ -140,5 +142,5 @@ export function searchAirports(query: string, limit = 8): Airport[] {
   return scored
     .sort((x, y) => y.score - x.score || x.a.iata.localeCompare(y.a.iata))
     .slice(0, limit)
-    .map((x) => x.a);
+    .map((x) => localized(x.a, locale));
 }

@@ -1,6 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { questionByKey, questionForDateKey, utcDateKey } from "@/lib/daily-question";
+import {
+  questionByKey,
+  questionForDateKey,
+  utcDateKey,
+  type DailyQuestion,
+} from "@/lib/daily-question";
 import { Prisma } from "@/generated/prisma/client";
 import { josa } from "@/lib/josa";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +14,11 @@ import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
+
+// 질문 문장은 요청자의 언어로 붙여 보낸다(두 사람이 각자의 언어로 같은 질문을 본다).
+function withText(question: DailyQuestion, locale?: string) {
+  return { key: question.key, text: translator(locale)(`questions.${question.key}`) };
+}
 
 export const questionRouter = router({
   // 오늘의 질문 + 내 답. 상대 답은 내가 먼저 답한 뒤에만 공개한다(PRD §3.2) —
@@ -24,7 +34,7 @@ export const questionRouter = router({
 
     return {
       dateKey,
-      question: questionForDateKey(dateKey),
+      question: withText(questionForDateKey(dateKey), ctx.locale),
       myAnswer: mine?.content ?? null,
       partnerAnswered: partners !== null,
       partnerAnswer: mine ? (partners?.content ?? null) : null,
@@ -122,7 +132,10 @@ export const questionRouter = router({
       return {
         items: page.map((a) => ({
           dateKey: a.dateKey,
-          question: questionByKey(a.questionKey) ?? null,
+          question: (() => {
+            const q = questionByKey(a.questionKey);
+            return q ? withText(q, ctx.locale) : null;
+          })(),
           myAnswer: a.content,
           partnerAnswer: partnerByDate.get(a.dateKey) ?? null,
         })),

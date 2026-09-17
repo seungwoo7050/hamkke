@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MESSAGES } from "@/i18n/messages";
 import { DAILY_QUESTIONS, questionForDateKey, utcDateKey } from "./daily-question";
 
 describe("하루 한 질문 선택", () => {
@@ -27,5 +28,12 @@ describe("하루 한 질문 선택", () => {
   it("key는 중복되지 않는다", () => {
     const keys = DAILY_QUESTIONS.map((q) => q.key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("모든 질문에 모든 언어의 문장이 있다", () => {
+    for (const locale of Object.keys(MESSAGES) as (keyof typeof MESSAGES)[]) {
+      const texts = MESSAGES[locale].questions as Record<string, string>;
+      for (const q of DAILY_QUESTIONS) expect(texts[q.key], `${locale} ${q.key}`).toBeTruthy();
+    }
   });
 });

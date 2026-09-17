@@ -72,7 +72,9 @@ describe("question 라우터 (통합)", () => {
     const today = await (await callerFor(userAId)).question.today();
     const dateKey = utcDateKey(new Date());
     expect(today.dateKey).toBe(dateKey);
-    expect(today.question).toEqual(questionForDateKey(dateKey));
+    expect(today.question).toMatchObject(questionForDateKey(dateKey));
+    // 문장은 요청자의 언어로 붙는다(caller 기본 = 한국어).
+    expect(today.question.text).toMatch(/[가-힣]/);
     expect(today.myAnswer).toBeNull();
   });
 

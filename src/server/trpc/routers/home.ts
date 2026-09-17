@@ -68,7 +68,9 @@ export const homeRouter = router({
       distanceKm: myPing && partnerPing ? distanceKm(myPing, partnerPing) : null,
       lastTouchReceivedAt: lastTouch?.createdAt ?? null,
       unreadCount,
-      flights: flights.map(serializeFlight).filter((f): f is FlightView => f !== null),
+      flights: flights
+        .map((f) => serializeFlight(f, ctx.locale))
+        .filter((f): f is FlightView => f !== null),
     };
   }),
 

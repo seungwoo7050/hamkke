@@ -87,9 +87,9 @@ const airportView = (a: Airport) => ({
 });
 
 /** 화면용 — 공항 정보와 거리를 붙인다(공항 데이터는 서버에만 있다). */
-export function serializeFlight(f: Flight) {
-  const from = getAirport(f.fromIata);
-  const to = getAirport(f.toIata);
+export function serializeFlight(f: Flight, locale?: string) {
+  const from = getAirport(f.fromIata, locale);
+  const to = getAirport(f.toIata, locale);
   if (!from || !to) return null;
   return {
     id: f.id,
@@ -112,20 +112,22 @@ export type FlightView = NonNullable<ReturnType<typeof serializeFlight>>;
 export const flightRouter = router({
   searchAirports: spaceProcedure
     .input(z.object({ q: z.string().max(40) }))
-    .query(({ input }) => searchAirports(input.q).map(airportView)),
+    .query(({ ctx, input }) => searchAirports(input.q, 8, ctx.locale).map(airportView)),
 
   list: spaceProcedure.query(async ({ ctx }) => {
     const rows = await prisma.flight.findMany({
       where: { spaceId: ctx.space.id },
       orderBy: { scheduledDepartureAt: "asc" },
     });
-    return rows.map(serializeFlight).filter((f): f is FlightView => f !== null);
+    return rows
+      .map((f) => serializeFlight(f, ctx.locale))
+      .filter((f): f is FlightView => f !== null);
   }),
 
   create: spaceProcedure.input(flightInput).mutation(async ({ ctx, input }) => {
     const data = await resolveInput(ctx, input);
     const created = await prisma.flight.create({ data: { spaceId: ctx.space.id, ...data } });
-    return serializeFlight(created)!;
+    return serializeFlight(created, ctx.locale)!;
   }),
 
   update: spaceProcedure
@@ -145,7 +147,7 @@ export const flightRouter = router({
         });
         return f;
       });
-      return serializeFlight(updated)!;
+      return serializeFlight(updated, ctx.locale)!;
     }),
 
   delete: spaceProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
