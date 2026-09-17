@@ -20,10 +20,10 @@ export const touchRouter = router({
 
     // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
     // 푸시 발송 실패가 터치 자체의 성공을 막으면 안 되므로 에러는 삼킨다.
-    await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+    await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
       title: "Hamkke",
-      body: "상대방이 생각하고 있어요",
-    }).catch(() => {});
+      body: t("push.touch"),
+    })).catch(() => {});
 
     return touch;
   }),

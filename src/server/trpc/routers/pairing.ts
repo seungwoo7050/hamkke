@@ -7,6 +7,7 @@ import {
   recordFailedInviteCodeAttempt,
 } from "@/server/pairing/rate-limit";
 import { protectedProcedure, router } from "../init";
+import { translator } from "@/i18n/server";
 
 export const pairingRouter = router({
   getStatus: protectedProcedure.query(async ({ ctx }) => {
@@ -35,7 +36,10 @@ export const pairingRouter = router({
       const existing = await prisma.space.findUniqueOrThrow({ where: { id: existingSpaceId } });
 
       if (existing.status === "active") {
-        throw new TRPCError({ code: "CONFLICT", message: "이미 페어링된 상태입니다." });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: translator(ctx.locale)("errors.alreadyPaired"),
+        });
       }
 
       if (existing.inviteCodeExpiresAt > new Date()) {
@@ -80,11 +84,14 @@ export const pairingRouter = router({
 
       // 이미 Space가 있는 사용자(코드 생성자 본인 포함)는 재입력 불가
       if (ctx.session.user.spaceId) {
-        throw new TRPCError({ code: "CONFLICT", message: "이미 Space에 속해 있습니다." });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: translator(ctx.locale)("errors.alreadyInSpace"),
+        });
       }
 
       // 코드를 찾아보기 전에 먼저 막는다(ARCHITECTURE.md §7).
-      await assertCanRedeemInviteCode(userId, ctx.ip);
+      await assertCanRedeemInviteCode(userId, ctx.ip, ctx.locale);
       const fail = async (
         code: "NOT_FOUND" | "CONFLICT" | "PRECONDITION_FAILED",
         message: string,
@@ -97,13 +104,13 @@ export const pairingRouter = router({
         where: { inviteCode: input.code.toUpperCase() },
       });
       if (!space) {
-        throw await fail("NOT_FOUND", "유효하지 않은 초대코드입니다.");
+        throw await fail("NOT_FOUND", translator(ctx.locale)("errors.inviteInvalid"));
       }
       if (space.status !== "pending") {
-        throw await fail("CONFLICT", "이미 사용된 초대코드입니다.");
+        throw await fail("CONFLICT", translator(ctx.locale)("errors.inviteUsed"));
       }
       if (space.inviteCodeExpiresAt < new Date()) {
-        throw await fail("PRECONDITION_FAILED", "만료된 초대코드입니다.");
+        throw await fail("PRECONDITION_FAILED", translator(ctx.locale)("errors.inviteExpired"));
       }
 
       const spaceId = await prisma.$transaction(async (tx) => {
@@ -113,7 +120,10 @@ export const pairingRouter = router({
           data: { status: "active" },
         });
         if (count === 0) {
-          throw new TRPCError({ code: "CONFLICT", message: "이미 사용된 초대코드입니다." });
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: translator(ctx.locale)("errors.inviteUsed"),
+          });
         }
         await tx.user.update({ where: { id: userId }, data: { spaceId: space.id } });
         return space.id;

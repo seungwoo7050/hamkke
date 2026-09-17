@@ -359,5 +359,39 @@
     "minute": "{label} minute",
     "hourOption": "{hour} {period, select, am {AM} other {PM}}",
     "minuteOption": ":{minute}"
+  },
+  "errors": {
+    "notPaired": "You're not connected yet.",
+    "spaceInactive": "This space isn't active.",
+    "alreadyPaired": "You're already connected.",
+    "alreadyInSpace": "You're already in a space.",
+    "inviteInvalid": "That invite code isn't valid.",
+    "inviteUsed": "That invite code has already been used.",
+    "inviteExpired": "That invite code has expired.",
+    "inviteRateLimited": "Too many wrong tries, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+    "questionAnswered": "You've already answered today's question.",
+    "momentLimit": "The free plan holds up to {limit} photos. Go Premium for unlimited.",
+    "capsuleLimit": "The free plan holds up to {limit} scheduled letters. Go Premium for unlimited.",
+    "capsuleOneWhen": "Pick just one time for it to open",
+    "capsuleFuture": "The delivery time has to be in the future",
+    "flightNotFound": "Couldn't find that flight",
+    "capsulePartnerFlightOnly": "You can only attach this to your person's flight",
+    "flightLanded": "That flight has already landed",
+    "alreadySubscribed": "You're already subscribed.",
+    "noSubscription": "No subscription found.",
+    "sharingOff": "Location sharing is off.",
+    "flightNumber": "Check the flight number (e.g. KE081)",
+    "airportNotFound": "Couldn't find that airport",
+    "sameAirport": "Departure and arrival airports are the same",
+    "noPartner": "Your person hasn't joined yet",
+    "arrivalTime": "Check the arrival time — it has to be within 20 hours of departure"
+  },
+  "push": {
+    "touch": "Your person is thinking of you",
+    "image": "Sent a photo",
+    "voice": "Sent a voice message",
+    "geofence": "Your person just got to \"{label}\"",
+    "questionAnswered": "{name} answered today's question",
+    "partnerFallback": "Your person"
   }
 }

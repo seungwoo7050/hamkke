@@ -7,6 +7,7 @@ import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
+import { translator } from "@/i18n/server";
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
 
@@ -22,10 +23,10 @@ async function checkGeofenceArrivals(ctx: SpaceCtx, position: { lat: number; lng
     await prisma.geofence.update({ where: { id: fence.id }, data: { isInside: withinRadius } });
 
     if (withinRadius) {
-      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
         title: "Hamkke",
-        body: `상대방이 "${fence.label}"에 도착했어요`,
-      }).catch(() => {});
+        body: t("push.geofence", { label: fence.label }),
+      })).catch(() => {});
     }
   }
 }
@@ -73,7 +74,10 @@ export const locationRouter = router({
         select: { locationSharingEnabled: true },
       });
       if (!me.locationSharingEnabled) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "위치공유가 꺼져 있어요." });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: translator(ctx.locale)("errors.sharingOff"),
+        });
       }
 
       const ping = await prisma.locationPing.create({

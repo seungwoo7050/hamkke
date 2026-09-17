@@ -6,7 +6,7 @@ import { appRouter } from "./_app";
 
 const createCaller = createCallerFactory(appRouter);
 
-async function callerFor(userId: string) {
+async function callerFor(userId: string, locale?: "ko" | "en") {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   return createCaller({
     session: {
@@ -14,6 +14,7 @@ async function callerFor(userId: string) {
       expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     },
     baseUrl: "http://localhost:3000",
+    locale,
   });
 }
 
@@ -141,5 +142,14 @@ describe("flight 라우터 (통합)", () => {
   it("공항 검색", async () => {
     const results = await (await callerFor(userAId)).flight.searchAirports({ q: "뉴욕" });
     expect(results.map((a) => a.iata)).toContain("JFK");
+  });
+
+  it("에러 문구는 요청자의 언어로(ARCHITECTURE §12)", async () => {
+    await expect(
+      (await callerFor(userAId, "en")).flight.create({ ...KE081, flightNumber: "KOREAN" }),
+    ).rejects.toThrow("Check the flight number (e.g. KE081)");
+    await expect(
+      (await callerFor(userAId, "ko")).flight.create({ ...KE081, flightNumber: "KOREAN" }),
+    ).rejects.toThrow("편명을 확인해 주세요(예: KE081)");
   });
 });

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { questionForDateKey, utcDateKey } from "@/lib/daily-question";
+import { translator } from "@/i18n/server";
 import { prisma } from "@/lib/prisma";
 import { createCallerFactory } from "../init";
 import { appRouter } from "./_app";
@@ -122,15 +123,18 @@ describe("question 라우터 (통합)", () => {
     await (await callerFor(userAId)).question.answer({ content: "비밀스러운 답" });
 
     expect(pushMock).toHaveBeenCalledTimes(1);
-    const [calledSpaceId, excludeUserId, notification] = pushMock.mock.calls[0] as unknown as [
+    const [calledSpaceId, excludeUserId, build] = pushMock.mock.calls[0] as unknown as [
       string,
       string,
-      { body: string },
+      (t: ReturnType<typeof translator>) => { body: string },
     ];
     expect(calledSpaceId).toBe(spaceId);
     expect(excludeUserId).toBe(userAId);
-    expect(notification.body).toBe("민준이 오늘의 질문에 답했어요");
-    expect(notification.body).not.toContain("비밀스러운 답");
+    // 문구는 받는 사람의 언어로 만든다(PRD §3.8) — 한국어는 조사까지 맞게.
+    const ko = build(translator("ko")).body;
+    expect(ko).toBe("민준이 오늘의 질문에 답했어요");
+    expect(build(translator("en")).body).toBe("민준 answered today's question");
+    expect(ko).not.toContain("비밀스러운 답");
   });
 
   it("history는 dateKey 커서로 이전 날을 이어서 준다", async () => {

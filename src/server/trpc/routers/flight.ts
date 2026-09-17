@@ -7,6 +7,7 @@ import { distanceKm } from "@/lib/geo";
 import { prisma } from "@/lib/prisma";
 import type { Flight } from "@/generated/prisma/client";
 import { router, spaceProcedure } from "../init";
+import { translator } from "@/i18n/server";
 
 // 비행(PRD §3.3.1). 입력은 사람이 탑승권에서 보는 그대로 — 편명, 출발 현지
 // 날짜, 공항 코드, 각 공항 현지 시각 — 을 받고, 서버가 공항 시간대로 UTC 순간을
@@ -23,19 +24,24 @@ const flightInput = z.object({
   source: z.enum(["manual", "barcode"]).default("manual"),
 });
 
-function bad(message: string): never {
+function bad(
+  t: ReturnType<typeof translator>,
+  key: Parameters<ReturnType<typeof translator>>[0],
+): never {
+  const message = t(key);
   throw new TRPCError({ code: "BAD_REQUEST", message });
 }
 
-type Ctx = { space: { id: string }; session: { user: { id: string } } };
+type Ctx = { space: { id: string }; session: { user: { id: string } }; locale?: string };
 
 async function resolveInput(ctx: Ctx, input: z.infer<typeof flightInput>) {
+  const t = translator(ctx.locale);
   const flightNumber = normalizeFlightNumber(input.flightNumber);
-  if (!flightNumber) bad("편명을 확인해 주세요(예: KE081)");
+  if (!flightNumber) bad(t, "errors.flightNumber");
   const from = getAirport(input.fromIata);
   const to = getAirport(input.toIata);
-  if (!from || !to) bad("공항을 찾지 못했어요");
-  if (from.iata === to.iata) bad("출발과 도착 공항이 같아요");
+  if (!from || !to) bad(t, "errors.airportNotFound");
+  if (from.iata === to.iata) bad(t, "errors.sameAirport");
 
   let travelerId = ctx.session.user.id;
   if (input.traveler === "partner") {
@@ -43,7 +49,7 @@ async function resolveInput(ctx: Ctx, input: z.infer<typeof flightInput>) {
       where: { spaceId: ctx.space.id, id: { not: ctx.session.user.id } },
       select: { id: true },
     });
-    if (!partner) bad("아직 상대가 없어요");
+    if (!partner) bad(t, "errors.noPartner");
     travelerId = partner.id;
   }
 
@@ -57,7 +63,7 @@ async function resolveInput(ctx: Ctx, input: z.infer<typeof flightInput>) {
     input.arrivalTime,
     to.timeZone,
   );
-  if (!scheduledArrivalAt) bad("도착 시각을 확인해 주세요 — 출발 후 20시간 안이어야 해요");
+  if (!scheduledArrivalAt) bad(t, "errors.arrivalTime");
 
   return {
     travelerId,

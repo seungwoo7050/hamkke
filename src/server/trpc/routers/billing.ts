@@ -3,6 +3,7 @@ import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { router, spaceProcedure } from "../init";
+import { translator } from "@/i18n/server";
 
 export const billingRouter = router({
   // 구독 주체는 Space(ARCHITECTURE.md §6) — 한쪽이 결제하면 둘 다 프리미엄.
@@ -47,7 +48,10 @@ export const billingRouter = router({
   createCheckoutSession: spaceProcedure.mutation(async ({ ctx }) => {
     const existing = await prisma.subscription.findUnique({ where: { spaceId: ctx.space.id } });
     if (existing?.status === "active") {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "이미 구독 중이에요." });
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: translator(ctx.locale)("errors.alreadySubscribed"),
+      });
     }
 
     // 과거에 만든 적 있는 Customer가 있으면 재사용(취소 후 재구독 시나리오).
@@ -80,7 +84,10 @@ export const billingRouter = router({
       where: { spaceId: ctx.space.id },
     });
     if (!subscription) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "구독 내역이 없어요." });
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: translator(ctx.locale)("errors.noSubscription"),
+      });
     }
 
     const session = await stripe.billingPortal.sessions.create({

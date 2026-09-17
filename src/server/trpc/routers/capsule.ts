@@ -4,22 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { bestTimes } from "@/lib/flight";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { router, spaceProcedure } from "../init";
+import { translator } from "@/i18n/server";
 
 // 여는 때는 정한 시각(deliverAt) 또는 "상대가 탄 비행기가 착륙하면"(flightId,
 // PRD §3.3.1) 둘 중 하나.
-const createInput = z
-  .object({
-    content: z.string().min(1).max(2000),
-    deliverAt: z.coerce.date().optional(),
-    flightId: z.string().optional(),
-  })
-  .refine((data) => (data.deliverAt ? !data.flightId : !!data.flightId), {
-    message: "여는 때를 하나만 골라주세요",
-  })
-  .refine((data) => !data.deliverAt || data.deliverAt > new Date(), {
-    message: "배달 시각은 미래여야 해요",
-    path: ["deliverAt"],
-  });
+// (둘 중 하나·미래 시각 검사는 사람에게 보이는 문구라 요청자 언어로 본문에서 한다.)
+const createInput = z.object({
+  content: z.string().min(1).max(2000),
+  deliverAt: z.coerce.date().optional(),
+  flightId: z.string().optional(),
+});
 
 export const capsuleRouter = router({
   // 발신자는 항상 내용을 볼 수 있고, 수신자는 deliverAt이 지나야 볼 수
@@ -58,6 +52,13 @@ export const capsuleRouter = router({
   // "캡슐 노트 무제한 예약"이 프리미엄 혜택). 이미 배달된 것은 과거 기록이라
   // 세지 않는다.
   create: spaceProcedure.input(createInput).mutation(async ({ ctx, input }) => {
+    const t = translator(ctx.locale);
+    if (!!input.deliverAt === !!input.flightId) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: t("errors.capsuleOneWhen") });
+    }
+    if (input.deliverAt && input.deliverAt <= new Date()) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: t("errors.capsuleFuture") });
+    }
     if (!(await isPremiumSpace(ctx.space.id))) {
       const pendingCount = await prisma.capsule.count({
         where: { spaceId: ctx.space.id, deliveredAt: null },
@@ -65,7 +66,7 @@ export const capsuleRouter = router({
       if (pendingCount >= FREE_TIER_LIMITS.activeCapsules) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `무료 티어는 예약 중인 캡슐을 ${FREE_TIER_LIMITS.activeCapsules}개까지만 가질 수 있어요. 프리미엄으로 무제한 예약해보세요.`,
+          message: t("errors.capsuleLimit", { limit: FREE_TIER_LIMITS.activeCapsules }),
         });
       }
     }
@@ -75,14 +76,17 @@ export const capsuleRouter = router({
       const flight = await prisma.flight.findFirst({
         where: { id: input.flightId, spaceId: ctx.space.id },
       });
-      if (!flight) throw new TRPCError({ code: "NOT_FOUND", message: "항공편을 찾지 못했어요" });
+      if (!flight) throw new TRPCError({ code: "NOT_FOUND", message: t("errors.flightNotFound") });
       // 착륙 편지는 타는 사람에게 남기는 것 — 내가 타는 비행기엔 걸 수 없다.
       if (flight.travelerId === ctx.session.user.id) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "상대가 탄 비행기에만 걸 수 있어요" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: t("errors.capsulePartnerFlightOnly"),
+        });
       }
       deliverAt = bestTimes(flight).arrivalAt;
       if (deliverAt <= new Date()) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "이미 착륙한 비행이에요" });
+        throw new TRPCError({ code: "BAD_REQUEST", message: t("errors.flightLanded") });
       }
     }
 

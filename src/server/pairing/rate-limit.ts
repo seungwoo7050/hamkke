@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { prisma } from "@/lib/prisma";
+import { translator } from "@/i18n/server";
 
 // 초대코드 입력 rate limiting(ARCHITECTURE.md §7). 실패한 입력만 세고, 한도에
 // 걸리면 올바른 코드여도 거절한다 — 맞는 코드를 찾아내는 것 자체를 막는 게
@@ -30,6 +31,7 @@ async function blockedUntil(where: Scope, limit: { max: number; windowMs: number
 export async function assertCanRedeemInviteCode(
   userId: string,
   ip: string | null | undefined,
+  locale?: string | null,
   now = new Date(),
 ) {
   const [byUser, byIp] = await Promise.all([
@@ -41,7 +43,7 @@ export async function assertCanRedeemInviteCode(
     const minutes = Math.max(1, Math.ceil((until - now.getTime()) / 60_000));
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
-      message: `여러 번 틀려서 잠시 막아뒀어요. ${minutes}분 뒤에 다시 입력해 주세요.`,
+      message: translator(locale)("errors.inviteRateLimited", { minutes }),
     });
   }
 }

@@ -8,6 +8,7 @@ import { sendPushToSpacePartner } from "@/lib/push";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
+import { translator } from "@/i18n/server";
 
 export const questionRouter = router({
   // 오늘의 질문 + 내 답. 상대 답은 내가 먼저 답한 뒤에만 공개한다(PRD §3.2) —
@@ -48,7 +49,10 @@ export const questionRouter = router({
         });
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-          throw new TRPCError({ code: "CONFLICT", message: "오늘 질문에는 이미 답했어요." });
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: translator(ctx.locale)("errors.questionAnswered"),
+          });
         }
         throw error;
       }
@@ -67,10 +71,16 @@ export const questionRouter = router({
         where: { id: ctx.session.user.id },
         select: { name: true },
       });
-      const name = me?.name?.trim() || "상대방";
-      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
-        title: "Hamkke",
-        body: `${josa(name, "이/가")} 오늘의 질문에 답했어요`,
+      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => {
+        const name = me?.name?.trim() || t("push.partnerFallback");
+        // 한국어 문구는 조사가 붙은 {nameSubj}, 다른 언어는 {name}을 쓴다.
+        return {
+          title: "Hamkke",
+          body: t("push.questionAnswered", {
+            name,
+            nameSubj: josa(name, "이/가"),
+          }),
+        };
       }).catch(() => {});
 
       return answer;
