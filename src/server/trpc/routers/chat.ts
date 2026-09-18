@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
@@ -75,10 +76,15 @@ export const chatRouter = router({
   // R2에 직접 업로드할 presigned PUT URL 발급. 서버는 파일 바이트를
   // 거치지 않는다 — 클라이언트가 이 URL로 R2에 바로 PUT한다.
   createImageUploadUrl: spaceProcedure
-    .input(z.object({ contentType: z.enum(ALLOWED_IMAGE_TYPES) }))
+    .input(
+      z.object({
+        contentType: z.enum(ALLOWED_IMAGE_TYPES),
+        size: z.number().int().positive().max(MAX_UPLOAD_BYTES.image),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const key = `messages/${ctx.space.id}/${randomUUID()}`;
-      const uploadUrl = await createUploadUrl(key, input.contentType);
+      const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
     }),
 
@@ -87,10 +93,15 @@ export const chatRouter = router({
     .mutation(({ ctx, input }) => createAndBroadcastMediaMessage(ctx, "image", input.key)),
 
   createVoiceUploadUrl: spaceProcedure
-    .input(z.object({ contentType: z.enum(ALLOWED_AUDIO_TYPES) }))
+    .input(
+      z.object({
+        contentType: z.enum(ALLOWED_AUDIO_TYPES),
+        size: z.number().int().positive().max(MAX_UPLOAD_BYTES.voice),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const key = `messages/${ctx.space.id}/${randomUUID()}`;
-      const uploadUrl = await createUploadUrl(key, input.contentType);
+      const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
     }),
 

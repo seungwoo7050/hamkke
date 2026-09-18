@@ -144,6 +144,8 @@
   "chat": {
     "imageTypes": "You can send JPG, PNG, WebP or GIF images",
     "imageFailed": "Couldn't send the photo",
+    "imageTooLarge": "Photos can be up to {mb} MB",
+    "voiceTooLarge": "That voice message is too long — try sending it in shorter parts",
     "voiceFailed": "Couldn't send the voice message",
     "micPermission": "Hamkke needs microphone access for that",
     "empty": "Nothing here yet. Say hi.",
@@ -235,6 +237,7 @@
     "delete": "Delete photo",
     "imageTypes": "You can upload JPG, PNG, WebP or GIF images",
     "uploadFailed": "Couldn't upload the photo",
+    "imageTooLarge": "Photos can be up to {mb} MB",
     "captionPlaceholder": "Add a caption (optional)",
     "uploading": "Uploading…",
     "choose": "Choose a photo"

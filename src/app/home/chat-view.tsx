@@ -15,6 +15,7 @@ import { useFormat } from "@/i18n/use-format";
 import { groupPositions } from "@/lib/chat-grouping";
 import { daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limits";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
@@ -232,10 +233,16 @@ export function ChatView({
       return;
     }
 
+    if (file.size > MAX_UPLOAD_BYTES.image) {
+      toast.error(t("imageTooLarge", { mb: MAX_UPLOAD_MB.image }));
+      return;
+    }
+
     setUploadingImage(true);
     try {
       const { uploadUrl, key } = await createImageUploadUrlMutation.mutateAsync({
         contentType: file.type as AllowedImageType,
+        size: file.size,
       });
       const res = await fetch(uploadUrl, {
         method: "PUT",
@@ -263,13 +270,20 @@ export function ChatView({
   const [uploadingVoice, setUploadingVoice] = useState(false);
 
   async function handleVoiceRecorded(blob: Blob) {
+    if (blob.size > MAX_UPLOAD_BYTES.voice) {
+      toast.error(t("voiceTooLarge"));
+      return;
+    }
     setUploadingVoice(true);
     try {
       const contentType = blob.type.split(";")[0] as AllowedAudioType;
       if (!ALLOWED_AUDIO_TYPES.includes(contentType)) {
         throw new Error(`지원하지 않는 오디오 형식: ${blob.type}`);
       }
-      const { uploadUrl, key } = await createVoiceUploadUrlMutation.mutateAsync({ contentType });
+      const { uploadUrl, key } = await createVoiceUploadUrlMutation.mutateAsync({
+        contentType,
+        size: blob.size,
+      });
       const res = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": contentType },

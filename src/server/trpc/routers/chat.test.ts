@@ -170,11 +170,12 @@ describe("chat 라우터 (통합)", () => {
   it("이미지 업로드 URL로 실제 R2에 업로드하고, sendImage/list가 접근 가능한 signed URL을 돌려준다", async () => {
     const caller = await callerFor(userAId);
 
+    const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
     const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
       contentType: "image/png",
+      size: fakeImageBytes.length,
     });
 
-    const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       headers: { "Content-Type": "image/png" },
@@ -201,11 +202,12 @@ describe("chat 라우터 (통합)", () => {
   it("음성 업로드 URL로 실제 R2에 업로드하고, sendVoice/list가 접근 가능한 signed URL을 돌려준다", async () => {
     const caller = await callerFor(userAId);
 
+    const fakeAudioBytes = new Uint8Array([9, 8, 7, 6, 5]);
     const { uploadUrl, key } = await caller.chat.createVoiceUploadUrl({
       contentType: "audio/webm",
+      size: fakeAudioBytes.length,
     });
 
-    const fakeAudioBytes = new Uint8Array([9, 8, 7, 6, 5]);
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       headers: { "Content-Type": "audio/webm" },
@@ -220,6 +222,33 @@ describe("chat 라우터 (통합)", () => {
     const downloadRes = await fetch(message.content);
     expect(downloadRes.ok).toBe(true);
     expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeAudioBytes);
+
+    await deleteR2Object(key);
+  });
+
+  it("크기 상한을 넘는 업로드 주소는 발급하지 않는다", async () => {
+    const caller = await callerFor(userAId);
+    await expect(
+      caller.chat.createImageUploadUrl({ contentType: "image/png", size: 10 * 1024 * 1024 + 1 }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller.chat.createVoiceUploadUrl({ contentType: "audio/webm", size: 5 * 1024 * 1024 + 1 }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("신고한 크기보다 큰 파일을 올리면 R2가 거절한다", async () => {
+    const caller = await callerFor(userAId);
+    const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
+      contentType: "image/png",
+      size: 4,
+    });
+
+    const res = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "image/png" },
+      body: new Uint8Array(4096),
+    });
+    expect(res.status).toBe(403);
 
     await deleteR2Object(key);
   });

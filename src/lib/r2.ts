@@ -21,7 +21,9 @@ function createR2Client() {
   });
 }
 
-export async function createUploadUrl(key: string, contentType: string) {
+// size는 클라이언트가 신고한 바이트 수. 서명에 content-length가 들어가서 실제로
+// 다른 크기를 PUT하면 R2가 403을 돌려준다(상한은 src/lib/upload-limits.ts).
+export async function createUploadUrl(key: string, contentType: string, size: number) {
   const client = createR2Client();
   return getSignedUrl(
     client,
@@ -29,6 +31,7 @@ export async function createUploadUrl(key: string, contentType: string) {
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
       ContentType: contentType,
+      ContentLength: size,
     }),
     { expiresIn: UPLOAD_URL_EXPIRY_SECONDS },
   );

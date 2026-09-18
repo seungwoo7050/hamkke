@@ -144,6 +144,8 @@
   "chat": {
     "imageTypes": "jpg, png, webp, gif 이미지만 보낼 수 있어요",
     "imageFailed": "이미지 전송에 실패했어요",
+    "imageTooLarge": "{mb}MB 이하 이미지만 보낼 수 있어요",
+    "voiceTooLarge": "음성 메시지가 너무 길어요. 조금 짧게 나눠서 보내 주세요",
     "voiceFailed": "음성 메시지 전송에 실패했어요",
     "micPermission": "마이크 권한이 필요해요",
     "empty": "아직 나눈 이야기가 없어요",
@@ -235,6 +237,7 @@
     "delete": "사진 삭제",
     "imageTypes": "jpg, png, webp, gif 이미지만 올릴 수 있어요",
     "uploadFailed": "사진 업로드에 실패했어요",
+    "imageTooLarge": "{mb}MB 이하 사진만 올릴 수 있어요",
     "captionPlaceholder": "한 줄 남기기(선택)",
     "uploading": "올리는 중...",
     "choose": "사진 고르기"

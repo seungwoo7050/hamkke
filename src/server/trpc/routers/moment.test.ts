@@ -61,9 +61,12 @@ describe("moment 라우터 (통합)", () => {
   it("업로드 URL로 실제 R2에 올리고, create/list가 접근 가능한 signed URL을 돌려준다", async () => {
     const caller = await callerFor(userAId);
 
-    const { uploadUrl, key } = await caller.moment.createUploadUrl({ contentType: "image/png" });
-
     const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
+    const { uploadUrl, key } = await caller.moment.createUploadUrl({
+      contentType: "image/png",
+      size: fakeImageBytes.length,
+    });
+
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       headers: { "Content-Type": "image/png" },
@@ -90,7 +93,10 @@ describe("moment 라우터 (통합)", () => {
     const caller = await callerFor(userAId);
     const keys: string[] = [];
     for (let i = 0; i < 3; i++) {
-      const { uploadUrl, key } = await caller.moment.createUploadUrl({ contentType: "image/png" });
+      const { uploadUrl, key } = await caller.moment.createUploadUrl({
+        contentType: "image/png",
+        size: 1,
+      });
       await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": "image/png" },
@@ -112,7 +118,10 @@ describe("moment 라우터 (통합)", () => {
 
   it("삭제하면 목록에서 사라진다", async () => {
     const caller = await callerFor(userAId);
-    const { uploadUrl, key } = await caller.moment.createUploadUrl({ contentType: "image/png" });
+    const { uploadUrl, key } = await caller.moment.createUploadUrl({
+      contentType: "image/png",
+      size: 1,
+    });
     await fetch(uploadUrl, {
       method: "PUT",
       headers: { "Content-Type": "image/png" },
@@ -133,7 +142,7 @@ describe("moment 라우터 (통합)", () => {
     try {
       const caller = await callerFor(outsider.id);
       await expect(
-        caller.moment.createUploadUrl({ contentType: "image/png" }),
+        caller.moment.createUploadUrl({ contentType: "image/png", size: 1 }),
       ).rejects.toMatchObject({
         code: "FORBIDDEN",
       });
@@ -153,11 +162,11 @@ describe("moment 라우터 (통합)", () => {
     });
 
     const caller = await callerFor(userAId);
-    await expect(caller.moment.createUploadUrl({ contentType: "image/png" })).rejects.toMatchObject(
-      {
-        code: "FORBIDDEN",
-      },
-    );
+    await expect(
+      caller.moment.createUploadUrl({ contentType: "image/png", size: 1 }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
   });
 
   it("프리미엄이면 한도를 넘어도 업로드 URL을 발급받는다", async () => {
@@ -180,7 +189,7 @@ describe("moment 라우터 (통합)", () => {
     });
 
     const caller = await callerFor(userAId);
-    const { key } = await caller.moment.createUploadUrl({ contentType: "image/png" });
+    const { key } = await caller.moment.createUploadUrl({ contentType: "image/png", size: 1 });
     expect(key).toContain(spaceId);
 
     await prisma.subscription.deleteMany({ where: { spaceId } });

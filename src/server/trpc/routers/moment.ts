@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -15,7 +16,12 @@ export const momentRouter = router({
   // 제한한다(PRD.md §3.5 "무제한 사진/영상 저장"이 프리미엄 혜택) — 업로드
   // 자체를 여기서 막아야 "업로드는 됐는데 저장은 안 됨" 혼란이 없다.
   createUploadUrl: spaceProcedure
-    .input(z.object({ contentType: z.enum(ALLOWED_IMAGE_TYPES) }))
+    .input(
+      z.object({
+        contentType: z.enum(ALLOWED_IMAGE_TYPES),
+        size: z.number().int().positive().max(MAX_UPLOAD_BYTES.image),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       if (!(await isPremiumSpace(ctx.space.id))) {
         const count = await prisma.moment.count({ where: { spaceId: ctx.space.id } });
@@ -30,7 +36,7 @@ export const momentRouter = router({
       }
 
       const key = `moments/${ctx.space.id}/${randomUUID()}`;
-      const uploadUrl = await createUploadUrl(key, input.contentType);
+      const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
     }),
 
