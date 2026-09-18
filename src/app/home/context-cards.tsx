@@ -273,7 +273,11 @@ function FlightCard({
         icon={<PlaneLanding className="size-6" />}
         title={t("flightLandsAt", { time: fmt.time(arrivalAt, f.to.timeZone) })}
         sub={withHint(
-          t(estimated ? "flightArrivingScheduled" : "flightArriving", { airport: f.to.name }),
+          // 한국어는 공항 이름, 영어는 더 짧은 도시 이름을 쓴다(잘리면 편지 안내가 가려짐).
+          t(estimated ? "flightArrivingScheduled" : "flightArriving", {
+            airport: f.to.name,
+            city: f.to.city,
+          }),
         )}
       />
     );
