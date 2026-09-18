@@ -1,7 +1,66 @@
 import { NextResponse } from "next/server";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
+
+/**
+ * 한 스페이스에 활성 구독이 둘 생겼을 때(Checkout 쪽 방지를 뚫고 들어온 경우의
+ * 마지막 안전망). DB가 활성이라고 알고 있는 구독을 Stripe에서 다시 확인해, 정말
+ * 활성이면 새로 들어온 중복 구독을 즉시 해지하고 결제를 환불한다. 기존 구독이
+ * 사실은 이미 끝났다면(그 이벤트가 아직 안 온 것) 새 구독으로 갈아타도록 true.
+ * 웹훅 재시도에도 두 번 환불하지 않게 멱등 키를 쓴다.
+ */
+async function resolveDuplicate(keptId: string, duplicate: Stripe.Subscription) {
+  // 조회 실패는 삼키지 않는다 — 네트워크 오류로 갈아타면 이중 청구가 조용히
+  // 남는다. 던지면 500이 나고 Stripe가 웹훅을 다시 보낸다.
+  const kept = await stripe.subscriptions.retrieve(keptId).catch((err: unknown) => {
+    if (err instanceof Stripe.errors.StripeError && err.code === "resource_missing") return null;
+    throw err;
+  });
+  if (kept?.status !== "active") return true;
+
+  const current = await stripe.subscriptions.retrieve(duplicate.id);
+  if (current.status !== "canceled") {
+    await stripe.subscriptions.cancel(duplicate.id, undefined, {
+      idempotencyKey: `cancel-duplicate-${duplicate.id}`,
+    });
+  }
+
+  const invoiceId =
+    typeof duplicate.latest_invoice === "string"
+      ? duplicate.latest_invoice
+      : duplicate.latest_invoice?.id;
+  if (invoiceId) {
+    const payments = await stripe.invoicePayments.list({ invoice: invoiceId, status: "paid" });
+    for (const { payment } of payments.data) {
+      const paymentIntent =
+        typeof payment.payment_intent === "string"
+          ? payment.payment_intent
+          : payment.payment_intent?.id;
+      if (!paymentIntent) continue;
+      // 멱등 키는 24시간만 유효하니, 그 뒤의 재시도에서 "이미 환불됨"은 성공으로 본다.
+      await stripe.refunds
+        .create(
+          {
+            payment_intent: paymentIntent,
+            reason: "duplicate",
+            metadata: { keptSubscription: keptId },
+          },
+          { idempotencyKey: `refund-duplicate-${duplicate.id}-${paymentIntent}` },
+        )
+        .catch((err: unknown) => {
+          if (err instanceof Stripe.errors.StripeError && err.code === "charge_already_refunded")
+            return;
+          throw err;
+        });
+    }
+  }
+
+  console.warn(
+    `[billing] canceled and refunded duplicate subscription ${duplicate.id} (kept ${keptId})`,
+  );
+  return false;
+}
 
 // customer.subscription.*(created/updated/deleted) 하나로 생성·갱신·취소를
 // 전부 upsert한다 — Stripe가 체크아웃 완료 시에도 subscription.created를
@@ -23,13 +82,15 @@ async function syncSubscription(subscription: Stripe.Subscription) {
 
   // 다른 구독의 이벤트인데 지금 행이 활성이면 덮지 않는다 — 지난 구독의 늦게
   // 도착한 이벤트(예: 이전 구독 deleted)가 새 활성 구독을 무효로 만들면 안 된다.
-  // 둘 다 활성인 중복 구독은 여기서 덮지 않고 따로 정리한다.
+  // 둘 다 활성이면 중복 결제라 새로 들어온 쪽을 해지·환불한다.
   if (
     existing &&
     existing.stripeSubscriptionId !== subscription.id &&
     existing.status === "active"
   ) {
-    return;
+    if (subscription.status !== "active") return;
+    const replaced = await resolveDuplicate(existing.stripeSubscriptionId, subscription);
+    if (!replaced) return;
   }
 
   const data = {
