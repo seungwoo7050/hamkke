@@ -21,7 +21,9 @@ if (!["localhost", "127.0.0.1"].includes(host) && process.env.E2E_ALLOW_REMOTE_D
   );
 }
 
-const pool = new Pool({ connectionString: url });
+// 여러 테스트 파일이 한 워커에서 같은 풀을 쓰므로 정리 때 닫지 않고, 할 일이
+// 없으면 프로세스 종료를 막지 않게 둔다.
+const pool = new Pool({ connectionString: url, allowExitOnIdle: true });
 const id = () => `e2e${randomBytes(10).toString("hex")}`;
 
 /**
@@ -41,6 +43,30 @@ export async function createSignedInUser(name: string) {
     [id(), sessionToken, userId, new Date(Date.now() + 86_400_000)],
   );
   return { userId, sessionCookie: { name: "authjs.session-token", value: sessionToken } };
+}
+
+/** 이미 연결된 커플(언어 지정) — 페어링 자체가 아닌 화면을 볼 때. */
+export async function createPairedCouple(
+  names: [string, string],
+  opts: { locale: "ko" | "en"; timezones?: [string, string] },
+) {
+  const spaceId = id();
+  await pool.query(
+    `INSERT INTO "Space" (id, status, "inviteCode", "inviteCodeExpiresAt") VALUES ($1, 'active', $2, $3)`,
+    [spaceId, randomBytes(3).toString("hex").toUpperCase(), new Date(Date.now() + 86_400_000)],
+  );
+  const users = [];
+  for (const [i, name] of names.entries()) {
+    const u = await createSignedInUser(name);
+    await pool.query(`UPDATE "User" SET "spaceId" = $1, locale = $2, timezone = $3 WHERE id = $4`, [
+      spaceId,
+      opts.locale,
+      opts.timezones?.[i] ?? null,
+      u.userId,
+    ]);
+    users.push(u);
+  }
+  return users as [(typeof users)[0], (typeof users)[0]];
 }
 
 export async function spaceOf(userId: string) {
@@ -67,5 +93,4 @@ export async function cleanup(userIds: string[]) {
     [userIds],
   );
   await pool.query(`DELETE FROM "User" WHERE id = ANY($1)`, [userIds]);
-  await pool.end();
 }
