@@ -33,6 +33,7 @@ Next.js 16(App Router) 단일 코드베이스 — 별도 백엔드 없음.
 - **지도·날씨**: react-leaflet + OpenStreetMap, Open-Meteo(둘 다 API 키 불필요)
 - **비행**: 공항 데이터 번들(mwgg/Airports, MIT — `npx tsx scripts/build-airports.mts`로 갱신), 예정 시각 기반 진행·대권 추정 위치, 탑승권 바코드(IATA BCBP) 스캔 — API 키 없음
 - **모바일**: Capacitor(Android) — 배포된 서버를 웹뷰로 원격 로드, 위젯만 Kotlin(Jetpack Glance)
+- **언어**: next-intl — 한국어 기본 + 영어, 사람마다 자기 언어(설정 시트). 문구는 `messages/ko.json`(기준)·`en.json`, 새 언어는 파일 하나 + `src/i18n/config.ts` 한 줄. 개발 중 쿠키 `hamkke-pseudo=1`이면 가짜 언어로 하드코딩 문구가 드러난다
 - **테스트**: Vitest(단위·통합, 실제 DB), Playwright(e2e)
 
 설계 이유는 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -60,14 +61,14 @@ npm run dev:seed-couple
 
 ## 스크립트
 
-| 명령                                                          | 내용                                                                                                                               |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`                                                 | 개발 서버                                                                                                                          |
-| `npm run build` / `npm start`                                 | 프로덕션 빌드 / 실행                                                                                                               |
-| `npm run lint` · `npm run typecheck` · `npm run format:check` | ESLint · 타입 검사 · Prettier                                                                                                      |
-| `npm test`                                                    | Vitest — 라우터 통합 테스트는 **실제 DB**에 쓰고 지운다(로컬 DB로)                                                                 |
-| `npm run test:e2e`                                            | Playwright 핵심 플로우(페어링 → 채팅 → 위치공유 → 구독). 서버와 같은 **로컬** `DATABASE_URL`이 필요하고, 원격 DB면 실행을 거부한다 |
-| `npm run dev:seed-couple`                                     | 페어링된 개발용 커플 계정                                                                                                          |
+| 명령                                                          | 내용                                                                                                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                                                 | 개발 서버                                                                                                                                                            |
+| `npm run build` / `npm start`                                 | 프로덕션 빌드 / 실행                                                                                                                                                 |
+| `npm run lint` · `npm run typecheck` · `npm run format:check` | ESLint · 타입 검사 · Prettier                                                                                                                                        |
+| `npm test`                                                    | Vitest — 라우터 통합 테스트는 **실제 DB**에 쓰고 지운다(로컬 DB로)                                                                                                   |
+| `npm run test:e2e`                                            | Playwright 핵심 플로우(페어링 → 채팅 → 위치공유 → 구독)와 영어·가짜 언어 화면(한국어 0자). 서버와 같은 **로컬** `DATABASE_URL`이 필요하고, 원격 DB면 실행을 거부한다 |
+| `npm run dev:seed-couple`                                     | 페어링된 개발용 커플 계정                                                                                                                                            |
 
 ## Android
 
@@ -94,6 +95,7 @@ src/app/            라우트 — login, onboarding, home(우리·대화·기억
 src/server/trpc/    tRPC 라우터(스페이스 단위 권한은 spaceProcedure 한 곳)
 src/lib/            순수 로직(시간·거리·요금제·상황 카드…)과 외부 서비스 클라이언트
 src/components/     ui(shadcn 기반) · brand(심볼·모티프)
+src/i18n/           언어 설정·해석·포맷터 — 문구는 messages/
 prisma/             스키마와 마이그레이션
 android/            Capacitor 셸 + 홈 화면 위젯(Kotlin)
 e2e/                Playwright
