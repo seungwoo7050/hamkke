@@ -143,4 +143,65 @@ describe("POST /api/webhooks/stripe", () => {
     });
     expect(stored?.status).toBe("canceled");
   });
+
+  it("해지 후 재구독하면(새 구독 ID) 같은 스페이스의 Subscription이 새 구독으로 바뀐다", async () => {
+    const customerId = `cus_test_${randomUUID()}`;
+    const oldId = `sub_test_${randomUUID()}`;
+    const newId = `sub_test_${randomUUID()}`;
+    await postSignedEvent(
+      subscriptionEvent("customer.subscription.created", {
+        id: oldId,
+        customer: customerId,
+        metadata: { spaceId },
+      }),
+    );
+    await postSignedEvent(
+      subscriptionEvent("customer.subscription.deleted", {
+        id: oldId,
+        customer: customerId,
+        metadata: { spaceId },
+        status: "canceled",
+      }),
+    );
+
+    const res = await postSignedEvent(
+      subscriptionEvent("customer.subscription.created", {
+        id: newId,
+        customer: customerId,
+        metadata: { spaceId },
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const stored = await prisma.subscription.findUnique({ where: { spaceId } });
+    expect(stored?.stripeSubscriptionId).toBe(newId);
+    expect(stored?.status).toBe("active");
+  });
+
+  it("지난 구독의 늦게 도착한 이벤트는 새 활성 구독을 덮어쓰지 않는다", async () => {
+    const customerId = `cus_test_${randomUUID()}`;
+    const oldId = `sub_test_${randomUUID()}`;
+    const newId = `sub_test_${randomUUID()}`;
+    await postSignedEvent(
+      subscriptionEvent("customer.subscription.created", {
+        id: newId,
+        customer: customerId,
+        metadata: { spaceId },
+      }),
+    );
+
+    const res = await postSignedEvent(
+      subscriptionEvent("customer.subscription.deleted", {
+        id: oldId,
+        customer: customerId,
+        metadata: { spaceId },
+        status: "canceled",
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const stored = await prisma.subscription.findUnique({ where: { spaceId } });
+    expect(stored?.stripeSubscriptionId).toBe(newId);
+    expect(stored?.status).toBe("active");
+  });
 });
