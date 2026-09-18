@@ -24,6 +24,10 @@ model Space {
   inviteCode          String   @unique
   inviteCodeExpiresAt DateTime
 
+  // 구독 주체(ARCHITECTURE.md §6)의 Stripe Customer. 구독이 생기기 전에도
+  // 기억해 두어 두 사람이 따로 결제를 시작해도 같은 Customer를 쓰게 한다.
+  stripeCustomerId String? @unique
+
   members        User[]
   messages       Message[]
   touches        Touch[]
