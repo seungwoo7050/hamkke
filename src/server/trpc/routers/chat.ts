@@ -21,11 +21,6 @@ async function resolveContent(message: { type: string; content: string }) {
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
 
-const PUSH_BODY_BY_TYPE: Record<"image" | "voice", string> = {
-  image: "사진을 보냈어요",
-  voice: "음성 메시지를 보냈어요",
-};
-
 async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
   const message = await prisma.message.create({
     data: { spaceId: ctx.space.id, senderId: ctx.session.user.id, type, content: key },
@@ -40,10 +35,10 @@ async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "vo
   });
 
   // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
-  await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+  await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
     title: "Hamkke",
-    body: PUSH_BODY_BY_TYPE[type],
-  }).catch(() => {});
+    body: t(type === "image" ? "push.image" : "push.voice"),
+  })).catch(() => {});
 
   return { ...message, content };
 }
@@ -69,10 +64,10 @@ export const chatRouter = router({
       });
 
       // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
-      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, {
+      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, () => ({
         title: "Hamkke",
         body: input.content.length > 40 ? `${input.content.slice(0, 40)}…` : input.content,
-      }).catch(() => {});
+      })).catch(() => {});
 
       return message;
     }),
@@ -137,6 +132,13 @@ export const chatRouter = router({
       // 화면에는 오래된 → 최신 순으로 표시.
       return { messages: messages.reverse(), nextCursor };
     }),
+
+  // "대화" 탭 배지용 — 상대가 보낸 메시지 중 아직 안 읽은 개수.
+  unreadCount: spaceProcedure.query(({ ctx }) =>
+    prisma.message.count({
+      where: { spaceId: ctx.space.id, senderId: { not: ctx.session.user.id }, readAt: null },
+    }),
+  ),
 
   // 상대가 보낸, 아직 안 읽은 메시지를 전부 읽음 처리하고 상대 화면에
   // "읽음" 표시가 즉시 뜨도록 브로드캐스트한다.

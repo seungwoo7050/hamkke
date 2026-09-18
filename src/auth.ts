@@ -11,6 +11,8 @@ declare module "next-auth" {
     user: {
       id: string;
       spaceId: string | null;
+      /** 화면·알림 언어(PRD §3.8). 세션에 실어 언어 결정 때 DB를 다시 읽지 않는다. */
+      locale?: string | null;
     } & DefaultSession["user"];
   }
 }
@@ -18,6 +20,7 @@ declare module "next-auth" {
 declare module "@auth/core/adapters" {
   interface AdapterUser {
     spaceId: string | null;
+    locale: string | null;
   }
 }
 
@@ -35,6 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, user }) {
       session.user.id = user.id;
       session.user.spaceId = user.spaceId;
+      session.user.locale = user.locale;
       return session;
     },
   },

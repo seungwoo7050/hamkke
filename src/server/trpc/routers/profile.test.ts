@@ -66,4 +66,16 @@ describe("profile 라우터 (통합)", () => {
     const result = await caller.profile.timezones();
     expect(result).toEqual({ me: "Asia/Seoul", partner: "America/Los_Angeles" });
   });
+
+  it("setLocale은 내 언어만 바꾸고, 지원하지 않는 언어는 거절한다", async () => {
+    const caller = await callerFor(userAId);
+    await caller.profile.setLocale({ locale: "en" });
+    const [a, b] = await Promise.all([
+      prisma.user.findUniqueOrThrow({ where: { id: userAId } }),
+      prisma.user.findUniqueOrThrow({ where: { id: userBId } }),
+    ]);
+    expect(a.locale).toBe("en");
+    expect(b.locale).toBeNull();
+    await expect(caller.profile.setLocale({ locale: "fr" as never })).rejects.toThrow();
+  });
 });

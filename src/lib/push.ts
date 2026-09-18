@@ -1,6 +1,7 @@
 import "server-only";
 import { getAdminMessaging } from "@/lib/firebase-admin";
 import { prisma } from "@/lib/prisma";
+import { translator } from "@/i18n/server";
 
 export async function sendPushToUser(
   userId: string,
@@ -34,16 +35,21 @@ export async function sendPushToUser(
   }
 }
 
-/** Space의 "상대방"(발신자 본인이 아닌 다른 멤버)에게만 발송한다. */
+/**
+ * Space의 "상대방"(발신자 본인이 아닌 다른 멤버)에게만 발송한다. 문구는 **받는
+ * 사람의 언어**로 만든다 — 두 사람의 언어가 다를 수 있어서(PRD §3.8).
+ */
 export async function sendPushToSpacePartner(
   spaceId: string,
   excludeUserId: string,
-  notification: { title: string; body: string },
+  build: (t: Translator) => { title: string; body: string },
 ) {
   const partner = await prisma.user.findFirst({
     where: { spaceId, id: { not: excludeUserId } },
-    select: { id: true },
+    select: { id: true, locale: true },
   });
   if (!partner) return;
-  await sendPushToUser(partner.id, notification);
+  await sendPushToUser(partner.id, build(translator(partner.locale)));
 }
+
+type Translator = ReturnType<typeof translator>;

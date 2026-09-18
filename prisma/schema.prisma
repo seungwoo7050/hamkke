@@ -35,6 +35,8 @@ model Space {
   countdowns     Countdown[]
   capsules       Capsule[]
   subscription   Subscription?
+  dailyAnswers   DailyAnswer[]
+  flights        Flight[]
 }
 
 // Auth.js Prisma 어댑터 계약(@auth/prisma-adapter)을 따른다. 필드명은 어댑터가
@@ -53,20 +55,26 @@ model User {
   // 옵트인 위치공유(docs/ARCHITECTURE.md §5) — 기본 꺼짐, 사용자가 명시적으로
   // 켜야 하고 언제든 끌 수 있어야 한다.
   locationSharingEnabled Boolean @default(false)
+  /// 화면·알림 언어(PRD §3.8) — "ko" | "en". 비어 있으면 기기 언어 → 한국어.
+  /// 사람마다 따로라 두 사람의 언어가 다를 수 있다.
+  locale                 String?
 
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id])
 
-  accounts        Account[]
-  sessions        Session[]
-  sentMessages    Message[]
-  sentTouches     Touch[]
-  pushTokens      PushToken[]
-  locationPings   LocationPing[]
-  geofences       Geofence[]
-  createdEvents   CalendarEvent[]
-  uploadedMoments Moment[]
-  sentCapsules    Capsule[]
+  accounts           Account[]
+  sessions           Session[]
+  sentMessages       Message[]
+  sentTouches        Touch[]
+  pushTokens         PushToken[]
+  locationPings      LocationPing[]
+  geofences          Geofence[]
+  createdEvents      CalendarEvent[]
+  uploadedMoments    Moment[]
+  sentCapsules       Capsule[]
+  dailyAnswers       DailyAnswer[]
+  inviteCodeAttempts InviteCodeAttempt[]
+  flights            Flight[]
 }
 
 model Account {
@@ -292,6 +300,12 @@ model Capsule {
   space  Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   sender User  @relation(fields: [senderId], references: [id])
 
+  // "착륙하면 열리는 편지"(PRD §3.3.1). deliverAt은 이 항공편의 가장 믿을 만한
+  // 도착 시각에 맞춰 두고(항공편 시각을 고치면 같이 옮김), 배달 판정은 그대로
+  // deliverAt 기준 pull이다. 항공편을 지우면 연결만 끊고 편지는 남는다.
+  flightId String?
+  flight   Flight? @relation(fields: [flightId], references: [id], onDelete: SetNull)
+
   @@index([spaceId, deliverAt])
 }
 
@@ -311,4 +325,81 @@ model Subscription {
   updatedAt            DateTime @updatedAt
 
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+}
+
+// 하루 한 질문 답변(PRD §3.2). 질문 본문은 DB가 아니라 앱 내장 목록
+// (src/lib/daily-question.ts)이라 questionKey로만 참조한다 — 콘텐츠 운영
+// 없이 목록 순서대로 순환한다. 두 사람이 서로 다른 시간대에 있어 "오늘"을
+// 로컬 기준으로 맞출 수 없으므로 dateKey는 UTC 날짜(YYYY-MM-DD)다.
+model DailyAnswer {
+  id          String   @id @default(cuid())
+  spaceId     String
+  userId      String
+  questionKey String
+  dateKey     String
+  content     String
+  createdAt   DateTime @default(now())
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([spaceId, userId, dateKey])
+  @@index([spaceId, dateKey])
+}
+
+// 실패한 초대코드 입력 기록(ARCHITECTURE.md §7 rate limiting). 성공은 남기지
+// 않는다 — 새 입력 전에 최근 실패 수만 세면 되므로. 하루 지난 기록은 입력
+// 때마다 조금씩 지워 테이블이 자라지 않게 한다.
+model InviteCodeAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([ip, createdAt])
+}
+
+enum FlightStatus {
+  scheduled
+  departed
+  landed
+  cancelled
+}
+
+enum FlightSource {
+  manual
+  barcode
+  api
+}
+
+// 비행(PRD §3.3.1). 지금은 예정 시각만 채운다(무료 범위). 실제 시각·status는
+// 유료 항공편 API 단계에서 채울 자리 — 화면은 src/lib/flight.ts의 "가장 믿을
+// 만한 시각"만 읽으므로 그때 화면 코드는 바뀌지 않는다. 시각은 UTC로 저장하고,
+// 입력은 각 공항 현지 시각으로 받는다(공항 시간대는 src/lib/airports.ts).
+model Flight {
+  id                   String       @id @default(cuid())
+  spaceId              String
+  travelerId           String
+  flightNumber         String
+  /// 출발 공항 현지 날짜 — 날짜 필드 관례대로 UTC 자정으로 저장
+  departureDate        DateTime
+  fromIata             String
+  toIata               String
+  scheduledDepartureAt DateTime
+  scheduledArrivalAt   DateTime
+  actualDepartureAt    DateTime?
+  actualArrivalAt      DateTime?
+  status               FlightStatus @default(scheduled)
+  source               FlightSource @default(manual)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  space    Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  traveler User      @relation(fields: [travelerId], references: [id], onDelete: Cascade)
+  capsules Capsule[]
+
+  @@index([spaceId, scheduledDepartureAt])
 }

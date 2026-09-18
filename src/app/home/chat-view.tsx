@@ -1,22 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useMutation } from "@tanstack/react-query";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
-import { Heart, ImagePlus, Mic, Square } from "lucide-react";
+import { ArrowUp, Heart, ImagePlus, Mic, Square } from "lucide-react";
+import { cn } from "cn";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/brand/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { onAnyForegroundMessage, requestAnyPushToken } from "@/lib/push-client";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { spaceChannelName } from "@/lib/supabase/channels";
+import { useFormat } from "@/i18n/use-format";
+import { groupPositions } from "@/lib/chat-grouping";
+import { daysBetween, todayIn } from "@/lib/datetime";
+import { useNow } from "@/lib/use-now";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
+import { ChatHeader } from "./chat-header";
+import { VoiceMessage } from "./voice-message";
+import { useSpaceBroadcast, useSpaceRealtime } from "./realtime-context";
+import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
 type ChatMessage = inferRouterOutputs<AppRouter>["chat"]["list"]["messages"][number];
+type Touch = inferRouterOutputs<AppRouter>["touch"]["list"][number];
+type TimelineItem =
+  { kind: "message"; at: Date; message: ChatMessage } | { kind: "touch"; at: Date; touch: Touch };
+
+// 메시지가 하나도 없을 때 터치를 얼마나 거슬러 보여줄지.
+const EMPTY_CHAT_TOUCH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const TYPING_THROTTLE_MS = 2000;
 const TYPING_CLEAR_MS = 3000;
@@ -56,108 +68,134 @@ function normalizeBroadcastMessage(payload: ChatMessage): ChatMessage {
 }
 
 export function ChatView({
-  spaceId,
-  currentUserId,
   initialMessages,
   initialNextCursor,
 }: {
-  spaceId: string;
-  currentUserId: string;
   initialMessages: ChatMessage[];
   initialNextCursor?: string;
 }) {
   const trpc = useTRPC();
   const trpcClient = useTRPCClient();
+  const queryClient = useQueryClient();
+  const { currentUserId } = useSpace();
+  const { send: sendRealtime, connected: realtimeConnected } = useSpaceRealtime();
+  const myTz = useMyTimeZone();
+  const now = useNow();
+  const t = useTranslations("chat");
+  const fmt = useFormat();
+  const partnerName = usePartnerName();
+  const names = fmt.particles(partnerName);
   const [messages, setMessages] = useState(initialMessages);
   const [olderCursor, setOlderCursor] = useState(initialNextCursor);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [draft, setDraft] = useState("");
   const [partnerTyping, setPartnerTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<RealtimeChannel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const lastTypingSentAt = useRef(0);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const markReadMutation = useMutation(trpc.chat.markRead.mutationOptions());
+  const markReadMutation = useMutation(
+    trpc.chat.markRead.mutationOptions({
+      // 대화 탭 배지(bottom-nav)가 바로 0으로 떨어지게 한다.
+      onSuccess: () => queryClient.invalidateQueries(trpc.chat.unreadCount.queryFilter()),
+    }),
+  );
 
+  // 받은/보낸 터치를 대화 흐름 안에 끼워 넣는다(승인 목업 ②). 불러온 메시지
+  // 범위와 같은 구간만 조회한다.
+  const [touchSince] = useState(() =>
+    initialMessages[0]
+      ? new Date(initialMessages[0].createdAt)
+      : new Date(Date.now() - EMPTY_CHAT_TOUCH_WINDOW_MS),
+  );
+  const touchQuery = useQuery(trpc.touch.list.queryOptions({ since: touchSince }));
+  const [liveTouches, setLiveTouches] = useState<Touch[]>([]);
+
+  // Realtime 구독 성공(SUBSCRIBED)만 기다리면 소켓이 막힌 환경에서 영영 읽음
+  // 처리가 안 된다 — 대화 탭을 연 것 자체를 "읽음"으로 본다.
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase.channel(spaceChannelName(spaceId));
-    channelRef.current = channel;
-
-    channel
-      .on("broadcast", { event: "message" }, (msg) => {
-        const message = normalizeBroadcastMessage(msg.payload as ChatMessage);
-        setMessages((prev) => mergeById(prev, [message]));
-        if (message.senderId !== currentUserId) {
-          markReadMutation.mutate();
-        }
-      })
-      .on("broadcast", { event: "read" }, (msg) => {
-        const { readAt } = msg.payload as { readAt: string; readBy: string };
-        const readAtDate = new Date(readAt);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.senderId === currentUserId && new Date(m.createdAt) <= readAtDate && !m.readAt
-              ? { ...m, readAt: readAtDate }
-              : m,
-          ),
-        );
-      })
-      .on("broadcast", { event: "typing" }, (msg) => {
-        const { userId } = msg.payload as { userId: string };
-        if (userId === currentUserId) return;
-        setPartnerTyping(true);
-        if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
-        typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
-      })
-      .on("broadcast", { event: "touch" }, (msg) => {
-        const { senderId } = msg.payload as { senderId: string };
-        if (senderId === currentUserId) return;
-        toast("상대방이 생각하고 있어요");
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          markReadMutation.mutate();
-        }
-      });
-
-    return () => {
-      if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
-      supabase.removeChannel(channel);
-    };
+    markReadMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId, currentUserId]);
+  }, []);
+
+  useSpaceBroadcast<ChatMessage>("message", (payload) => {
+    const message = normalizeBroadcastMessage(payload);
+    setMessages((prev) => mergeById(prev, [message]));
+    if (message.senderId !== currentUserId) markReadMutation.mutate();
+  });
+
+  // 상대가 읽었을 때만 내 메시지에 "읽음"을 단다. 읽음 이벤트는 서버가 REST로
+  // 보내서 읽은 본인에게도 도착하는데, 전에는 readBy를 보지 않아 내가 대화를
+  // 열기만 해도(markRead) 내가 보낸 메시지까지 "읽음"으로 바뀌었다.
+  useSpaceBroadcast<{ readAt: string; readBy: string }>("read", ({ readAt, readBy }) => {
+    if (readBy === currentUserId) return;
+    const readAtDate = new Date(readAt);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.senderId === currentUserId && new Date(m.createdAt) <= readAtDate && !m.readAt
+          ? { ...m, readAt: readAtDate }
+          : m,
+      ),
+    );
+  });
+
+  useSpaceBroadcast<Touch>("touch", (touch) => {
+    setLiveTouches((prev) => [...prev, { ...touch, createdAt: new Date(touch.createdAt) }]);
+  });
+
+  useSpaceBroadcast<{ userId: string }>("typing", ({ userId }) => {
+    if (userId === currentUserId) return;
+    setPartnerTyping(true);
+    if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
+  });
+
+  // 끊겼다 다시 연결되면 그사이 온 메시지가 있을 수 있어 다시 읽음 처리한다.
+  useEffect(() => {
+    if (realtimeConnected) markReadMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeConnected]);
+
+  useEffect(
+    () => () => {
+      if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    },
+    [],
+  );
+
+  const timeline = useMemo(() => {
+    const touches = new Map<string, Touch>();
+    for (const t of [...(touchQuery.data ?? []), ...liveTouches]) touches.set(t.id, t);
+    const items: TimelineItem[] = [
+      ...messages.map((m) => ({ kind: "message" as const, at: new Date(m.createdAt), message: m })),
+      ...[...touches.values()].map((t) => ({
+        kind: "touch" as const,
+        at: new Date(t.createdAt),
+        touch: t,
+      })),
+    ];
+    return items.sort((a, b) => a.at.getTime() - b.at.getTime());
+  }, [messages, touchQuery.data, liveTouches]);
+
+  const positions = useMemo(
+    () =>
+      groupPositions(
+        timeline.map((item) =>
+          item.kind === "message"
+            ? { kind: "message" as const, senderId: item.message.senderId, at: item.at }
+            : { kind: "touch" as const, at: item.at },
+        ),
+        myTz,
+      ),
+    [timeline, myTz],
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
-
-  const registerPushTokenMutation = useMutation(trpc.push.registerToken.mutationOptions());
-
-  useEffect(() => {
-    let unsubscribeForeground: (() => void) | undefined;
-
-    requestAnyPushToken()
-      .then((token) => {
-        if (token) registerPushTokenMutation.mutate({ token });
-      })
-      .catch(() => {});
-
-    // 앱이 열려 있을 땐 시스템 알림 대신 토스트로 보여준다(포그라운드에서는
-    // FCM이 시스템 알림을 자동으로 띄우지 않는다).
-    onAnyForegroundMessage((body) => toast(body))
-      .then((unsub) => {
-        unsubscribeForeground = unsub;
-      })
-      .catch(() => {});
-
-    return () => unsubscribeForeground?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [timeline.length]);
 
   const sendMutation = useMutation(
     trpc.chat.send.mutationOptions({
@@ -170,7 +208,7 @@ export function ChatView({
 
   const sendTouchMutation = useMutation(
     trpc.touch.send.mutationOptions({
-      onSuccess: () => toast("상대방에게 전송했어요"),
+      onSuccess: (touch) => setLiveTouches((prev) => [...prev, touch]),
     }),
   );
 
@@ -190,7 +228,7 @@ export function ChatView({
     if (!file) return;
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type as AllowedImageType)) {
-      toast.error("jpg, png, webp, gif 이미지만 보낼 수 있어요");
+      toast.error(t("imageTypes"));
       return;
     }
 
@@ -207,7 +245,7 @@ export function ChatView({
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendImageMutation.mutateAsync({ key });
     } catch {
-      toast.error("이미지 전송에 실패했어요");
+      toast.error(t("imageFailed"));
     } finally {
       setUploadingImage(false);
     }
@@ -240,7 +278,7 @@ export function ChatView({
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendVoiceMutation.mutateAsync({ key });
     } catch {
-      toast.error("음성 메시지 전송에 실패했어요");
+      toast.error(t("voiceFailed"));
     } finally {
       setUploadingVoice(false);
     }
@@ -266,7 +304,7 @@ export function ChatView({
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
     } catch {
-      toast.error("마이크 권한이 필요해요");
+      toast.error(t("micPermission"));
     }
   }
 
@@ -280,11 +318,7 @@ export function ChatView({
     const now = Date.now();
     if (now - lastTypingSentAt.current > TYPING_THROTTLE_MS) {
       lastTypingSentAt.current = now;
-      channelRef.current?.send({
-        type: "broadcast",
-        event: "typing",
-        payload: { userId: currentUserId },
-      });
+      sendRealtime("typing", { userId: currentUserId });
     }
   }
 
@@ -305,11 +339,10 @@ export function ChatView({
     .find((m) => m.senderId === currentUserId && m.readAt)?.id;
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-6 py-4">
-        {messages.length === 0 && (
-          <EmptyState caption="아직 나눈 이야기가 없어요" className="flex-1" />
-        )}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ChatHeader />
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-1 pb-4">
+        {timeline.length === 0 && <EmptyState caption={t("empty")} className="flex-1" />}
         {olderCursor && (
           <Button
             variant="ghost"
@@ -318,48 +351,101 @@ export function ChatView({
             onClick={loadOlder}
             disabled={loadingOlder}
           >
-            {loadingOlder ? "불러오는 중..." : "이전 메시지 더 보기"}
+            {loadingOlder ? t("loadingOlder") : t("loadOlder")}
           </Button>
         )}
-        {messages.map((message) => {
+        {timeline.map((item, i) => {
+          const prev = timeline[i - 1];
+          const position = positions[i];
+          const newDay = !prev || daysBetween(todayIn(myTz, prev.at), todayIn(myTz, item.at)) !== 0;
+          const divider = newDay && (
+            <p className="text-muted-foreground mt-4 mb-1 text-center text-xs">
+              {fmt.dayLabel(item.at, myTz, now)}
+            </p>
+          );
+
+          if (item.kind === "touch") {
+            const fromMe = item.touch.senderId === currentUserId;
+            return (
+              <div key={`touch-${item.touch.id}`} className="contents">
+                {divider}
+                <p className="bg-glow/30 text-dusk-ink font-handwritten mt-3 flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-lg">
+                  <Heart className="size-4" />
+                  {fromMe ? t("touchSent") : t("touchReceived", names)}
+                  <span className="text-base">· {fmt.time(item.at, myTz)}</span>
+                </p>
+              </div>
+            );
+          }
+
+          const message = item.message;
           const isMine = message.senderId === currentUserId;
-          return (
-            <div
-              key={message.id}
-              className={`flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}
+          // 묶음 안쪽(이어지는 쪽) 모서리만 줄여 한 덩어리로 보이게.
+          const corners = cn(
+            isMine
+              ? [!position.first && "rounded-tr-sm", !position.last && "rounded-br-sm"]
+              : [!position.first && "rounded-tl-sm", !position.last && "rounded-bl-sm"],
+          );
+          const time = position.last && (
+            <time
+              dateTime={item.at.toISOString()}
+              className="text-muted-foreground shrink-0 pb-0.5 text-xs"
             >
-              {message.type === "image" ? (
-                <Image
-                  src={message.content}
-                  alt="공유한 사진"
-                  width={240}
-                  height={240}
-                  unoptimized
-                  className="h-60 w-60 rounded-lg object-cover"
-                />
-              ) : message.type === "voice" ? (
-                <audio controls src={message.content} className="h-10 max-w-[75%]" />
-              ) : (
+              {fmt.time(item.at, myTz)}
+            </time>
+          );
+          return (
+            <div key={message.id} className="contents">
+              {divider}
+              <div
+                className={cn(
+                  "flex flex-col gap-1",
+                  position.first ? "mt-3" : "mt-1",
+                  isMine ? "items-end" : "items-start",
+                )}
+              >
                 <div
-                  className={`flex max-w-[75%] flex-col gap-1 rounded-lg px-3 py-2 ${
-                    isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                  }`}
+                  className={cn("flex max-w-[85%] items-end gap-1.5", isMine && "flex-row-reverse")}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  {message.type === "image" ? (
+                    <Image
+                      src={message.content}
+                      alt={t("photoAlt")}
+                      width={240}
+                      height={240}
+                      unoptimized
+                      className={cn("h-60 w-60 rounded-lg object-cover", corners)}
+                    />
+                  ) : message.type === "voice" ? (
+                    <VoiceMessage src={message.content} mine={isMine} className={corners} />
+                  ) : (
+                    <div
+                      className={cn(
+                        "rounded-lg px-3 py-2",
+                        corners,
+                        isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                      )}
+                    >
+                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    </div>
+                  )}
+                  {time}
                 </div>
-              )}
-              {isMine && message.id === lastReadMineId && (
-                <span className="text-muted-foreground text-xs">읽음</span>
-              )}
+                {isMine && message.id === lastReadMineId && (
+                  <span className="text-muted-foreground text-xs">{t("read")}</span>
+                )}
+              </div>
             </div>
           );
         })}
-        {partnerTyping && <p className="text-muted-foreground text-xs">상대가 입력 중...</p>}
+        {partnerTyping && <p className="text-muted-foreground text-xs">{t("typing", names)}</p>}
         <div ref={bottomRef} />
       </div>
 
       <form
-        className="border-border flex gap-2 border-t px-6 py-4"
+        className="border-border flex items-center gap-1 border-t px-3 py-2.5"
         onSubmit={(e) => {
           e.preventDefault();
           if (!draft.trim()) return;
@@ -375,9 +461,10 @@ export function ChatView({
         />
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="icon"
-          aria-label="사진 보내기"
+          aria-label={t("sendPhoto")}
+          className="text-muted-foreground"
           disabled={uploadingImage}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -385,9 +472,10 @@ export function ChatView({
         </Button>
         <Button
           type="button"
-          variant={isRecording ? "default" : "outline"}
+          variant={isRecording ? "default" : "ghost"}
           size="icon"
-          aria-label={isRecording ? "녹음 중지 및 보내기" : "음성 메시지 녹음"}
+          aria-label={isRecording ? t("stopRecording") : t("recordVoice")}
+          className={isRecording ? undefined : "text-muted-foreground"}
           disabled={uploadingVoice}
           onClick={() => (isRecording ? stopRecording() : startRecording())}
         >
@@ -396,21 +484,33 @@ export function ChatView({
         <Input
           value={draft}
           onChange={(e) => handleDraftChange(e.target.value)}
-          placeholder="메시지 보내기"
+          placeholder={t("placeholder")}
+          className="mx-1"
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          aria-label="생각하고 있어 보내기"
-          disabled={sendTouchMutation.isPending}
-          onClick={() => sendTouchMutation.mutate()}
-        >
-          <Heart className="size-5" />
-        </Button>
-        <Button type="submit" disabled={sendMutation.isPending || !draft.trim()}>
-          전송
-        </Button>
+        {/* 입력 중이 아닐 땐 전송 버튼 자리를 터치가 차지한다 — 대화 중에도
+            한 번에 "생각하고 있어요"를 보낼 수 있게(DESIGN.md §2 Kaye). */}
+        {draft.trim() ? (
+          <Button
+            type="submit"
+            size="icon"
+            aria-label={t("send")}
+            disabled={sendMutation.isPending}
+          >
+            <ArrowUp className="size-5" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={t("sendTouch")}
+            className="text-primary"
+            disabled={sendTouchMutation.isPending}
+            onClick={() => sendTouchMutation.mutate()}
+          >
+            <Heart className="size-5" />
+          </Button>
+        )}
       </form>
     </div>
   );

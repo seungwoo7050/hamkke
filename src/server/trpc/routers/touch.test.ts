@@ -21,13 +21,18 @@ async function callerFor(userId: string) {
 
 describe("touch 라우터 (통합)", () => {
   let userAId: string;
+  let userBId: string;
   let spaceId: string;
 
   beforeEach(async () => {
     const a = await prisma.user.create({
       data: { email: `test-touch-a-${randomUUID()}@example.com` },
     });
+    const b = await prisma.user.create({
+      data: { email: `test-touch-b-${randomUUID()}@example.com` },
+    });
     userAId = a.id;
+    userBId = b.id;
 
     const space = await prisma.space.create({
       data: {
@@ -37,18 +42,18 @@ describe("touch 라우터 (통합)", () => {
       },
     });
     spaceId = space.id;
-    await prisma.user.update({ where: { id: userAId }, data: { spaceId } });
+    await prisma.user.updateMany({ where: { id: { in: [userAId, userBId] } }, data: { spaceId } });
   });
 
   afterEach(async () => {
     await prisma.touch.deleteMany({ where: { spaceId } });
-    await prisma.user.deleteMany({ where: { id: userAId } });
+    await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
     await prisma.space.delete({ where: { id: spaceId } });
   });
 
   it("스페이스 멤버가 아니면 보낼 수 없다", async () => {
     const outsider = await prisma.user.create({
-      data: { email: `test-touch-b-${randomUUID()}@example.com` },
+      data: { email: `test-touch-outsider-${randomUUID()}@example.com` },
     });
     try {
       const caller = await callerFor(outsider.id);
@@ -67,5 +72,38 @@ describe("touch 라우터 (통합)", () => {
 
     const stored = await prisma.touch.findUnique({ where: { id: touch.id } });
     expect(stored).not.toBeNull();
+  });
+
+  it("받은 터치가 없으면 latest는 null이다", async () => {
+    const caller = await callerFor(userAId);
+    expect(await caller.touch.latest()).toBeNull();
+  });
+
+  it("latest는 상대가 보낸 가장 최근 터치만 돌려주고 내가 보낸 건 제외한다", async () => {
+    const older = await prisma.touch.create({
+      data: { spaceId, senderId: userBId, createdAt: new Date(Date.now() - 60_000) },
+    });
+    const newer = await prisma.touch.create({ data: { spaceId, senderId: userBId } });
+    await prisma.touch.create({
+      data: { spaceId, senderId: userAId, createdAt: new Date(Date.now() + 60_000) },
+    });
+
+    const latest = await (await callerFor(userAId)).touch.latest();
+    expect(latest?.id).toBe(newer.id);
+    expect(latest?.id).not.toBe(older.id);
+  });
+
+  it("list는 since 이후의 터치를 보낸 사람과 무관하게 시간순으로 돌려준다", async () => {
+    const since = new Date(Date.now() - 60_000);
+    await prisma.touch.create({
+      data: { spaceId, senderId: userBId, createdAt: new Date(Date.now() - 120_000) },
+    });
+    const b = await prisma.touch.create({
+      data: { spaceId, senderId: userBId, createdAt: new Date(Date.now() - 30_000) },
+    });
+    const a = await prisma.touch.create({ data: { spaceId, senderId: userAId } });
+
+    const list = await (await callerFor(userAId)).touch.list({ since });
+    expect(list.map((t) => t.id)).toEqual([b.id, a.id]);
   });
 });

@@ -3,6 +3,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { prisma } from "@/lib/prisma";
 import type { TRPCContext } from "./context";
+import { translator } from "@/i18n/server";
 
 const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
@@ -32,12 +33,15 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 export const spaceProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   const spaceId = ctx.session.user.spaceId;
   if (!spaceId) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "아직 페어링되지 않았습니다." });
+    throw new TRPCError({ code: "FORBIDDEN", message: translator(ctx.locale)("errors.notPaired") });
   }
 
   const space = await prisma.space.findUnique({ where: { id: spaceId } });
   if (!space || space.status !== "active") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "활성화된 Space가 아닙니다." });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: translator(ctx.locale)("errors.spaceInactive"),
+    });
   }
 
   return next({ ctx: { ...ctx, space } });

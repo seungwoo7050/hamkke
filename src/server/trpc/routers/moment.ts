@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
 import { router, spaceProcedure } from "../init";
+import { translator } from "@/i18n/server";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
@@ -21,7 +22,9 @@ export const momentRouter = router({
         if (count >= FREE_TIER_LIMITS.moments) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: `무료 티어는 사진을 ${FREE_TIER_LIMITS.moments}장까지만 저장할 수 있어요. 프리미엄으로 무제한 저장해보세요.`,
+            message: translator(ctx.locale)("errors.momentLimit", {
+              limit: FREE_TIER_LIMITS.moments,
+            }),
           });
         }
       }
