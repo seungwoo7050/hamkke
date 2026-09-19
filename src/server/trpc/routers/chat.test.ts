@@ -30,7 +30,10 @@ async function deleteR2Object(key: string) {
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
     },
   });
-  await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
+  // 업로드 키(pending/…)와 등록 후 옮겨진 정식 키를 둘 다 지운다(없는 키 삭제도 성공).
+  for (const k of [key, key.replace(/^pending\//, "")]) {
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: k }));
+  }
 }
 
 // 실제 R2 왕복(업로드·HeadObject)이 여러 번이라 기본 5초로는 빠듯하다.

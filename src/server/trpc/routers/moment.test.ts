@@ -29,7 +29,10 @@ async function deleteR2Object(key: string) {
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
     },
   });
-  await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
+  // 업로드 키(pending/…)와 등록 후 옮겨진 정식 키를 둘 다 지운다(없는 키 삭제도 성공).
+  for (const k of [key, key.replace(/^pending\//, "")]) {
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: k }));
+  }
 }
 
 // 실제 R2 왕복(업로드·HeadObject·삭제)이 여러 번이라 기본 5초로는 빠듯하다.
@@ -133,7 +136,8 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
 
     await caller.moment.delete({ id: moment.id });
     expect((await caller.moment.list({})).moments).toHaveLength(0);
-    // R2 파일도 함께 지워진다.
+    // R2 파일도 함께 지워진다(정식 경로, 임시 경로 모두).
+    expect(await headUpload(key.replace(/^pending\//, ""))).toBeNull();
     expect(await headUpload(key)).toBeNull();
   });
 
@@ -227,6 +231,31 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     });
 
     await expect(caller.moment.create({ key })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await deleteR2Object(key);
+  });
+
+  it("업로드는 임시 경로에 올라가고, 등록하면 정식 경로로 옮겨진다", async () => {
+    const caller = await callerFor(userAId);
+    const { uploadUrl, key } = await caller.moment.createUploadUrl({
+      contentType: "image/png",
+      size: 1,
+    });
+    expect(key).toMatch(new RegExp(`^pending/moments/${spaceId}/`));
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "image/png" },
+      body: new Uint8Array([1]),
+    });
+
+    const moment = await caller.moment.create({ key });
+    const stored = await prisma.moment.findUniqueOrThrow({ where: { id: moment.id } });
+    expect(stored.mediaUrl).toBe(key.replace(/^pending\//, ""));
+    expect(await headUpload(key)).toBeNull();
+    expect(await headUpload(stored.mediaUrl)).toMatchObject({ size: 1, contentType: "image/png" });
+
+    // 같은 임시 키로 두 번 등록할 수 없다(이미 옮겨졌다).
+    await expect(caller.moment.create({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
     await deleteR2Object(key);
   });
 });

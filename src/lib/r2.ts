@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -74,4 +75,14 @@ export async function headUpload(key: string) {
 export async function deleteUpload(key: string) {
   const client = createR2Client();
   await client.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
+}
+
+/** 임시 경로의 파일을 정식 경로로 옮긴다(복사 후 임시 파일 삭제). 형식 등 메타데이터는 그대로. */
+export async function promoteUpload(pendingKey: string, finalKey: string) {
+  const client = createR2Client();
+  const Bucket = process.env.R2_BUCKET_NAME;
+  await client.send(
+    new CopyObjectCommand({ Bucket, Key: finalKey, CopySource: `${Bucket}/${pendingKey}` }),
+  );
+  await client.send(new DeleteObjectCommand({ Bucket, Key: pendingKey }));
 }

@@ -1,11 +1,10 @@
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
-import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
+import { createDownloadUrl, createUploadUrl, promoteUpload } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
-import { verifyUpload } from "@/server/uploads";
+import { newUploadKey, verifyUpload } from "@/server/uploads";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
@@ -29,20 +28,21 @@ type SpaceCtx = {
 };
 
 async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
-  const { size } = await verifyUpload(key, {
+  const { size, finalKey } = await verifyUpload(key, {
     folder: "messages",
     spaceId: ctx.space.id,
     allowedTypes: type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES,
     locale: ctx.locale,
   });
   await assertStorageAvailable(ctx.space.id, size, ctx.locale);
+  await promoteUpload(key, finalKey);
 
   const message = await prisma.message.create({
     data: {
       spaceId: ctx.space.id,
       senderId: ctx.session.user.id,
       type,
-      content: key,
+      content: finalKey,
       mediaSize: size,
     },
   });
@@ -104,7 +104,7 @@ export const chatRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
-      const key = `messages/${ctx.space.id}/${randomUUID()}`;
+      const key = newUploadKey("messages", ctx.space.id);
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
     }),
@@ -122,7 +122,7 @@ export const chatRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
-      const key = `messages/${ctx.space.id}/${randomUUID()}`;
+      const key = newUploadKey("messages", ctx.space.id);
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
     }),
