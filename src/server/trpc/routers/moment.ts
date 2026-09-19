@@ -11,6 +11,19 @@ import { translator } from "@/i18n/server";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
+// 무료 티어 사진 개수 한도. 업로드 주소 발급과 등록 두 곳에서 본다 — 발급 때만
+// 보면 주소만 여러 개 받아 두고 나중에 한꺼번에 등록하는 식으로 넘길 수 있다.
+async function assertMomentQuota(spaceId: string, locale: string | null | undefined) {
+  if (await isPremiumSpace(spaceId)) return;
+  const count = await prisma.moment.count({ where: { spaceId } });
+  if (count >= FREE_TIER_LIMITS.moments) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: translator(locale)("errors.momentLimit", { limit: FREE_TIER_LIMITS.moments }),
+    });
+  }
+}
+
 export const momentRouter = router({
   // R2에 직접 업로드할 presigned PUT URL 발급 — chat.createImageUploadUrl과
   // 동일한 패턴(서버는 파일 바이트를 거치지 않는다). 무료 티어는 사진 개수를
@@ -24,17 +37,7 @@ export const momentRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!(await isPremiumSpace(ctx.space.id))) {
-        const count = await prisma.moment.count({ where: { spaceId: ctx.space.id } });
-        if (count >= FREE_TIER_LIMITS.moments) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: translator(ctx.locale)("errors.momentLimit", {
-              limit: FREE_TIER_LIMITS.moments,
-            }),
-          });
-        }
-      }
+      await assertMomentQuota(ctx.space.id, ctx.locale);
 
       const key = `moments/${ctx.space.id}/${randomUUID()}`;
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
@@ -44,6 +47,7 @@ export const momentRouter = router({
   create: spaceProcedure
     .input(z.object({ key: z.string().min(1), caption: z.string().max(300).optional() }))
     .mutation(async ({ ctx, input }) => {
+      await assertMomentQuota(ctx.space.id, ctx.locale);
       await verifyUpload(input.key, {
         folder: "moments",
         spaceId: ctx.space.id,

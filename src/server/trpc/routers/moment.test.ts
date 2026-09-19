@@ -204,4 +204,27 @@ describe("moment 라우터 (통합)", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(await prisma.moment.count({ where: { spaceId } })).toBe(0);
   });
+
+  it("업로드 주소를 미리 받아 두어도 한도에 이르면 등록을 거부한다", async () => {
+    const caller = await callerFor(userAId);
+    const { uploadUrl, key } = await caller.moment.createUploadUrl({
+      contentType: "image/png",
+      size: 1,
+    });
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "image/png" },
+      body: new Uint8Array([1]),
+    });
+    await prisma.moment.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({
+        spaceId,
+        uploaderId: userAId,
+        mediaUrl: `moments/${spaceId}/fake-${i}`,
+      })),
+    });
+
+    await expect(caller.moment.create({ key })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await deleteR2Object(key);
+  });
 });
