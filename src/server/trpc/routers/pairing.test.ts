@@ -116,6 +116,12 @@ describe("pairing 플로우 (통합)", () => {
   });
 
   describe("입력 횟수 제한 (ARCHITECTURE.md §7)", () => {
+    // 기록은 사용자와 cascade로 묶이지 않으니 테스트가 남긴 초대코드 기록을 지운다
+    // (고정 IP가 반복 실행으로 쌓여 한도에 걸리지 않게).
+    afterEach(async () => {
+      await prisma.rateLimitHit.deleteMany({ where: { bucket: { startsWith: "invite." } } });
+    });
+
     it("사용자당 15분에 5번 틀리면 올바른 코드도 막고, 남은 시간을 알려준다", async () => {
       const created = await (await callerFor(userAId)).pairing.createInviteCode();
       const b = await callerFor(userBId);
@@ -134,8 +140,12 @@ describe("pairing 플로우 (통합)", () => {
     it("창(15분)이 지난 실패는 세지 않는다", async () => {
       const created = await (await callerFor(userAId)).pairing.createInviteCode();
       const old = new Date(Date.now() - 16 * 60_000);
-      await prisma.inviteCodeAttempt.createMany({
-        data: Array.from({ length: 5 }, () => ({ userId: userBId, createdAt: old })),
+      await prisma.rateLimitHit.createMany({
+        data: Array.from({ length: 5 }, () => ({
+          bucket: "invite.fail.user",
+          subject: userBId,
+          createdAt: old,
+        })),
       });
 
       const redeemed = await (
@@ -149,8 +159,8 @@ describe("pairing 플로우 (통합)", () => {
     it("같은 IP에서 1시간에 20번 틀리면 다른 계정이어도 막는다", async () => {
       const ip = `203.0.113.${Math.floor(Math.random() * 250)}`;
       // 계정을 여럿 만들어 사용자 한도를 피해 간 경우 — 실패 20건이 이미 쌓였다.
-      await prisma.inviteCodeAttempt.createMany({
-        data: Array.from({ length: 20 }, () => ({ userId: userAId, ip })),
+      await prisma.rateLimitHit.createMany({
+        data: Array.from({ length: 20 }, () => ({ bucket: "invite.fail.ip", subject: ip })),
       });
 
       await expect(
@@ -167,7 +177,7 @@ describe("pairing 플로우 (통합)", () => {
       await expect(
         (await callerFor(userAId)).pairing.redeemInviteCode({ code: created.inviteCode }),
       ).rejects.toMatchObject({ code: "CONFLICT" });
-      expect(await prisma.inviteCodeAttempt.count({ where: { userId: userAId } })).toBe(0);
+      expect(await prisma.rateLimitHit.count({ where: { subject: userAId } })).toBe(0);
     });
   });
 });
