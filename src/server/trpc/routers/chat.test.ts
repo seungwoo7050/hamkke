@@ -33,7 +33,8 @@ async function deleteR2Object(key: string) {
   await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
 }
 
-describe("chat 라우터 (통합)", () => {
+// 실제 R2 왕복(업로드·HeadObject)이 여러 번이라 기본 5초로는 빠듯하다.
+describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
   let userAId: string;
   let userBId: string;
   let spaceId: string;
@@ -289,5 +290,90 @@ describe("chat 라우터 (통합)", () => {
       await expect(caller.chat.sendImage({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     }
     await deleteR2Object(key);
+  });
+
+  describe("스페이스 저장 용량 상한", () => {
+    const GB = 1024 * 1024 * 1024;
+
+    // 사진 행으로 용량만 채운다(실제 파일 없이) — 무료 상한 1GB에서 2바이트 모자라게.
+    async function fillStorage(bytes: number) {
+      await prisma.moment.create({
+        data: {
+          spaceId,
+          uploaderId: userAId,
+          mediaUrl: `moments/${spaceId}/fill`,
+          mediaSize: bytes,
+        },
+      });
+    }
+
+    afterEach(async () => {
+      await prisma.moment.deleteMany({ where: { spaceId } });
+      await prisma.subscription.deleteMany({ where: { spaceId } });
+    });
+
+    it("등록하면 실제 파일 크기가 기록된다", async () => {
+      const caller = await callerFor(userAId);
+      const bytes = new Uint8Array(7);
+      const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
+        contentType: "image/png",
+        size: bytes.length,
+      });
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "image/png" },
+        body: bytes,
+      });
+      const message = await caller.chat.sendImage({ key });
+      expect(
+        (await prisma.message.findUniqueOrThrow({ where: { id: message.id } })).mediaSize,
+      ).toBe(7);
+      await deleteR2Object(key);
+    });
+
+    it("무료 상한을 넘기는 업로드 주소는 발급하지 않는다", async () => {
+      await fillStorage(GB - 2);
+      const caller = await callerFor(userAId);
+      await expect(
+        caller.chat.createImageUploadUrl({ contentType: "image/png", size: 4 }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(
+        caller.moment.createUploadUrl({ contentType: "image/png", size: 4 }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    });
+
+    it("주소를 미리 받아 두어도 등록 시점에 상한을 넘기면 거부한다", async () => {
+      const caller = await callerFor(userAId);
+      const { uploadUrl, key } = await caller.chat.createVoiceUploadUrl({
+        contentType: "audio/webm",
+        size: 4,
+      });
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "audio/webm" },
+        body: new Uint8Array(4),
+      });
+      await fillStorage(GB - 2);
+
+      await expect(caller.chat.sendVoice({ key })).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await deleteR2Object(key);
+    });
+
+    it("프리미엄은 무료 상한을 넘어도 올릴 수 있다", async () => {
+      await fillStorage(GB - 2);
+      await prisma.subscription.create({
+        data: {
+          spaceId,
+          stripeCustomerId: `cus_fake_${randomUUID()}`,
+          stripeSubscriptionId: `sub_fake_${randomUUID()}`,
+          plan: "premium",
+          status: "active",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+      const caller = await callerFor(userAId);
+      const { key } = await caller.chat.createImageUploadUrl({ contentType: "image/png", size: 4 });
+      expect(key).toContain(spaceId);
+    });
   });
 });

@@ -377,6 +377,8 @@
     "inviteRateLimited": "Too many wrong tries, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "questionAnswered": "You've already answered today's question.",
     "uploadNotFound": "The file didn't finish uploading. Please try again.",
+    "storageLimitFree": "You've used all {gb} GB of storage. Delete some older photos, or upgrade to Premium for more room.",
+    "storageLimitPremium": "You've used all {gb} GB of storage. Delete some older photos to make room.",
     "momentLimit": "The free plan holds up to {limit} photos. Go Premium for unlimited.",
     "capsuleLimit": "The free plan holds up to {limit} scheduled letters. Go Premium for unlimited.",
     "capsuleOneWhen": "Pick just one time for it to open",

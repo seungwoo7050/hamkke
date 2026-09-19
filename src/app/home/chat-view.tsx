@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { TRPCClientError } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import { ArrowUp, Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { cn } from "cn";
@@ -251,8 +252,9 @@ export function ChatView({
       });
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendImageMutation.mutateAsync({ key });
-    } catch {
-      toast.error(t("imageFailed"));
+    } catch (err) {
+      // 저장 공간 한도 같은 서버 안내는 그대로, 업로드 자체의 실패는 사람이 읽을 문구로.
+      toast.error(err instanceof TRPCClientError ? err.message : t("imageFailed"));
     } finally {
       setUploadingImage(false);
     }
@@ -291,8 +293,8 @@ export function ChatView({
       });
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendVoiceMutation.mutateAsync({ key });
-    } catch {
-      toast.error(t("voiceFailed"));
+    } catch (err) {
+      toast.error(err instanceof TRPCClientError ? err.message : t("voiceFailed"));
     } finally {
       setUploadingVoice(false);
     }

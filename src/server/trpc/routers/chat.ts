@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { assertStorageAvailable } from "@/server/storage-quota";
 import { verifyUpload } from "@/server/uploads";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -28,15 +29,22 @@ type SpaceCtx = {
 };
 
 async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
-  await verifyUpload(key, {
+  const { size } = await verifyUpload(key, {
     folder: "messages",
     spaceId: ctx.space.id,
     allowedTypes: type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES,
     locale: ctx.locale,
   });
+  await assertStorageAvailable(ctx.space.id, size, ctx.locale);
 
   const message = await prisma.message.create({
-    data: { spaceId: ctx.space.id, senderId: ctx.session.user.id, type, content: key },
+    data: {
+      spaceId: ctx.space.id,
+      senderId: ctx.session.user.id,
+      type,
+      content: key,
+      mediaSize: size,
+    },
   });
   const content = await resolveContent(message);
 
@@ -95,6 +103,7 @@ export const chatRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
       const key = `messages/${ctx.space.id}/${randomUUID()}`;
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
@@ -112,6 +121,7 @@ export const chatRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
       const key = `messages/${ctx.space.id}/${randomUUID()}`;
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
