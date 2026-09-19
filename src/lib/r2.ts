@@ -1,5 +1,10 @@
 import "server-only";
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const UPLOAD_URL_EXPIRY_SECONDS = 5 * 60;
@@ -46,4 +51,20 @@ export async function createDownloadUrl(key: string) {
       expiresIn: DOWNLOAD_URL_EXPIRY_SECONDS,
     },
   );
+}
+
+/** 올라간 오브젝트의 크기·형식. 없으면 null(업로드 주소만 받고 안 올린 경우). */
+export async function headUpload(key: string) {
+  const client = createR2Client();
+  try {
+    const res = await client.send(
+      new HeadObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }),
+    );
+    return { size: res.ContentLength ?? 0, contentType: res.ContentType ?? "" };
+  } catch (err) {
+    if ((err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    throw err;
+  }
 }

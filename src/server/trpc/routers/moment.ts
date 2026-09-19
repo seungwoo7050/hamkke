@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { verifyUpload } from "@/server/uploads";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -43,6 +44,13 @@ export const momentRouter = router({
   create: spaceProcedure
     .input(z.object({ key: z.string().min(1), caption: z.string().max(300).optional() }))
     .mutation(async ({ ctx, input }) => {
+      await verifyUpload(input.key, {
+        folder: "moments",
+        spaceId: ctx.space.id,
+        allowedTypes: ALLOWED_IMAGE_TYPES,
+        locale: ctx.locale,
+      });
+
       const moment = await prisma.moment.create({
         data: {
           spaceId: ctx.space.id,

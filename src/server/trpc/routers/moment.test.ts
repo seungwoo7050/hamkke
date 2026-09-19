@@ -194,4 +194,14 @@ describe("moment 라우터 (통합)", () => {
 
     await prisma.subscription.deleteMany({ where: { spaceId } });
   });
+
+  it("올리지 않은 파일이나 다른 스페이스의 파일로는 사진을 등록할 수 없다", async () => {
+    const caller = await callerFor(userAId);
+    const { key } = await caller.moment.createUploadUrl({ contentType: "image/png", size: 1 });
+    await expect(caller.moment.create({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller.moment.create({ key: `moments/other-space/${randomUUID()}` }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await prisma.moment.count({ where: { spaceId } })).toBe(0);
+  });
 });

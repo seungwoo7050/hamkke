@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { verifyUpload } from "@/server/uploads";
 import { spaceChannelName } from "@/lib/supabase/channels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
@@ -20,9 +21,20 @@ async function resolveContent(message: { type: string; content: string }) {
   return createDownloadUrl(message.content);
 }
 
-type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
+type SpaceCtx = {
+  space: { id: string };
+  session: NonNullable<TRPCContext["session"]>;
+  locale: TRPCContext["locale"];
+};
 
 async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
+  await verifyUpload(key, {
+    folder: "messages",
+    spaceId: ctx.space.id,
+    allowedTypes: type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES,
+    locale: ctx.locale,
+  });
+
   const message = await prisma.message.create({
     data: { spaceId: ctx.space.id, senderId: ctx.session.user.id, type, content: key },
   });

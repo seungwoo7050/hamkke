@@ -252,4 +252,42 @@ describe("chat 라우터 (통합)", () => {
 
     await deleteR2Object(key);
   });
+
+  it("다른 스페이스의 파일이나 올리지 않은 파일로는 메시지를 만들 수 없다", async () => {
+    const caller = await callerFor(userAId);
+
+    // 올리지 않은 키(업로드 주소만 받음)
+    const { key: notUploaded } = await caller.chat.createImageUploadUrl({
+      contentType: "image/png",
+      size: 1,
+    });
+    await expect(caller.chat.sendImage({ key: notUploaded })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+
+    // 남의 스페이스 경로
+    await expect(
+      caller.chat.sendImage({ key: `messages/other-space/${randomUUID()}` }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+    expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
+  });
+
+  it("서명에 묶이지 않은 Content-Type을 바꿔 올린 파일은 거절한다", async () => {
+    const caller = await callerFor(userAId);
+    const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
+      contentType: "image/png",
+      size: 4,
+    });
+    const res = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "text/html" },
+      body: new Uint8Array(4),
+    });
+    // R2가 받든 거절하든, 받았다면 등록 단계에서 막혀야 한다.
+    if (res.ok) {
+      await expect(caller.chat.sendImage({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    }
+    await deleteR2Object(key);
+  });
 });
