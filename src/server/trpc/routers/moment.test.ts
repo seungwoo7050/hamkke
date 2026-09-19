@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
+import { headUpload } from "@/lib/r2";
 import { createCallerFactory } from "../init";
 import { appRouter } from "./_app";
 
@@ -31,7 +32,8 @@ async function deleteR2Object(key: string) {
   await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
 }
 
-describe("moment 라우터 (통합)", () => {
+// 실제 R2 왕복(업로드·HeadObject·삭제)이 여러 번이라 기본 5초로는 빠듯하다.
+describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
   let userAId: string;
   let spaceId: string;
 
@@ -131,8 +133,8 @@ describe("moment 라우터 (통합)", () => {
 
     await caller.moment.delete({ id: moment.id });
     expect((await caller.moment.list({})).moments).toHaveLength(0);
-
-    await deleteR2Object(key);
+    // R2 파일도 함께 지워진다.
+    expect(await headUpload(key)).toBeNull();
   });
 
   it("스페이스 멤버가 아니면 호출할 수 없다(spaceProcedure)", async () => {

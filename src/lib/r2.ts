@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
@@ -67,4 +68,10 @@ export async function headUpload(key: string) {
     }
     throw err;
   }
+}
+
+/** 없는 키를 지워도 성공(R2가 204)이라 재시도해도 안전하다. */
+export async function deleteUpload(key: string) {
+  const client = createR2Client();
+  await client.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
 }

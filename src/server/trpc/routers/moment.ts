@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
-import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
+import { createDownloadUrl, createUploadUrl, deleteUpload } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import { verifyUpload } from "@/server/uploads";
 import { router, spaceProcedure } from "../init";
@@ -100,8 +100,17 @@ export const momentRouter = router({
       return { moments, nextCursor };
     }),
 
+  // R2 파일을 먼저 지운다 — 행만 지우면 파일은 계속 요금이 나가고, 지우고 다시
+  // 올리는 식으로 한도도 넘길 수 있었다. R2 삭제가 실패하면 행이 남아 다시 지울 수 있다.
   delete: spaceProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    await prisma.moment.deleteMany({ where: { id: input.id, spaceId: ctx.space.id } });
+    const moment = await prisma.moment.findFirst({
+      where: { id: input.id, spaceId: ctx.space.id },
+      select: { id: true, mediaUrl: true },
+    });
+    if (!moment) return { ok: true };
+
+    await deleteUpload(moment.mediaUrl);
+    await prisma.moment.delete({ where: { id: moment.id } });
     return { ok: true };
   }),
 });
