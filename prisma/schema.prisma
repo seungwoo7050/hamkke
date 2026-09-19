@@ -411,3 +411,16 @@ model Flight {
 
   @@index([spaceId, scheduledDepartureAt])
 }
+
+// 요청 횟수 제한 기록(ARCHITECTURE.md §7). bucket은 한도 종류(예: "chat.send"),
+// subject는 세는 단위(사용자 ID·IP·이메일 등). 가장 긴 창이 지난 기록은 기록할
+// 때마다 정리한다 — 스케줄러 없이 테이블이 커지지 않게.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  bucket    String
+  subject   String
+  createdAt DateTime @default(now())
+
+  @@index([bucket, subject, createdAt])
+  @@index([bucket, createdAt])
+}
