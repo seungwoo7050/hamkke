@@ -8,6 +8,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 import { translator } from "@/i18n/server";
+import { consume } from "@/server/rate-limit";
+import { LOCATION_PING_RETENTION_MS, locationSendCheck } from "@/server/request-limits";
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
 
@@ -80,12 +82,30 @@ export const locationRouter = router({
         });
       }
 
+      // 너무 잦은 전송은 저장·브로드캐스트·지오펜스 확인 없이 무시하고 마지막
+      // 스냅샷을 돌려준다 — 오류로 돌려주면 정상 화면도 토스트가 뜰 수 있어서.
+      const userId = ctx.session.user.id;
+      if ((await consume(locationSendCheck(userId))) > 0) {
+        const last = await prisma.locationPing.findFirst({
+          where: { userId },
+          orderBy: { capturedAt: "desc" },
+        });
+        if (last) return last;
+      }
+
       const ping = await prisma.locationPing.create({
         data: {
-          userId: ctx.session.user.id,
+          userId,
           lat: input.lat,
           lng: input.lng,
           accuracy: input.accuracy,
+        },
+      });
+      // 보관 기간이 지난 스냅샷은 저장할 때마다 정리한다(스케줄러 없이).
+      await prisma.locationPing.deleteMany({
+        where: {
+          userId,
+          capturedAt: { lt: new Date(Date.now() - LOCATION_PING_RETENTION_MS) },
         },
       });
 

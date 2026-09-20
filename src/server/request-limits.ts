@@ -11,6 +11,10 @@ export const REQUEST_LIMITS = {
     { max: 60, windowMs: MINUTE },
     { max: 3000, windowMs: DAY },
   ],
+  // 화면은 15초에 한 번 보낸다(src/app/home/location-context.tsx). 서버는 그보다
+  // 조금 짧게 잡아 정상 전송은 막지 않고, 그보다 잦은 전송은 저장·브로드캐스트
+  // 없이 무시한다.
+  locationSend: [{ max: 1, windowMs: 10_000 }],
   // 대화 이미지·음성과 사진 업로드 주소를 합산한다.
   uploadUrl: [
     { max: 30, windowMs: 10 * MINUTE },
@@ -25,3 +29,10 @@ export const chatMessageCheck = (userId: string): Check[] => [
 export const uploadUrlCheck = (userId: string): Check[] => [
   { bucket: "upload.url", subject: userId, limits: REQUEST_LIMITS.uploadUrl },
 ];
+
+export const locationSendCheck = (userId: string): Check[] => [
+  { bucket: "location.send", subject: userId, limits: REQUEST_LIMITS.locationSend },
+];
+
+/** 위치 스냅샷(LocationPing) 보관 기간 — 화면은 최신 한 건만 읽는다. */
+export const LOCATION_PING_RETENTION_MS = 7 * DAY;
