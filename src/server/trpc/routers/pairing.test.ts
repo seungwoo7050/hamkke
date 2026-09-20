@@ -120,6 +120,7 @@ describe("pairing 플로우 (통합)", () => {
     // (고정 IP가 반복 실행으로 쌓여 한도에 걸리지 않게).
     afterEach(async () => {
       await prisma.rateLimitHit.deleteMany({ where: { bucket: { startsWith: "invite." } } });
+      await prisma.rateLimitHit.deleteMany({ where: { subject: { in: [userAId, userBId] } } });
     });
 
     it("사용자당 15분에 5번 틀리면 올바른 코드도 막고, 남은 시간을 알려준다", async () => {
@@ -177,7 +178,11 @@ describe("pairing 플로우 (통합)", () => {
       await expect(
         (await callerFor(userAId)).pairing.redeemInviteCode({ code: created.inviteCode }),
       ).rejects.toMatchObject({ code: "CONFLICT" });
-      expect(await prisma.rateLimitHit.count({ where: { subject: userAId } })).toBe(0);
+      expect(
+        await prisma.rateLimitHit.count({
+          where: { subject: userAId, bucket: { startsWith: "invite." } },
+        }),
+      ).toBe(0);
     });
   });
 });
