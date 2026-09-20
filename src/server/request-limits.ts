@@ -15,6 +15,9 @@ export const REQUEST_LIMITS = {
   // 조금 짧게 잡아 정상 전송은 막지 않고, 그보다 잦은 전송은 저장·브로드캐스트
   // 없이 무시한다.
   locationSend: [{ max: 1, windowMs: 10_000 }],
+  // Checkout·Customer Portal 세션 생성(합산) — 매번 Stripe API를 부르고, 카드
+  // 테스팅(훔친 카드 시험 결제)의 입구가 되지 않게.
+  billingSession: [{ max: 10, windowMs: 60 * MINUTE }],
   // 대화 이미지·음성과 사진 업로드 주소를 합산한다.
   uploadUrl: [
     { max: 30, windowMs: 10 * MINUTE },
@@ -36,3 +39,7 @@ export const locationSendCheck = (userId: string): Check[] => [
 
 /** 위치 스냅샷(LocationPing) 보관 기간 — 화면은 최신 한 건만 읽는다. */
 export const LOCATION_PING_RETENTION_MS = 7 * DAY;
+
+export const billingSessionCheck = (userId: string): Check[] => [
+  { bucket: "billing.session", subject: userId, limits: REQUEST_LIMITS.billingSession },
+];

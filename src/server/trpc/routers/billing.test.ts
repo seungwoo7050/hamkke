@@ -42,6 +42,7 @@ describe("billing 라우터 (통합)", () => {
   });
 
   afterEach(async () => {
+    await prisma.rateLimitHit.deleteMany({ where: { subject: userAId } });
     await Promise.all(createdCustomerIds.map((id) => stripe.customers.del(id)));
     createdCustomerIds.length = 0;
     await prisma.subscription.deleteMany({ where: { spaceId } });
@@ -153,5 +154,18 @@ describe("billing 라우터 (통합)", () => {
     } finally {
       await prisma.user.delete({ where: { id: outsider.id } });
     }
+  });
+
+  it("결제·구독 관리 화면은 합쳐서 1시간에 10번까지만 연다", async () => {
+    await prisma.rateLimitHit.createMany({
+      data: Array.from({ length: 10 }, () => ({ bucket: "billing.session", subject: userAId })),
+    });
+    const caller = await callerFor(userAId);
+    await expect(caller.billing.createCheckoutSession()).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
+    await expect(caller.billing.createPortalSession()).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
   });
 });

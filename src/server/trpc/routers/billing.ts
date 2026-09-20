@@ -2,6 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
+import { consumeOrThrow } from "@/server/rate-limit";
+import { billingSessionCheck } from "@/server/request-limits";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -48,7 +50,8 @@ export const billingRouter = router({
   // 이중 구독 방지: 두 사람이 동시에 누르거나 결제 화면을 여러 번 열어도
   // 스페이스당 Customer 하나, 열린 Checkout 세션 하나만 쓴다 — 같은 세션은 한
   // 번만 결제할 수 있다. 스페이스 단위 잠금으로 확인과 생성을 직렬화한다.
-  createCheckoutSession: spaceProcedure.mutation(({ ctx }) => {
+  createCheckoutSession: spaceProcedure.mutation(async ({ ctx }) => {
+    await consumeOrThrow(billingSessionCheck(ctx.session.user.id), ctx.locale);
     const spaceId = ctx.space.id;
     return prisma.$transaction(
       async (tx) => {
@@ -105,6 +108,7 @@ export const billingRouter = router({
   // 해지/결제수단 변경은 자체 UI로 구현하지 않고 Stripe Customer Portal로
   // 위임한다(ARCHITECTURE.md §6).
   createPortalSession: spaceProcedure.mutation(async ({ ctx }) => {
+    await consumeOrThrow(billingSessionCheck(ctx.session.user.id), ctx.locale);
     const subscription = await prisma.subscription.findUnique({
       where: { spaceId: ctx.space.id },
     });
