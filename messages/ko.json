@@ -380,6 +380,8 @@
     "uploadNotFound": "파일이 제대로 올라가지 않았어요. 다시 시도해 주세요.",
     "storageLimitFree": "저장 공간({gb}GB)을 다 썼어요. 오래된 사진을 지우거나 프리미엄으로 늘려 보세요.",
     "storageLimitPremium": "저장 공간({gb}GB)을 다 썼어요. 오래된 사진을 지워 공간을 만들어 주세요.",
+    "rateLimitedSeconds": "너무 빨리 보내고 있어요. {seconds}초 뒤에 다시 시도해 주세요.",
+    "rateLimitedMinutes": "요청이 너무 많아서 잠시 막아뒀어요. {minutes}분 뒤에 다시 시도해 주세요.",
     "momentLimit": "무료 티어는 사진을 {limit}장까지만 저장할 수 있어요. 프리미엄으로 무제한 저장해보세요.",
     "capsuleLimit": "무료 티어는 예약 중인 캡슐을 {limit}개까지만 가질 수 있어요. 프리미엄으로 무제한 예약해보세요.",
     "capsuleOneWhen": "여는 때를 하나만 골라주세요",

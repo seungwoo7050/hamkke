@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { createDownloadUrl, createUploadUrl, deleteUpload, promoteUpload } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { consumeOrThrow } from "@/server/rate-limit";
+import { uploadUrlCheck } from "@/server/request-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
 import { newUploadKey, verifyUpload } from "@/server/uploads";
 import { router, spaceProcedure } from "../init";
@@ -39,6 +41,7 @@ export const momentRouter = router({
     .mutation(async ({ ctx, input }) => {
       await assertMomentQuota(ctx.space.id, ctx.locale);
       await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
+      await consumeOrThrow(uploadUrlCheck(ctx.session.user.id), ctx.locale);
 
       const key = newUploadKey("moments", ctx.space.id);
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);

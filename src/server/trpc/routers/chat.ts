@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { createDownloadUrl, createUploadUrl, promoteUpload } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { consumeOrThrow } from "@/server/rate-limit";
+import { chatMessageCheck, uploadUrlCheck } from "@/server/request-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
 import { newUploadKey, verifyUpload } from "@/server/uploads";
 import { spaceChannelName } from "@/lib/supabase/channels";
@@ -68,6 +70,7 @@ export const chatRouter = router({
   send: spaceProcedure
     .input(z.object({ content: z.string().min(1).max(4000) }))
     .mutation(async ({ ctx, input }) => {
+      await consumeOrThrow(chatMessageCheck(ctx.session.user.id), ctx.locale);
       const message = await prisma.message.create({
         data: {
           spaceId: ctx.space.id,
@@ -104,6 +107,7 @@ export const chatRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
+      await consumeOrThrow(uploadUrlCheck(ctx.session.user.id), ctx.locale);
       const key = newUploadKey("messages", ctx.space.id);
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
@@ -122,6 +126,7 @@ export const chatRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
+      await consumeOrThrow(uploadUrlCheck(ctx.session.user.id), ctx.locale);
       const key = newUploadKey("messages", ctx.space.id);
       const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };

@@ -1,4 +1,6 @@
 import "server-only";
+import { TRPCError } from "@trpc/server";
+import { translator } from "@/i18n/server";
 import { prisma } from "@/lib/prisma";
 
 // 요청 횟수 제한(ARCHITECTURE.md §7) — 기록은 Postgres(RateLimitHit). 2인 전용
@@ -60,5 +62,22 @@ export async function consume(checks: readonly Check[], now = new Date()) {
     const wait = await retryAfterMs(checks, now, tx);
     if (wait === 0) await recordHits(checks, now, tx);
     return wait;
+  });
+}
+
+/**
+ * tRPC 절차용 — 한도 안이면 기록하고 통과, 넘으면 남은 시간을 담은
+ * TOO_MANY_REQUESTS를 요청자 언어로 던진다.
+ */
+export async function consumeOrThrow(checks: readonly Check[], locale?: string | null) {
+  const wait = await consume(checks);
+  if (wait === 0) return;
+  const t = translator(locale);
+  throw new TRPCError({
+    code: "TOO_MANY_REQUESTS",
+    message:
+      wait < 60_000
+        ? t("errors.rateLimitedSeconds", { seconds: Math.max(1, Math.ceil(wait / 1000)) })
+        : t("errors.rateLimitedMinutes", { minutes: Math.ceil(wait / 60_000) }),
   });
 }

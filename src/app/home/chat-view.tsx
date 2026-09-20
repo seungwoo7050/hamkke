@@ -205,6 +205,10 @@ export function ChatView({
         setMessages((prev) => mergeById(prev, [message]));
         setDraft("");
       },
+      // 보내기 횟수 한도에 걸리면 남은 시간을 안내한다(입력한 글은 그대로 남는다).
+      onError: (err) => {
+        if (err.data?.code === "TOO_MANY_REQUESTS") toast.error(err.message);
+      },
     }),
   );
 

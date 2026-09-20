@@ -62,6 +62,7 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
   });
 
   afterEach(async () => {
+    await prisma.rateLimitHit.deleteMany({ where: { subject: { in: [userAId, userBId] } } });
     await prisma.message.deleteMany({ where: { spaceId } });
     await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
     await prisma.space.delete({ where: { id: spaceId } });
@@ -377,6 +378,47 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
       const caller = await callerFor(userAId);
       const { key } = await caller.chat.createImageUploadUrl({ contentType: "image/png", size: 4 });
       expect(key).toContain(spaceId);
+    });
+  });
+
+  describe("요청 횟수 제한", () => {
+    async function seedHits(bucket: string, subject: string, count: number) {
+      await prisma.rateLimitHit.createMany({
+        data: Array.from({ length: count }, () => ({ bucket, subject })),
+      });
+    }
+
+    it("1분에 60개를 넘게 보내면 남은 시간을 알려주며 막고, 상대는 막지 않는다", async () => {
+      await seedHits("chat.send", userAId, 60);
+      const blocked = (await callerFor(userAId)).chat.send({ content: "61번째" });
+      await expect(blocked).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+      await expect(blocked).rejects.toThrow(/초 뒤/);
+      expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
+
+      await expect((await callerFor(userBId)).chat.send({ content: "안녕" })).resolves.toBeTruthy();
+    });
+
+    it("업로드 주소는 대화·사진을 합쳐 10분에 30개까지만 발급한다", async () => {
+      await seedHits("upload.url", userAId, 30);
+      const caller = await callerFor(userAId);
+      await expect(
+        caller.chat.createImageUploadUrl({ contentType: "image/png", size: 1 }),
+      ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+      await expect(
+        caller.chat.createVoiceUploadUrl({ contentType: "audio/webm", size: 1 }),
+      ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+      await expect(
+        caller.moment.createUploadUrl({ contentType: "image/png", size: 1 }),
+      ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+    });
+
+    it("업로드 주소를 발급할 때마다 한 번으로 센다", async () => {
+      const caller = await callerFor(userAId);
+      await caller.chat.createImageUploadUrl({ contentType: "image/png", size: 1 });
+      await caller.moment.createUploadUrl({ contentType: "image/png", size: 1 });
+      expect(
+        await prisma.rateLimitHit.count({ where: { bucket: "upload.url", subject: userAId } }),
+      ).toBe(2);
     });
   });
 });
