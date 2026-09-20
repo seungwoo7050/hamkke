@@ -66,19 +66,18 @@ model User {
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id])
 
-  accounts           Account[]
-  sessions           Session[]
-  sentMessages       Message[]
-  sentTouches        Touch[]
-  pushTokens         PushToken[]
-  locationPings      LocationPing[]
-  geofences          Geofence[]
-  createdEvents      CalendarEvent[]
-  uploadedMoments    Moment[]
-  sentCapsules       Capsule[]
-  dailyAnswers       DailyAnswer[]
-  inviteCodeAttempts InviteCodeAttempt[]
-  flights            Flight[]
+  accounts        Account[]
+  sessions        Session[]
+  sentMessages    Message[]
+  sentTouches     Touch[]
+  pushTokens      PushToken[]
+  locationPings   LocationPing[]
+  geofences       Geofence[]
+  createdEvents   CalendarEvent[]
+  uploadedMoments Moment[]
+  sentCapsules    Capsule[]
+  dailyAnswers    DailyAnswer[]
+  flights         Flight[]
 }
 
 model Account {
@@ -353,21 +352,6 @@ model DailyAnswer {
 
   @@unique([spaceId, userId, dateKey])
   @@index([spaceId, dateKey])
-}
-
-// 실패한 초대코드 입력 기록(ARCHITECTURE.md §7 rate limiting). 성공은 남기지
-// 않는다 — 새 입력 전에 최근 실패 수만 세면 되므로. 하루 지난 기록은 입력
-// 때마다 조금씩 지워 테이블이 자라지 않게 한다.
-model InviteCodeAttempt {
-  id        String   @id @default(cuid())
-  userId    String
-  ip        String?
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([ip, createdAt])
 }
 
 enum FlightStatus {
