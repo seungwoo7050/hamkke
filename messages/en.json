@@ -21,7 +21,8 @@
     "google": "Continue with Google",
     "or": "or",
     "emailPlaceholder": "Email address",
-    "emailSubmit": "Email me a sign-in link"
+    "emailSubmit": "Email me a sign-in link",
+    "rateLimited": "You've asked for a lot of sign-in links, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}."
   },
   "onboarding": {
     "title": "Connect with your person",
