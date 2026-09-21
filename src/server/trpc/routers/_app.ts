@@ -16,6 +16,7 @@ import { pairingRouter } from "./pairing";
 import { profileRouter } from "./profile";
 import { pushRouter } from "./push";
 import { questionRouter } from "./question";
+import { realtimeRouter } from "./realtime";
 import { streakRouter } from "./streak";
 import { touchRouter } from "./touch";
 import { weatherRouter } from "./weather";
@@ -29,6 +30,7 @@ export const appRouter = router({
   location: locationRouter,
   profile: profileRouter,
   weather: weatherRouter,
+  realtime: realtimeRouter,
   geofence: geofenceRouter,
   meetup: meetupRouter,
   calendar: calendarRouter,
