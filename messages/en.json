@@ -265,6 +265,17 @@
     "languageSub": "Only changes the app for you — {name} keeps theirs",
     "languageFailed": "Couldn't change the language"
   },
+  "account": {
+    "delete": "Delete account",
+    "confirmTitle": "Delete your account?",
+    "confirmBodyPaired": "Your chats, photos and memories will be deleted for both of you, and this can't be undone. {name}'s account stays, so they can connect again.",
+    "confirmBody": "Your account and any invite code you made will be deleted. This can't be undone.",
+    "confirmBilling": "If you're subscribed, it's canceled right away and you won't be charged again.",
+    "confirm": "Delete",
+    "deleting": "Deleting…",
+    "cancel": "Keep my account",
+    "failed": "Couldn't delete your account. Please try again in a bit."
+  },
   "location": {
     "partnerOff": "{name} has location sharing off",
     "turnOnMine": "Turn on your location sharing to see the distance",

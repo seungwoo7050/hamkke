@@ -265,6 +265,17 @@
     "languageSub": "나에게만 바뀌어요 — {name}의 화면은 그대로예요",
     "languageFailed": "언어를 바꾸지 못했어요"
   },
+  "account": {
+    "delete": "계정 삭제",
+    "confirmTitle": "정말 계정을 삭제할까요?",
+    "confirmBodyPaired": "함께 쓰던 대화·사진·기억이 두 사람 모두에게서 지워지고 되돌릴 수 없어요. {name}의 계정은 남아서 다시 연결할 수 있어요.",
+    "confirmBody": "계정과 만들어 둔 초대코드가 지워지고 되돌릴 수 없어요.",
+    "confirmBilling": "구독 중이면 바로 해지되고 더는 청구되지 않아요.",
+    "confirm": "삭제하기",
+    "deleting": "삭제하는 중…",
+    "cancel": "그만두기",
+    "failed": "삭제하지 못했어요. 잠시 뒤 다시 시도해 주세요."
+  },
   "location": {
     "partnerOff": "{nameSubj} 위치공유를 꺼두었어요",
     "turnOnMine": "내 위치공유를 켜면 거리를 볼 수 있어요",
