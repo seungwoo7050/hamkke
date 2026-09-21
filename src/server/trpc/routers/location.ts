@@ -3,8 +3,7 @@ import { z } from "zod";
 import { distanceKm } from "@/lib/geo";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
-import { spaceChannelName } from "@/lib/supabase/channels";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 import { translator } from "@/i18n/server";
@@ -44,11 +43,9 @@ export const locationRouter = router({
         data: { locationSharingEnabled: input.enabled },
       });
 
-      const supabase = createSupabaseServerClient();
-      await supabase.channel(spaceChannelName(ctx.space.id)).send({
-        type: "broadcast",
-        event: "location-sharing",
-        payload: { userId: ctx.session.user.id, enabled: input.enabled },
+      await broadcastToSpace(ctx.space.id, "location-sharing", {
+        userId: ctx.session.user.id,
+        enabled: input.enabled,
       });
 
       return { enabled: input.enabled };
@@ -109,12 +106,7 @@ export const locationRouter = router({
         },
       });
 
-      const supabase = createSupabaseServerClient();
-      await supabase.channel(spaceChannelName(ctx.space.id)).send({
-        type: "broadcast",
-        event: "location",
-        payload: ping,
-      });
+      await broadcastToSpace(ctx.space.id, "location", ping);
 
       await checkGeofenceArrivals(ctx, input);
 

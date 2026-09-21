@@ -7,8 +7,7 @@ import { consumeOrThrow } from "@/server/rate-limit";
 import { chatMessageCheck, uploadUrlCheck } from "@/server/request-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
 import { newUploadKey, verifyUpload } from "@/server/uploads";
-import { spaceChannelName } from "@/lib/supabase/channels";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 
@@ -50,12 +49,7 @@ async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "vo
   });
   const content = await resolveContent(message);
 
-  const supabase = createSupabaseServerClient();
-  await supabase.channel(spaceChannelName(ctx.space.id)).send({
-    type: "broadcast",
-    event: "message",
-    payload: { ...message, content },
-  });
+  await broadcastToSpace(ctx.space.id, "message", { ...message, content });
 
   // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
   await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
@@ -80,12 +74,7 @@ export const chatRouter = router({
         },
       });
 
-      const supabase = createSupabaseServerClient();
-      await supabase.channel(spaceChannelName(ctx.space.id)).send({
-        type: "broadcast",
-        event: "message",
-        payload: message,
-      });
+      await broadcastToSpace(ctx.space.id, "message", message);
 
       // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
       await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, () => ({
@@ -187,11 +176,9 @@ export const chatRouter = router({
       data: { readAt },
     });
 
-    const supabase = createSupabaseServerClient();
-    await supabase.channel(spaceChannelName(ctx.space.id)).send({
-      type: "broadcast",
-      event: "read",
-      payload: { readAt: readAt.toISOString(), readBy: ctx.session.user.id },
+    await broadcastToSpace(ctx.space.id, "read", {
+      readAt: readAt.toISOString(),
+      readBy: ctx.session.user.id,
     });
 
     return { readAt };
