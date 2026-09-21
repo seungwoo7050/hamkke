@@ -22,7 +22,8 @@
     "or": "또는",
     "emailPlaceholder": "이메일 주소",
     "emailSubmit": "이메일로 로그인 링크 받기",
-    "rateLimited": "로그인 링크를 여러 번 요청해서 잠시 막아뒀어요. {minutes}분 뒤에 다시 시도해 주세요."
+    "rateLimited": "로그인 링크를 여러 번 요청해서 잠시 막아뒀어요. {minutes}분 뒤에 다시 시도해 주세요.",
+    "deleted": "계정과 함께 쓰던 공간을 모두 삭제했어요. 그동안 함께해 줘서 고마워요."
   },
   "onboarding": {
     "title": "상대와 연결하기",
@@ -404,7 +405,8 @@
     "voice": "음성 메시지를 보냈어요",
     "geofence": "상대방이 \"{label}\"에 도착했어요",
     "questionAnswered": "{nameSubj} 오늘의 질문에 답했어요",
-    "partnerFallback": "상대방"
+    "partnerFallback": "상대방",
+    "spaceDeleted": "상대가 계정을 삭제해서 함께 쓰던 공간이 정리됐어요."
   },
   "questions": {
     "q001": "오늘 하루 중 가장 나를 생각나게 한 순간은 언제였어?",

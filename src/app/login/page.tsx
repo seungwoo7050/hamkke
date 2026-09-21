@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     redirect("/onboarding");
   }
   const t = await getTranslations("login");
-  const { limited } = await searchParams;
+  const { limited, deleted } = await searchParams;
   const limitedMinutes = typeof limited === "string" ? Number(limited) : NaN;
 
   async function signInWithGoogle() {
@@ -37,6 +37,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="flex flex-1 flex-col justify-center gap-8 px-6 py-16">
       <Wordmark className="mx-auto" />
+      {deleted === "1" && (
+        <p role="status" className="bg-muted text-foreground rounded-lg px-4 py-3 text-sm">
+          {t("deleted")}
+        </p>
+      )}
       <div className="flex flex-col gap-3">
         <h1 className="text-foreground text-3xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground max-w-sm">{t("description")}</p>

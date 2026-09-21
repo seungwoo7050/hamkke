@@ -22,7 +22,8 @@
     "or": "or",
     "emailPlaceholder": "Email address",
     "emailSubmit": "Email me a sign-in link",
-    "rateLimited": "You've asked for a lot of sign-in links, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}."
+    "rateLimited": "You've asked for a lot of sign-in links, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+    "deleted": "Your account and your shared space have been deleted. Thanks for being here."
   },
   "onboarding": {
     "title": "Connect with your person",
@@ -404,7 +405,8 @@
     "voice": "Sent a voice message",
     "geofence": "Your person just got to \"{label}\"",
     "questionAnswered": "{name} answered today's question",
-    "partnerFallback": "Your person"
+    "partnerFallback": "Your person",
+    "spaceDeleted": "Your partner deleted their account, so your shared space has been cleared."
   },
   "questions": {
     "q001": "What moment today made you think of me most?",

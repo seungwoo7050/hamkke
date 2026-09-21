@@ -2,8 +2,10 @@ import "server-only";
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -85,4 +87,29 @@ export async function promoteUpload(pendingKey: string, finalKey: string) {
     new CopyObjectCommand({ Bucket, Key: finalKey, CopySource: `${Bucket}/${pendingKey}` }),
   );
   await client.send(new DeleteObjectCommand({ Bucket, Key: pendingKey }));
+}
+
+/** 접두사 아래 파일을 전부 지운다(목록 1000개씩 받아 일괄 삭제). 지운 개수를 돌려준다. */
+export async function deletePrefix(prefix: string) {
+  const client = createR2Client();
+  const Bucket = process.env.R2_BUCKET_NAME;
+  let deleted = 0;
+  let ContinuationToken: string | undefined;
+  do {
+    const page = await client.send(
+      new ListObjectsV2Command({ Bucket, Prefix: prefix, ContinuationToken }),
+    );
+    const keys = (page.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []));
+    if (keys.length > 0) {
+      const res = await client.send(
+        new DeleteObjectsCommand({ Bucket, Delete: { Objects: keys, Quiet: true } }),
+      );
+      if (res.Errors?.length) {
+        throw new Error(`R2 삭제 실패: ${res.Errors.map((e) => e.Key).join(", ")}`);
+      }
+      deleted += keys.length;
+    }
+    ContinuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (ContinuationToken);
+  return deleted;
 }
