@@ -88,6 +88,7 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 4. Google OAuth 리디렉션 URI와 Resend 발신 도메인을 운영 도메인으로 바꾼다.
 5. `capacitor.config.ts`의 `server.url`을 운영 도메인(https)으로 바꾸고 `cleartext`를 끈 뒤 Android를 다시 빌드한다.
 6. Cloudflare 대시보드 → R2 → 버킷 → Settings → Object lifecycle rules에 **접두사 `pending/`, 업로드 1일 뒤 삭제** 규칙을 추가한다. 업로드 주소만 받고 등록하지 않은 파일이 여기서 지워진다(앱의 R2 키는 버킷 설정 권한이 없어 코드로 넣지 않는다).
+7. Google Play Console → 앱 콘텐츠 → 데이터 보안의 계정 삭제 URL에 `https://<도메인>/account/delete`를 등록한다(앱 밖에서도 삭제를 요청할 수 있어야 한다는 Play 요건).
 
 ## 폴더
 

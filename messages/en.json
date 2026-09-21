@@ -276,6 +276,19 @@
     "cancel": "Keep my account",
     "failed": "Couldn't delete your account. Please try again in a bit."
   },
+  "accountPage": {
+    "title": "Delete your Hamkke account",
+    "intro": "Here's how to delete your Hamkke account and data. Deletion happens right away and can't be undone.",
+    "howTitle": "How to delete",
+    "step1": "Sign in to Hamkke.",
+    "step2": "Tap your photo in the top right to open Settings.",
+    "step3": "Tap \"Delete account\" at the bottom and confirm. If you're already signed in, you can also delete it below.",
+    "deletedTitle": "What gets deleted",
+    "deletedBody": "Your account (name, email and sign-in details) and everything in the space you share — chats, photos, voice messages, plans, anniversaries, capsules, location history and flights — for both of you. If you're subscribed, it's canceled right away and you won't be charged again. Your partner's account stays, so they can connect again.",
+    "keptTitle": "What we keep",
+    "keptBody": "Payment records such as receipts are kept by our payment provider (Stripe) for the period the law requires. We don't keep anything else.",
+    "signIn": "Sign in to delete"
+  },
   "location": {
     "partnerOff": "{name} has location sharing off",
     "turnOnMine": "Turn on your location sharing to see the distance",
