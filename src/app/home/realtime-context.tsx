@@ -25,9 +25,12 @@ const RealtimeContext = createContext<SpaceRealtime | null>(null);
 // 옮길 수 없었다.
 export function SpaceRealtimeProvider({
   spaceId,
+  privateChannel,
   children,
 }: {
   spaceId: string;
+  /** private 채널 전환 여부(서버에 Realtime 서명 키가 있는지, src/server/realtime-token.ts). */
+  privateChannel: boolean;
   children: React.ReactNode;
 }) {
   const handlers = useRef(new Map<string, Set<Handler>>());
@@ -37,7 +40,7 @@ export function SpaceRealtimeProvider({
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase
-      .channel(spaceChannelName(spaceId))
+      .channel(spaceChannelName(spaceId), { config: { private: privateChannel } })
       .on("broadcast", { event: "*" }, (msg) => {
         handlers.current.get(msg.event)?.forEach((handler) => handler(msg.payload));
       })
@@ -49,7 +52,7 @@ export function SpaceRealtimeProvider({
       setConnected(false);
       void supabase.removeChannel(channel);
     };
-  }, [spaceId]);
+  }, [spaceId, privateChannel]);
 
   const [value] = useState<Omit<SpaceRealtime, "connected">>(() => ({
     send: (event, payload) => {
