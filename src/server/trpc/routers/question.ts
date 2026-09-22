@@ -10,8 +10,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { josa } from "@/lib/josa";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
-import { spaceChannelName } from "@/lib/supabase/channels";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -69,11 +68,9 @@ export const questionRouter = router({
 
       // 상대 화면의 "오늘의 질문" 카드가 바로 "답했어요"로 바뀌게 알린다(내용은
       // 싣지 않는다 — 상대 답은 상대가 먼저 답해야 열린다, PRD §3.2).
-      const supabase = createSupabaseServerClient();
-      await supabase.channel(spaceChannelName(ctx.space.id)).send({
-        type: "broadcast",
-        event: "question-answered",
-        payload: { userId: ctx.session.user.id, dateKey },
+      await broadcastToSpace(ctx.space.id, "question-answered", {
+        userId: ctx.session.user.id,
+        dateKey,
       });
 
       // 질문 답변 알림(PRD §3.6). 알림 실패가 답변 저장을 막으면 안 되므로 삼킨다.

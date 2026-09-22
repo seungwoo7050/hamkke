@@ -13,10 +13,12 @@ const PresenceContext = createContext(false);
 export function PresenceProvider({
   spaceId,
   currentUserId,
+  privateChannel,
   children,
 }: {
   spaceId: string;
   currentUserId: string;
+  privateChannel: boolean;
   children: React.ReactNode;
 }) {
   const [partnerPresent, setPartnerPresent] = useState(false);
@@ -24,7 +26,7 @@ export function PresenceProvider({
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase.channel(spacePresenceChannelName(spaceId), {
-      config: { presence: { key: currentUserId } },
+      config: { presence: { key: currentUserId }, private: privateChannel },
     });
 
     const sync = () =>
@@ -43,7 +45,7 @@ export function PresenceProvider({
       document.removeEventListener("visibilitychange", trackVisibility);
       void supabase.removeChannel(channel);
     };
-  }, [spaceId, currentUserId]);
+  }, [spaceId, currentUserId, privateChannel]);
 
   return <PresenceContext.Provider value={partnerPresent}>{children}</PresenceContext.Provider>;
 }

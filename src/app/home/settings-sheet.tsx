@@ -14,6 +14,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { signOutAction } from "./actions";
 import { BillingSection } from "./billing-section";
+import { DeleteAccountSection } from "./delete-account-section";
 import { GeofenceManager } from "./geofence-manager";
 import { LanguageSection } from "./language-section";
 import { useLocationSharing } from "./location-context";
@@ -69,6 +70,9 @@ export function SettingsSheet() {
                 <LogOut className="size-5" /> {t("signOut")}
               </Button>
             </form>
+            <div className="pb-2">
+              <DeleteAccountSection partnerName={summary.partner ? partnerName : undefined} />
+            </div>
           </div>
         </div>
       </DrawerContent>

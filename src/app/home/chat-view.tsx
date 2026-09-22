@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { TRPCClientError } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import { ArrowUp, Heart, ImagePlus, Mic, Square } from "lucide-react";
 import { cn } from "cn";
@@ -15,6 +16,7 @@ import { useFormat } from "@/i18n/use-format";
 import { groupPositions } from "@/lib/chat-grouping";
 import { daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limits";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
@@ -203,6 +205,10 @@ export function ChatView({
         setMessages((prev) => mergeById(prev, [message]));
         setDraft("");
       },
+      // 보내기 횟수 한도에 걸리면 남은 시간을 안내한다(입력한 글은 그대로 남는다).
+      onError: (err) => {
+        if (err.data?.code === "TOO_MANY_REQUESTS") toast.error(err.message);
+      },
     }),
   );
 
@@ -232,10 +238,16 @@ export function ChatView({
       return;
     }
 
+    if (file.size > MAX_UPLOAD_BYTES.image) {
+      toast.error(t("imageTooLarge", { mb: MAX_UPLOAD_MB.image }));
+      return;
+    }
+
     setUploadingImage(true);
     try {
       const { uploadUrl, key } = await createImageUploadUrlMutation.mutateAsync({
         contentType: file.type as AllowedImageType,
+        size: file.size,
       });
       const res = await fetch(uploadUrl, {
         method: "PUT",
@@ -244,8 +256,9 @@ export function ChatView({
       });
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendImageMutation.mutateAsync({ key });
-    } catch {
-      toast.error(t("imageFailed"));
+    } catch (err) {
+      // 저장 공간 한도 같은 서버 안내는 그대로, 업로드 자체의 실패는 사람이 읽을 문구로.
+      toast.error(err instanceof TRPCClientError ? err.message : t("imageFailed"));
     } finally {
       setUploadingImage(false);
     }
@@ -263,13 +276,20 @@ export function ChatView({
   const [uploadingVoice, setUploadingVoice] = useState(false);
 
   async function handleVoiceRecorded(blob: Blob) {
+    if (blob.size > MAX_UPLOAD_BYTES.voice) {
+      toast.error(t("voiceTooLarge"));
+      return;
+    }
     setUploadingVoice(true);
     try {
       const contentType = blob.type.split(";")[0] as AllowedAudioType;
       if (!ALLOWED_AUDIO_TYPES.includes(contentType)) {
         throw new Error(`지원하지 않는 오디오 형식: ${blob.type}`);
       }
-      const { uploadUrl, key } = await createVoiceUploadUrlMutation.mutateAsync({ contentType });
+      const { uploadUrl, key } = await createVoiceUploadUrlMutation.mutateAsync({
+        contentType,
+        size: blob.size,
+      });
       const res = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": contentType },
@@ -277,8 +297,8 @@ export function ChatView({
       });
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
       await sendVoiceMutation.mutateAsync({ key });
-    } catch {
-      toast.error(t("voiceFailed"));
+    } catch (err) {
+      toast.error(err instanceof TRPCClientError ? err.message : t("voiceFailed"));
     } finally {
       setUploadingVoice(false);
     }

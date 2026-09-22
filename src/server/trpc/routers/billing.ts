@@ -2,6 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
+import { consumeOrThrow } from "@/server/rate-limit";
+import { billingSessionCheck } from "@/server/request-limits";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -45,41 +47,68 @@ export const billingRouter = router({
     };
   }),
 
+  // 이중 구독 방지: 두 사람이 동시에 누르거나 결제 화면을 여러 번 열어도
+  // 스페이스당 Customer 하나, 열린 Checkout 세션 하나만 쓴다 — 같은 세션은 한
+  // 번만 결제할 수 있다. 스페이스 단위 잠금으로 확인과 생성을 직렬화한다.
   createCheckoutSession: spaceProcedure.mutation(async ({ ctx }) => {
-    const existing = await prisma.subscription.findUnique({ where: { spaceId: ctx.space.id } });
-    if (existing?.status === "active") {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: translator(ctx.locale)("errors.alreadySubscribed"),
-      });
-    }
+    await consumeOrThrow(billingSessionCheck(ctx.session.user.id), ctx.locale);
+    const spaceId = ctx.space.id;
+    return prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`checkout:${spaceId}`}))`;
 
-    // 과거에 만든 적 있는 Customer가 있으면 재사용(취소 후 재구독 시나리오).
-    const customerId =
-      existing?.stripeCustomerId ??
-      (
-        await stripe.customers.create({
-          email: ctx.session.user.email ?? undefined,
-          metadata: { spaceId: ctx.space.id },
-        })
-      ).id;
+        const [space, existing] = await Promise.all([
+          tx.space.findUniqueOrThrow({ where: { id: spaceId } }),
+          tx.subscription.findUnique({ where: { spaceId } }),
+        ]);
+        if (existing?.status === "active") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: translator(ctx.locale)("errors.alreadySubscribed"),
+          });
+        }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID!, quantity: 1 }],
-      success_url: `${ctx.baseUrl}/home?checkout=success`,
-      cancel_url: `${ctx.baseUrl}/home?checkout=cancel`,
-      subscription_data: { metadata: { spaceId: ctx.space.id } },
-      metadata: { spaceId: ctx.space.id },
-    });
+        // 과거에 만든 Customer가 있으면 재사용(취소 후 재구독 시나리오 포함).
+        let customerId = space.stripeCustomerId ?? existing?.stripeCustomerId;
+        if (!customerId) {
+          customerId = (
+            await stripe.customers.create({
+              email: ctx.session.user.email ?? undefined,
+              metadata: { spaceId },
+            })
+          ).id;
+        }
+        if (space.stripeCustomerId !== customerId) {
+          await tx.space.update({ where: { id: spaceId }, data: { stripeCustomerId: customerId } });
+        }
 
-    return { url: session.url! };
+        const open = await stripe.checkout.sessions.list({ customer: customerId, status: "open" });
+        const reusable = open.data.find(
+          (s) => s.mode === "subscription" && s.metadata?.spaceId === spaceId && s.url,
+        );
+        if (reusable) return { url: reusable.url! };
+
+        const session = await stripe.checkout.sessions.create({
+          mode: "subscription",
+          customer: customerId,
+          line_items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID!, quantity: 1 }],
+          success_url: `${ctx.baseUrl}/home?checkout=success`,
+          cancel_url: `${ctx.baseUrl}/home?checkout=cancel`,
+          subscription_data: { metadata: { spaceId } },
+          metadata: { spaceId },
+        });
+
+        return { url: session.url! };
+      },
+      // 잠금을 쥔 채 Stripe를 두세 번 부르므로 기본 5초보다 넉넉하게.
+      { timeout: 20_000, maxWait: 20_000 },
+    );
   }),
 
   // 해지/결제수단 변경은 자체 UI로 구현하지 않고 Stripe Customer Portal로
   // 위임한다(ARCHITECTURE.md §6).
   createPortalSession: spaceProcedure.mutation(async ({ ctx }) => {
+    await consumeOrThrow(billingSessionCheck(ctx.session.user.id), ctx.locale);
     const subscription = await prisma.subscription.findUnique({
       where: { spaceId: ctx.space.id },
     });

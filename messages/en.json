@@ -21,7 +21,9 @@
     "google": "Continue with Google",
     "or": "or",
     "emailPlaceholder": "Email address",
-    "emailSubmit": "Email me a sign-in link"
+    "emailSubmit": "Email me a sign-in link",
+    "rateLimited": "You've asked for a lot of sign-in links, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+    "deleted": "Your account and your shared space have been deleted. Thanks for being here."
   },
   "onboarding": {
     "title": "Connect with your person",
@@ -144,6 +146,8 @@
   "chat": {
     "imageTypes": "You can send JPG, PNG, WebP or GIF images",
     "imageFailed": "Couldn't send the photo",
+    "imageTooLarge": "Photos can be up to {mb} MB",
+    "voiceTooLarge": "That voice message is too long — try sending it in shorter parts",
     "voiceFailed": "Couldn't send the voice message",
     "micPermission": "Hamkke needs microphone access for that",
     "empty": "Nothing here yet. Say hi.",
@@ -235,6 +239,7 @@
     "delete": "Delete photo",
     "imageTypes": "You can upload JPG, PNG, WebP or GIF images",
     "uploadFailed": "Couldn't upload the photo",
+    "imageTooLarge": "Photos can be up to {mb} MB",
     "captionPlaceholder": "Add a caption (optional)",
     "uploading": "Uploading…",
     "choose": "Choose a photo"
@@ -259,6 +264,30 @@
     "language": "Language",
     "languageSub": "Only changes the app for you — {name} keeps theirs",
     "languageFailed": "Couldn't change the language"
+  },
+  "account": {
+    "delete": "Delete account",
+    "confirmTitle": "Delete your account?",
+    "confirmBodyPaired": "Your chats, photos and memories will be deleted for both of you, and this can't be undone. {name}'s account stays, so they can connect again.",
+    "confirmBody": "Your account and any invite code you made will be deleted. This can't be undone.",
+    "confirmBilling": "If you're subscribed, it's canceled right away and you won't be charged again.",
+    "confirm": "Delete",
+    "deleting": "Deleting…",
+    "cancel": "Keep my account",
+    "failed": "Couldn't delete your account. Please try again in a bit."
+  },
+  "accountPage": {
+    "title": "Delete your Hamkke account",
+    "intro": "Here's how to delete your Hamkke account and data. Deletion happens right away and can't be undone.",
+    "howTitle": "How to delete",
+    "step1": "Sign in to Hamkke.",
+    "step2": "Tap your photo in the top right to open Settings.",
+    "step3": "Tap \"Delete account\" at the bottom and confirm. If you're already signed in, you can also delete it below.",
+    "deletedTitle": "What gets deleted",
+    "deletedBody": "Your account (name, email and sign-in details) and everything in the space you share — chats, photos, voice messages, plans, anniversaries, capsules, location history and flights — for both of you. If you're subscribed, it's canceled right away and you won't be charged again. Your partner's account stays, so they can connect again.",
+    "keptTitle": "What we keep",
+    "keptBody": "Payment records such as receipts are kept by our payment provider (Stripe) for the period the law requires. We don't keep anything else.",
+    "signIn": "Sign in to delete"
   },
   "location": {
     "partnerOff": "{name} has location sharing off",
@@ -373,6 +402,11 @@
     "inviteExpired": "That invite code has expired.",
     "inviteRateLimited": "Too many wrong tries, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "questionAnswered": "You've already answered today's question.",
+    "uploadNotFound": "The file didn't finish uploading. Please try again.",
+    "storageLimitFree": "You've used all {gb} GB of storage. Delete some older photos, or upgrade to Premium for more room.",
+    "storageLimitPremium": "You've used all {gb} GB of storage. Delete some older photos to make room.",
+    "rateLimitedSeconds": "You're going a little fast. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+    "rateLimitedMinutes": "That's a lot of requests, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "momentLimit": "The free plan holds up to {limit} photos. Go Premium for unlimited.",
     "capsuleLimit": "The free plan holds up to {limit} scheduled letters. Go Premium for unlimited.",
     "capsuleOneWhen": "Pick just one time for it to open",
@@ -395,7 +429,8 @@
     "voice": "Sent a voice message",
     "geofence": "Your person just got to \"{label}\"",
     "questionAnswered": "{name} answered today's question",
-    "partnerFallback": "Your person"
+    "partnerFallback": "Your person",
+    "spaceDeleted": "Your partner deleted their account, so your shared space has been cleared."
   },
   "questions": {
     "q001": "What moment today made you think of me most?",

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getCurrentPairingStatus } from "@/server/pairing/current-status";
+import { isPrivateRealtimeEnabled } from "@/server/realtime-token";
 import { createTRPCContext } from "@/server/trpc/context";
 import { createCallerFactory } from "@/server/trpc/init";
 import { appRouter } from "@/server/trpc/routers/_app";
@@ -34,15 +35,22 @@ export default async function HomeLayout({ children }: LayoutProps<"/home">) {
     caller.location.partnerStatus(),
   ]);
 
+  // Realtime private 채널 전환 여부 — 서버에 서명 키가 있을 때만(없으면 공개 채널).
+  const privateChannel = isPrivateRealtimeEnabled();
+
   return (
     <SpaceProvider value={{ spaceId: status.spaceId, currentUserId: session.user.id, summary }}>
-      <SpaceRealtimeProvider spaceId={status.spaceId}>
+      <SpaceRealtimeProvider spaceId={status.spaceId} privateChannel={privateChannel}>
         <LocationProvider
           currentUserId={session.user.id}
           initialSharing={summary.me.locationSharingEnabled}
           initialPartnerStatus={partnerStatus}
         >
-          <PresenceProvider spaceId={status.spaceId} currentUserId={session.user.id}>
+          <PresenceProvider
+            spaceId={status.spaceId}
+            currentUserId={session.user.id}
+            privateChannel={privateChannel}
+          >
             <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
               <AppEffects currentUserId={session.user.id} />
               <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>

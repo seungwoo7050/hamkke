@@ -21,7 +21,8 @@ export function BillingSection() {
       onSuccess: ({ url }) => {
         window.location.assign(url);
       },
-      onError: () => toast.error(t("checkoutFailed")),
+      onError: (err) =>
+        toast.error(err.data?.code === "TOO_MANY_REQUESTS" ? err.message : t("checkoutFailed")),
     }),
   );
   const portalMutation = useMutation(
@@ -29,7 +30,8 @@ export function BillingSection() {
       onSuccess: ({ url }) => {
         window.location.assign(url);
       },
-      onError: () => toast.error(t("portalFailed")),
+      onError: (err) =>
+        toast.error(err.data?.code === "TOO_MANY_REQUESTS" ? err.message : t("portalFailed")),
     }),
   );
 

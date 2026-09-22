@@ -4,6 +4,8 @@ import superjson from "superjson";
 import { prisma } from "@/lib/prisma";
 import type { TRPCContext } from "./context";
 import { translator } from "@/i18n/server";
+import { consumeOrThrow } from "@/server/rate-limit";
+import { anyMutationCheck } from "@/server/request-limits";
 
 const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
@@ -13,10 +15,16 @@ export const createCallerFactory = t.createCallerFactory;
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
-/** 로그인만 요구한다 — 아직 Space가 없는 사용자도 통과(페어링 절차 자체가 이걸 씀). */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+/**
+ * 로그인만 요구한다 — 아직 Space가 없는 사용자도 통과(페어링 절차 자체가 이걸 씀).
+ * 변경 요청(mutation)은 사용자별 전체 상한을 한 번 센다(src/server/request-limits.ts).
+ */
+export const protectedProcedure = t.procedure.use(async ({ ctx, type, next }) => {
   if (!ctx.session?.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  if (type === "mutation") {
+    await consumeOrThrow(anyMutationCheck(ctx.session.user.id), ctx.locale);
   }
   return next({
     ctx: {

@@ -46,6 +46,7 @@ describe("touch 라우터 (통합)", () => {
   });
 
   afterEach(async () => {
+    await prisma.rateLimitHit.deleteMany({ where: { subject: { in: [userAId, userBId] } } });
     await prisma.touch.deleteMany({ where: { spaceId } });
     await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
     await prisma.space.delete({ where: { id: spaceId } });
@@ -105,5 +106,15 @@ describe("touch 라우터 (통합)", () => {
 
     const list = await (await callerFor(userAId)).touch.list({ since });
     expect(list.map((t) => t.id)).toEqual([b.id, a.id]);
+  });
+
+  it("변경 요청이 10분에 600번을 넘으면 개별 한도가 없는 쓰기도 막고, 조회는 막지 않는다", async () => {
+    await prisma.rateLimitHit.createMany({
+      data: Array.from({ length: 600 }, () => ({ bucket: "mutation", subject: userAId })),
+    });
+    const caller = await callerFor(userAId);
+    await expect(caller.touch.send()).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+    expect(await prisma.touch.count({ where: { spaceId } })).toBe(0);
+    await expect(caller.touch.latest()).resolves.toBeNull();
   });
 });

@@ -42,6 +42,7 @@ describe("billing 라우터 (통합)", () => {
   });
 
   afterEach(async () => {
+    await prisma.rateLimitHit.deleteMany({ where: { subject: userAId } });
     await Promise.all(createdCustomerIds.map((id) => stripe.customers.del(id)));
     createdCustomerIds.length = 0;
     await prisma.subscription.deleteMany({ where: { spaceId } });
@@ -61,6 +62,39 @@ describe("billing 라우터 (통합)", () => {
     const sessionId = new URL(url).pathname.split("/").pop()!.split("#")[0];
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     createdCustomerIds.push(session.customer as string);
+  });
+
+  it("두 사람이 동시에 결제를 시작해도 같은 Customer의 같은 Checkout 세션을 받는다", async () => {
+    const b = await prisma.user.create({
+      data: { email: `test-billing-b-${randomUUID()}@example.com`, spaceId },
+    });
+    try {
+      const [callerA, callerB] = await Promise.all([callerFor(userAId), callerFor(b.id)]);
+      const [first, second] = await Promise.all([
+        callerA.billing.createCheckoutSession(),
+        callerB.billing.createCheckoutSession(),
+      ]);
+
+      const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
+      if (space.stripeCustomerId) createdCustomerIds.push(space.stripeCustomerId);
+
+      expect(second.url).toBe(first.url);
+      const sessionId = new URL(first.url).pathname.split("/").pop()!.split("#")[0];
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      expect(session.customer).toBe(space.stripeCustomerId);
+    } finally {
+      await prisma.user.delete({ where: { id: b.id } });
+    }
+  });
+
+  it("결제 화면을 다시 열면 아직 열려 있는 세션을 재사용한다", async () => {
+    const caller = await callerFor(userAId);
+    const first = await caller.billing.createCheckoutSession();
+    const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
+    createdCustomerIds.push(space.stripeCustomerId!);
+
+    const again = await caller.billing.createCheckoutSession();
+    expect(again.url).toBe(first.url);
   });
 
   it("이미 활성 구독이 있으면 새 Checkout Session을 만들 수 없다", async () => {
@@ -120,5 +154,18 @@ describe("billing 라우터 (통합)", () => {
     } finally {
       await prisma.user.delete({ where: { id: outsider.id } });
     }
+  });
+
+  it("결제·구독 관리 화면은 합쳐서 1시간에 10번까지만 연다", async () => {
+    await prisma.rateLimitHit.createMany({
+      data: Array.from({ length: 10 }, () => ({ bucket: "billing.session", subject: userAId })),
+    });
+    const caller = await callerFor(userAId);
+    await expect(caller.billing.createCheckoutSession()).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
+    await expect(caller.billing.createPortalSession()).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
   });
 });

@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { POST } from "./route";
 
@@ -143,4 +144,118 @@ describe("POST /api/webhooks/stripe", () => {
     });
     expect(stored?.status).toBe("canceled");
   });
+
+  it("해지 후 재구독하면(새 구독 ID) 같은 스페이스의 Subscription이 새 구독으로 바뀐다", async () => {
+    const customerId = `cus_test_${randomUUID()}`;
+    const oldId = `sub_test_${randomUUID()}`;
+    const newId = `sub_test_${randomUUID()}`;
+    await postSignedEvent(
+      subscriptionEvent("customer.subscription.created", {
+        id: oldId,
+        customer: customerId,
+        metadata: { spaceId },
+      }),
+    );
+    await postSignedEvent(
+      subscriptionEvent("customer.subscription.deleted", {
+        id: oldId,
+        customer: customerId,
+        metadata: { spaceId },
+        status: "canceled",
+      }),
+    );
+
+    const res = await postSignedEvent(
+      subscriptionEvent("customer.subscription.created", {
+        id: newId,
+        customer: customerId,
+        metadata: { spaceId },
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const stored = await prisma.subscription.findUnique({ where: { spaceId } });
+    expect(stored?.stripeSubscriptionId).toBe(newId);
+    expect(stored?.status).toBe("active");
+  });
+
+  it("지난 구독의 늦게 도착한 이벤트는 새 활성 구독을 덮어쓰지 않는다", async () => {
+    const customerId = `cus_test_${randomUUID()}`;
+    const oldId = `sub_test_${randomUUID()}`;
+    const newId = `sub_test_${randomUUID()}`;
+    await postSignedEvent(
+      subscriptionEvent("customer.subscription.created", {
+        id: newId,
+        customer: customerId,
+        metadata: { spaceId },
+      }),
+    );
+
+    const res = await postSignedEvent(
+      subscriptionEvent("customer.subscription.deleted", {
+        id: oldId,
+        customer: customerId,
+        metadata: { spaceId },
+        status: "canceled",
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const stored = await prisma.subscription.findUnique({ where: { spaceId } });
+    expect(stored?.stripeSubscriptionId).toBe(newId);
+    expect(stored?.status).toBe("active");
+  });
+
+  // 실제 Stripe(테스트 모드)에 결제된 구독 두 개를 만들어 중복 상황을 재현한다.
+  it("활성 구독이 있는 스페이스에 두 번째 활성 구독이 들어오면 그 구독을 해지하고 환불한다", async () => {
+    const customer = await stripe.customers.create({
+      payment_method: "pm_card_visa",
+      invoice_settings: { default_payment_method: "pm_card_visa" },
+    });
+    try {
+      const create = () =>
+        stripe.subscriptions.create({
+          customer: customer.id,
+          items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID! }],
+          metadata: { spaceId },
+        });
+      const kept = await create();
+      const duplicate = await create();
+      expect([kept.status, duplicate.status]).toEqual(["active", "active"]);
+
+      await postSignedEvent({
+        ...subscriptionEvent("customer.subscription.created"),
+        data: { object: kept },
+      });
+      const res = await postSignedEvent({
+        ...subscriptionEvent("customer.subscription.created"),
+        data: { object: duplicate },
+      });
+      expect(res.status).toBe(200);
+
+      const stored = await prisma.subscription.findUnique({ where: { spaceId } });
+      expect(stored?.stripeSubscriptionId).toBe(kept.id);
+      expect(stored?.status).toBe("active");
+
+      expect((await stripe.subscriptions.retrieve(kept.id)).status).toBe("active");
+      expect((await stripe.subscriptions.retrieve(duplicate.id)).status).toBe("canceled");
+
+      const payments = await stripe.invoicePayments.list({
+        invoice: duplicate.latest_invoice as string,
+        expand: ["data.payment.payment_intent.latest_charge"],
+      });
+      const intent = payments.data[0].payment.payment_intent as Stripe.PaymentIntent;
+      const charge = intent.latest_charge as Stripe.Charge;
+      expect(charge.refunded).toBe(true);
+
+      // 같은 이벤트가 재전송돼도(웹훅 재시도) 오류 없이 넘어간다.
+      const retry = await postSignedEvent({
+        ...subscriptionEvent("customer.subscription.updated"),
+        data: { object: duplicate },
+      });
+      expect(retry.status).toBe(200);
+    } finally {
+      await stripe.customers.del(customer.id);
+    }
+  }, 60_000);
 });

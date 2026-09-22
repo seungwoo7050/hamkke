@@ -1,10 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
-import { createDownloadUrl, createUploadUrl } from "@/lib/r2";
-import { spaceChannelName } from "@/lib/supabase/channels";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDownloadUrl, createUploadUrl, promoteUpload } from "@/lib/r2";
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { consumeOrThrow } from "@/server/rate-limit";
+import { chatMessageCheck, uploadUrlCheck } from "@/server/request-limits";
+import { assertStorageAvailable } from "@/server/storage-quota";
+import { newUploadKey, verifyUpload } from "@/server/uploads";
+import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 
@@ -19,20 +22,34 @@ async function resolveContent(message: { type: string; content: string }) {
   return createDownloadUrl(message.content);
 }
 
-type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
+type SpaceCtx = {
+  space: { id: string };
+  session: NonNullable<TRPCContext["session"]>;
+  locale: TRPCContext["locale"];
+};
 
 async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
+  const { size, finalKey } = await verifyUpload(key, {
+    folder: "messages",
+    spaceId: ctx.space.id,
+    allowedTypes: type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES,
+    locale: ctx.locale,
+  });
+  await assertStorageAvailable(ctx.space.id, size, ctx.locale);
+  await promoteUpload(key, finalKey);
+
   const message = await prisma.message.create({
-    data: { spaceId: ctx.space.id, senderId: ctx.session.user.id, type, content: key },
+    data: {
+      spaceId: ctx.space.id,
+      senderId: ctx.session.user.id,
+      type,
+      content: finalKey,
+      mediaSize: size,
+    },
   });
   const content = await resolveContent(message);
 
-  const supabase = createSupabaseServerClient();
-  await supabase.channel(spaceChannelName(ctx.space.id)).send({
-    type: "broadcast",
-    event: "message",
-    payload: { ...message, content },
-  });
+  await broadcastToSpace(ctx.space.id, "message", { ...message, content });
 
   // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
   await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
@@ -47,6 +64,7 @@ export const chatRouter = router({
   send: spaceProcedure
     .input(z.object({ content: z.string().min(1).max(4000) }))
     .mutation(async ({ ctx, input }) => {
+      await consumeOrThrow(chatMessageCheck(ctx.session.user.id), ctx.locale);
       const message = await prisma.message.create({
         data: {
           spaceId: ctx.space.id,
@@ -56,12 +74,7 @@ export const chatRouter = router({
         },
       });
 
-      const supabase = createSupabaseServerClient();
-      await supabase.channel(spaceChannelName(ctx.space.id)).send({
-        type: "broadcast",
-        event: "message",
-        payload: message,
-      });
+      await broadcastToSpace(ctx.space.id, "message", message);
 
       // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
       await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, () => ({
@@ -75,10 +88,17 @@ export const chatRouter = router({
   // R2에 직접 업로드할 presigned PUT URL 발급. 서버는 파일 바이트를
   // 거치지 않는다 — 클라이언트가 이 URL로 R2에 바로 PUT한다.
   createImageUploadUrl: spaceProcedure
-    .input(z.object({ contentType: z.enum(ALLOWED_IMAGE_TYPES) }))
+    .input(
+      z.object({
+        contentType: z.enum(ALLOWED_IMAGE_TYPES),
+        size: z.number().int().positive().max(MAX_UPLOAD_BYTES.image),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      const key = `messages/${ctx.space.id}/${randomUUID()}`;
-      const uploadUrl = await createUploadUrl(key, input.contentType);
+      await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
+      await consumeOrThrow(uploadUrlCheck(ctx.session.user.id), ctx.locale);
+      const key = newUploadKey("messages", ctx.space.id);
+      const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
     }),
 
@@ -87,10 +107,17 @@ export const chatRouter = router({
     .mutation(({ ctx, input }) => createAndBroadcastMediaMessage(ctx, "image", input.key)),
 
   createVoiceUploadUrl: spaceProcedure
-    .input(z.object({ contentType: z.enum(ALLOWED_AUDIO_TYPES) }))
+    .input(
+      z.object({
+        contentType: z.enum(ALLOWED_AUDIO_TYPES),
+        size: z.number().int().positive().max(MAX_UPLOAD_BYTES.voice),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      const key = `messages/${ctx.space.id}/${randomUUID()}`;
-      const uploadUrl = await createUploadUrl(key, input.contentType);
+      await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
+      await consumeOrThrow(uploadUrlCheck(ctx.session.user.id), ctx.locale);
+      const key = newUploadKey("messages", ctx.space.id);
+      const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
       return { uploadUrl, key };
     }),
 
@@ -149,11 +176,9 @@ export const chatRouter = router({
       data: { readAt },
     });
 
-    const supabase = createSupabaseServerClient();
-    await supabase.channel(spaceChannelName(ctx.space.id)).send({
-      type: "broadcast",
-      event: "read",
-      payload: { readAt: readAt.toISOString(), readBy: ctx.session.user.id },
+    await broadcastToSpace(ctx.space.id, "read", {
+      readAt: readAt.toISOString(),
+      readBy: ctx.session.user.id,
     });
 
     return { readAt };

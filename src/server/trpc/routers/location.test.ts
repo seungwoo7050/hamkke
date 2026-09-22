@@ -44,7 +44,16 @@ describe("location 라우터 (통합)", () => {
     await prisma.user.updateMany({ where: { id: { in: [userAId, userBId] } }, data: { spaceId } });
   });
 
+  // 서버 빈도 제한(10초에 한 번)이 지난 것처럼 기록 시각을 과거로 돌린다.
+  async function afterThrottle(userId: string) {
+    await prisma.rateLimitHit.updateMany({
+      where: { bucket: "location.send", subject: userId },
+      data: { createdAt: new Date(Date.now() - 60_000) },
+    });
+  }
+
   afterEach(async () => {
+    await prisma.rateLimitHit.deleteMany({ where: { subject: { in: [userAId, userBId] } } });
     await prisma.geofence.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.locationPing.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
@@ -107,6 +116,7 @@ describe("location 라우터 (통합)", () => {
     );
 
     // 반경 안(거의 같은 좌표) → 진입으로 전이.
+    await afterThrottle(userAId);
     await caller.location.send({ lat: 37.5666, lng: 126.9781 });
     expect((await prisma.geofence.findUniqueOrThrow({ where: { id: fence.id } })).isInside).toBe(
       true,
@@ -125,5 +135,41 @@ describe("location 라우터 (통합)", () => {
     } finally {
       await prisma.user.delete({ where: { id: outsider.id } });
     }
+  });
+
+  it("10초 안에 다시 보내면 저장·지오펜스 확인 없이 마지막 위치를 돌려준다", async () => {
+    const caller = await callerFor(userAId);
+    await caller.location.setSharing({ enabled: true });
+    const fence = await caller.geofence.create({
+      label: "집",
+      lat: 37.5665,
+      lng: 126.978,
+      radiusM: 500,
+    });
+
+    const first = await caller.location.send({ lat: 35.1796, lng: 129.0756 });
+    const second = await caller.location.send({ lat: 37.5666, lng: 126.9781 });
+
+    expect(second.id).toBe(first.id);
+    expect(await prisma.locationPing.count({ where: { userId: userAId } })).toBe(1);
+    expect((await prisma.geofence.findUniqueOrThrow({ where: { id: fence.id } })).isInside).toBe(
+      false,
+    );
+  });
+
+  it("7일 지난 위치 기록은 새로 저장할 때 지워진다", async () => {
+    const caller = await callerFor(userAId);
+    await caller.location.setSharing({ enabled: true });
+    const old = await prisma.locationPing.create({
+      data: { userId: userAId, lat: 1, lng: 1, capturedAt: new Date(Date.now() - 8 * 86_400_000) },
+    });
+    const recent = await prisma.locationPing.create({
+      data: { userId: userAId, lat: 2, lng: 2, capturedAt: new Date(Date.now() - 86_400_000) },
+    });
+
+    await caller.location.send({ lat: 37.5, lng: 127 });
+
+    expect(await prisma.locationPing.findUnique({ where: { id: old.id } })).toBeNull();
+    expect(await prisma.locationPing.findUnique({ where: { id: recent.id } })).not.toBeNull();
   });
 });
