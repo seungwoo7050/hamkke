@@ -1,11 +1,8 @@
 /**
- * Realtime 채널 인가 전략: Supabase Auth를 쓰지 않고 Auth.js를 쓰므로,
- * Realtime의 RLS 기반 private 채널(realtime.messages 테이블 정책)을 쓰려면
- * Supabase가 인식하는 커스텀 JWT를 직접 서명해야 하는데 공식 문서에 정확한
- * 방법이 없다. 대신 public 채널 + spaceId(cuid, 추측 불가능)를 채널명에
- * 그대로 실어 "채널명을 아는 것 자체가 권한"인 캡슐화 모델을 쓴다.
- * spaceId는 항상 Auth.js 세션 기반 tRPC(spaceProcedure)를 통해서만 클라이언트에
- * 전달된다 — docs/ARCHITECTURE.md §4/§10 갱신 참고.
+ * Space의 Broadcast 채널 이름. 권한은 채널 이름이 아니라 private 채널 + RLS가
+ * 정한다 — 서버가 서명한 스페이스 토큰의 space_id와 이 이름이 맞을 때만 받고
+ * 보낼 수 있다(docs/ARCHITECTURE.md §4, 마이그레이션 realtime_space_policies).
+ * 이름을 바꾸면 그 정책도 같이 바꿔야 한다.
  */
 export function spaceChannelName(spaceId: string) {
   return `space:${spaceId}`;
@@ -13,8 +10,8 @@ export function spaceChannelName(spaceId: string) {
 
 /**
  * 현존감(Presence, PRD §3.2) 전용 채널. Presence는 채널 생성 시점에
- * config.presence.key를 줘야 해서 Broadcast 채널과 분리했다 — 같은 공개 채널
- * 캡슐화 모델을 따른다.
+ * config.presence.key를 줘야 해서 Broadcast 채널과 분리했다 — 같은
+ * 권한 모델을 따른다(정책의 ':presence' 접미사).
  */
 export function spacePresenceChannelName(spaceId: string) {
   return `space:${spaceId}:presence`;
