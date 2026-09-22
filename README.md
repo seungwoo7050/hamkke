@@ -89,6 +89,13 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 5. `capacitor.config.ts`의 `server.url`을 운영 도메인(https)으로 바꾸고 `cleartext`를 끈 뒤 Android를 다시 빌드한다.
 6. Cloudflare 대시보드 → R2 → 버킷 → Settings → Object lifecycle rules에 **접두사 `pending/`, 업로드 1일 뒤 삭제** 규칙을 추가한다. 업로드 주소만 받고 등록하지 않은 파일이 여기서 지워진다(앱의 R2 키는 버킷 설정 권한이 없어 코드로 넣지 않는다).
 7. Google Play Console → 앱 콘텐츠 → 데이터 보안의 계정 삭제 URL에 `https://<도메인>/account/delete`를 등록한다(앱 밖에서도 삭제를 요청할 수 있어야 한다는 Play 요건).
+8. **Realtime private 채널 전환**(ARCHITECTURE §4) — 이 순서대로(중간에 멈춰도 실시간 기능은 계속 동작한다):
+   1. 운영 DB에 마이그레이션(2번)으로 `realtime_space_policies` 정책이 들어갔는지 확인한다.
+   2. `npx tsx scripts/generate-supabase-jwt-key.mts`로 키를 만들고, Supabase → Project Settings → JWT Keys에서 출력된 JWK를 **standby 키로 가져온 뒤 Rotate로 current**로 바꾼다(Supabase Auth는 쓰지 않아 영향 없음).
+   3. 배포 환경변수 `SUPABASE_JWT_PRIVATE_KEY`에 같은 JWK 한 줄을 넣고 다시 배포한다 — 이때부터 앱이 private 채널을 쓴다.
+   4. Supabase → Realtime → Settings에서 **Allow public access를 끈다**.
+   5. `npx tsx --conditions=react-server scripts/check-realtime-private.mts`가 "전부 통과"인지 확인한다.
+   6. 같은 화면에서 Realtime 초당 이벤트 한도를 확인하고, 프로젝트 spend cap을 켜 둔다.
 
 ## 폴더
 
