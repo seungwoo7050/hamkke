@@ -144,6 +144,17 @@ describe("home 라우터 (통합)", () => {
     expect(summary.distanceKm).toBeNull();
   });
 
+  it("상대에게 잘못된 시간대가 저장돼 있어도 장면과 위젯은 그 값을 내보내지 않는다", async () => {
+    await prisma.user.update({ where: { id: userBId }, data: { timezone: "Not/AZone" } });
+    const caller = await callerFor(userAId);
+
+    const summary = await caller.home.summary();
+    expect(summary.partner?.timezone).toBeNull();
+
+    const widget = await caller.home.widget();
+    expect(widget.partnerTimezone).toBeNull();
+  });
+
   it("위젯 값은 날씨 없이 시간대·거리·마지막 받은 터치만 돌려준다", async () => {
     const { fetchWeather } = await import("@/lib/weather");
     vi.mocked(fetchWeather).mockClear();

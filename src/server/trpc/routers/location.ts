@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { distanceKm } from "@/lib/geo";
+import { nextGeofenceState } from "@/lib/geofence";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { broadcastToSpace } from "@/lib/supabase/broadcast";
@@ -13,22 +14,30 @@ import { LOCATION_PING_RETENTION_MS, locationSendCheck } from "@/server/request-
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
 
 // 반경 재진입(밖→안) 때만 알림을 보내고, 반경 안에 머무는 동안은
-// isInside=true로 남겨둬 중복 알림을 막는다.
-async function checkGeofenceArrivals(ctx: SpaceCtx, position: { lat: number; lng: number }) {
+// isInside=true로 남겨둬 중복 알림을 막는다. 안/밖 기준은 nextGeofenceState가
+// GPS 흔들림을 감안해 정한다.
+async function checkGeofenceArrivals(
+  ctx: SpaceCtx,
+  position: { lat: number; lng: number; accuracy?: number },
+) {
   const fences = await prisma.geofence.findMany({ where: { userId: ctx.session.user.id } });
 
   for (const fence of fences) {
-    const withinRadius = distanceKm(position, fence) * 1000 <= fence.radiusM;
-    if (withinRadius === fence.isInside) continue;
+    const distanceM = distanceKm(position, fence) * 1000;
+    const isInside = nextGeofenceState(fence, distanceM, position.accuracy);
+    if (isInside === fence.isInside) continue;
 
-    await prisma.geofence.update({ where: { id: fence.id }, data: { isInside: withinRadius } });
+    // 같은 사람의 위치가 겹쳐 들어와도 상태를 바꾼 요청 하나만 알림을 보낸다.
+    const { count } = await prisma.geofence.updateMany({
+      where: { id: fence.id, isInside: fence.isInside },
+      data: { isInside },
+    });
+    if (count === 0 || !isInside) continue;
 
-    if (withinRadius) {
-      await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
-        title: "Hamkke",
-        body: t("push.geofence", { label: fence.label }),
-      })).catch(() => {});
-    }
+    await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
+      title: "Hamkke",
+      body: t("push.geofence", { label: fence.label }),
+    })).catch(() => {});
   }
 }
 

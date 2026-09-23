@@ -21,7 +21,9 @@ export const geofenceRouter = router({
     )
     .mutation(({ ctx, input }) =>
       prisma.geofence.create({
-        data: { spaceId: ctx.space.id, userId: ctx.session.user.id, ...input },
+        // 화면은 "현재 위치로 등록"으로만 만든다 — 만든 사람은 이미 그 안에 있다.
+        // false로 두면 다음 위치에서 곧바로 "도착" 알림이 간다.
+        data: { spaceId: ctx.space.id, userId: ctx.session.user.id, ...input, isInside: true },
       }),
     ),
 

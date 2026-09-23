@@ -55,6 +55,22 @@ describe("profile 라우터 (통합)", () => {
     expect(stored.timezone).toBe("Asia/Seoul");
   });
 
+  it("setTimezone은 IANA에 없는 시간대 이름을 저장하지 않는다", async () => {
+    const caller = await callerFor(userAId);
+    await expect(caller.profile.setTimezone({ timezone: "Not/AZone" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+
+    const stored = await prisma.user.findUniqueOrThrow({ where: { id: userAId } });
+    expect(stored.timezone).toBeNull();
+  });
+
+  it("timezones는 이미 저장된 잘못된 시간대를 null로 돌려준다", async () => {
+    await prisma.user.update({ where: { id: userBId }, data: { timezone: "Not/AZone" } });
+    const result = await (await callerFor(userAId)).profile.timezones();
+    expect(result.partner).toBeNull();
+  });
+
   it("timezones는 내 타임존과 상대 타임존을 함께 돌려준다", async () => {
     await prisma.user.update({ where: { id: userAId }, data: { timezone: "Asia/Seoul" } });
     await prisma.user.update({
