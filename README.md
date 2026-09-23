@@ -29,14 +29,14 @@ Next.js 16(App Router) 단일 코드베이스 — 별도 백엔드 없음.
 - **미디어**: Cloudflare R2(presigned URL)
 - **푸시**: FCM
 - **결제**: Stripe Checkout · Customer Portal · Webhook
-- **UI**: Tailwind CSS v4, shadcn/ui(Radix), Vaul, Sonner, Motion — 토큰은 [`docs/DESIGN.md`](docs/DESIGN.md)
+- **UI**: Tailwind CSS v4, shadcn/ui(Radix), Vaul, Sonner, Motion — 토큰은 [`docs/DESIGN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/DESIGN.md)
 - **지도·날씨**: react-leaflet + OpenStreetMap, Open-Meteo(둘 다 API 키 불필요)
 - **비행**: 공항 데이터 번들(mwgg/Airports, MIT — `npx tsx scripts/build-airports.mts`로 갱신), 예정 시각 기반 진행·대권 추정 위치, 탑승권 바코드(IATA BCBP) 스캔 — API 키 없음
 - **모바일**: Capacitor(Android) — 배포된 서버를 웹뷰로 원격 로드, 위젯만 Kotlin(Jetpack Glance)
 - **언어**: next-intl — 한국어 기본 + 영어, 사람마다 자기 언어(설정 시트). 문구는 `messages/ko.json`(기준)·`en.json`, 새 언어는 파일 하나 + `src/i18n/config.ts` 한 줄. 개발 중 쿠키 `hamkke-pseudo=1`이면 가짜 언어로 하드코딩 문구가 드러난다
 - **테스트**: Vitest(단위·통합, 실제 DB), Playwright(e2e)
 
-설계 이유는 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+설계 이유는 [`docs/ARCHITECTURE.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/ARCHITECTURE.md).
 
 ## 시작하기
 
@@ -117,13 +117,21 @@ src/i18n/           언어 설정·해석·포맷터 — 문구는 messages/
 prisma/             스키마와 마이그레이션
 android/            Capacitor 셸 + 홈 화면 위젯(Kotlin)
 e2e/                Playwright
-docs/               PRD · 아키텍처 · 디자인 · 워크플로우 · 커밋 계획 · 디자인 리서치
+assets/             브랜드 마스터 SVG·README 스크린샷
 ```
 
 ## 문서
 
-- [`docs/PRD.md`](docs/PRD.md) — 기능 명세·데이터 모델
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 스택·실시간·결제·보안 설계
-- [`docs/DESIGN.md`](docs/DESIGN.md) — 디자인 철학 앵커와 토큰(임의 변경 금지)
-- [`docs/WORKFLOW.md`](docs/WORKFLOW.md) · [`docs/COMMIT_PLAN.md`](docs/COMMIT_PLAN.md) — 커밋 규칙과 진행 기록
-- [`CLAUDE.md`](CLAUDE.md) — 현재 상태와 고정 결정
+설계 문서와 진행 기록은 고아 브랜치 [`docs`](https://github.com/woopinbell/hamkke/tree/docs)에, 개발 기록은 [`devlog`](https://github.com/woopinbell/hamkke/tree/devlog)에 있다. 로컬에서는 워크트리로 붙여 쓴다.
+
+```bash
+git worktree add .docs docs && ln -sfn .docs/CLAUDE.md CLAUDE.md && ln -sfn .docs/docs docs
+git worktree add .devlog devlog && ln -sfn .devlog devlog
+printf '%s\n' .docs/ .devlog/ CLAUDE.md docs devlog >> .git/info/exclude
+```
+
+- [`docs/PRD.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/PRD.md) — 기능 명세·데이터 모델
+- [`docs/ARCHITECTURE.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/ARCHITECTURE.md) — 스택·실시간·결제·보안 설계
+- [`docs/DESIGN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/DESIGN.md) — 디자인 철학 앵커와 토큰(임의 변경 금지)
+- [`docs/WORKFLOW.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/WORKFLOW.md) · [`docs/COMMIT_PLAN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/COMMIT_PLAN.md) — 커밋 규칙과 진행 기록
+- [`CLAUDE.md`](https://github.com/woopinbell/hamkke/blob/docs/CLAUDE.md) — 현재 상태와 고정 결정
