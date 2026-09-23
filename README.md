@@ -87,7 +87,20 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 3. Stripe 대시보드 → Webhooks에 `https://<도메인>/api/webhooks/stripe`(`customer.subscription.*`)를 등록하고 `STRIPE_WEBHOOK_SECRET`을 교체한다.
 4. Google OAuth 리디렉션 URI와 Resend 발신 도메인을 운영 도메인으로 바꾼다.
 5. `capacitor.config.ts`의 `server.url`을 운영 도메인(https)으로 바꾸고 `cleartext`를 끈 뒤 Android를 다시 빌드한다.
-6. Cloudflare 대시보드 → R2 → 버킷 → Settings → Object lifecycle rules에 **접두사 `pending/`, 업로드 1일 뒤 삭제** 규칙을 추가한다. 업로드 주소만 받고 등록하지 않은 파일이 여기서 지워진다(앱의 R2 키는 버킷 설정 권한이 없어 코드로 넣지 않는다).
+6. Cloudflare 대시보드 → R2 → 버킷 → Settings에서 두 가지를 넣는다(앱의 R2 키는 버킷 설정 권한이 없어 코드로 넣지 않는다).
+   - Object lifecycle rules에 **접두사 `pending/`, 업로드 1일 뒤 삭제** 규칙을 추가한다. 업로드 주소만 받고 등록하지 않은 파일이 여기서 지워진다.
+   - **CORS Policy**를 추가한다. 사진·음성은 브라우저가 R2로 직접 PUT하므로, 이 규칙이 없으면 preflight가 403으로 막혀 첨부가 전부 "전송에 실패했어요"로 끝난다(Node에서 PUT하는 테스트는 CORS를 거치지 않아 통과한다). Android 앱도 `server.url`의 운영 도메인에서 열리므로 같은 오리진이다.
+     ```json
+     [
+       {
+         "AllowedOrigins": ["http://localhost:3000", "https://<도메인>"],
+         "AllowedMethods": ["PUT"],
+         "AllowedHeaders": ["content-type"],
+         "MaxAgeSeconds": 3600
+       }
+     ]
+     ```
+     넣은 뒤 `npx tsx --conditions=react-server scripts/check-r2-cors.mts http://localhost:3000 https://<도메인>`이 "전부 통과"인지 확인한다. 이미지·오디오를 보여 주는 GET은 `<img>`·`<audio>`가 CORS 없이 읽으므로 넣지 않는다.
 7. Google Play Console → 앱 콘텐츠 → 데이터 보안의 계정 삭제 URL에 `https://<도메인>/account/delete`를 등록한다(앱 밖에서도 삭제를 요청할 수 있어야 한다는 Play 요건).
 8. **Realtime private 채널 전환**(ARCHITECTURE §4) — 이 순서대로(중간에 멈춰도 실시간 기능은 계속 동작한다):
    1. 운영 DB에 마이그레이션(2번)으로 `realtime_space_policies` 정책이 들어갔는지 확인한다.

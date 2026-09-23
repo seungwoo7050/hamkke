@@ -12,8 +12,8 @@ export function GET() {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   };
 
-  // 서비스워커는 ES 모듈 import를 못 쓰므로(Next.js public 폴더 서빙 방식과도
-  // 무관하게 SW 명세 자체의 제약) compat 빌드를 importScripts로 불러온다.
+  // 이 본문은 번들을 거치지 않는 문자열이라 npm 패키지를 import할 수 없다.
+  // Firebase 문서의 웹 푸시 예시대로 compat 빌드를 importScripts로 불러온다.
   const body = `importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js");
 
@@ -23,11 +23,13 @@ const messaging = firebase.messaging();
 
 // 앱이 백그라운드(탭 비활성/닫힘)일 때만 여기로 온다 — 포그라운드는
 // src/lib/firebase-client.ts의 onForegroundMessage가 처리한다.
+// notification 필드가 있는 메시지는 SDK가 이 핸들러를 부르기 전에 이미 알림을
+// 띄운다. 여기서 또 띄우면 같은 알림이 두 번 뜨므로 data 전용 메시지만 직접 띄운다.
 messaging.onBackgroundMessage((payload) => {
-  const notification = payload.notification || {};
-  self.registration.showNotification(notification.title || "Hamkke", {
-    body: notification.body,
-  });
+  if (payload.notification) return;
+  const data = payload.data || {};
+  if (!data.title && !data.body) return;
+  self.registration.showNotification(data.title || "Hamkke", { body: data.body });
 });
 `;
 
