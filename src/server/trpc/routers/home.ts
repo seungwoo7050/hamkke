@@ -1,5 +1,6 @@
 import { distanceKm } from "@/lib/geo";
 import { prisma } from "@/lib/prisma";
+import { validTimeZoneOrNull } from "@/lib/timezone";
 import { fetchWeather } from "@/lib/weather";
 import { router, spaceProcedure } from "../init";
 import { serializeFlight, type FlightView } from "./flight";
@@ -63,8 +64,10 @@ export const homeRouter = router({
     ]);
 
     return {
-      me: { ...me, weather: myWeather },
-      partner: partner ? { ...partner, weather: partnerWeather } : null,
+      me: { ...me, timezone: validTimeZoneOrNull(me.timezone), weather: myWeather },
+      partner: partner
+        ? { ...partner, timezone: validTimeZoneOrNull(partner.timezone), weather: partnerWeather }
+        : null,
       distanceKm: myPing && partnerPing ? distanceKm(myPing, partnerPing) : null,
       lastTouchReceivedAt: lastTouch?.createdAt ?? null,
       unreadCount,
@@ -98,9 +101,9 @@ export const homeRouter = router({
     ]);
 
     return {
-      myTimezone: me.timezone,
+      myTimezone: validTimeZoneOrNull(me.timezone),
       partnerName: partner?.name?.trim() || null,
-      partnerTimezone: partner?.timezone ?? null,
+      partnerTimezone: validTimeZoneOrNull(partner?.timezone),
       distanceKm: myPing && partnerPing ? Math.round(distanceKm(myPing, partnerPing)) : null,
       lastTouchReceivedAt: lastTouch?.createdAt.toISOString() ?? null,
     };

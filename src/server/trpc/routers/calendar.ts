@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { isValidTimeZone } from "@/lib/timezone";
 import { router, spaceProcedure } from "../init";
 
 const eventInput = z
@@ -7,7 +8,7 @@ const eventInput = z
     title: z.string().min(1).max(100),
     startAt: z.coerce.date(),
     endAt: z.coerce.date(),
-    timezone: z.string().min(1).max(100),
+    timezone: z.string().min(1).max(100).refine(isValidTimeZone),
   })
   .refine((data) => data.endAt >= data.startAt, {
     message: "종료 시각은 시작 시각 이후여야 해요",
