@@ -46,7 +46,11 @@ export async function requestPushToken(): Promise<string | null> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return null;
 
-  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+  await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+  // register()는 등록을 접수하자마자 돌아온다. 처음 방문이면 서비스워커가 아직
+  // 설치 중이라 바로 구독하면 "no active Service Worker"로 실패한다(개발 모드는
+  // effect가 두 번 돌아 우연히 가려졌다). 활성화된 등록을 기다렸다가 쓴다.
+  const registration = await navigator.serviceWorker.ready;
 
   return getToken(messaging, {
     vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
