@@ -141,6 +141,25 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     expect(await headUpload(key)).toBeNull();
   });
 
+  // 화면은 올린 사람에게만 삭제 버튼을 보인다. 서버도 같은 규칙이어야 상대가
+  // API로 내 사진을 지울 수 없다(캡슐의 보낸 사람 규칙과 같다).
+  it("같은 스페이스의 상대도 내가 올린 사진은 지울 수 없다", async () => {
+    const partner = await prisma.user.create({
+      data: { email: `test-moment-p-${randomUUID()}@example.com`, spaceId },
+    });
+    try {
+      const moment = await prisma.moment.create({
+        data: { spaceId, uploaderId: userAId, mediaUrl: `moments/${spaceId}/${randomUUID()}` },
+      });
+
+      await (await callerFor(partner.id)).moment.delete({ id: moment.id });
+
+      expect(await prisma.moment.findUnique({ where: { id: moment.id } })).not.toBeNull();
+    } finally {
+      await prisma.user.delete({ where: { id: partner.id } });
+    }
+  });
+
   it("스페이스 멤버가 아니면 호출할 수 없다(spaceProcedure)", async () => {
     const outsider = await prisma.user.create({
       data: { email: `test-moment-b-${randomUUID()}@example.com` },
