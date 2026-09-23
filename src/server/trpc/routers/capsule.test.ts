@@ -143,6 +143,24 @@ describe("capsule 라우터 (통합)", () => {
     });
   });
 
+  // 열리는 때가 지났는데 상대가 아직 앱을 안 열어 deliveredAt이 비어 있는 캡슐은
+  // 더는 "예약 중"이 아니다. 보낸 사람의 한도를 계속 차지하면 안 된다.
+  it("열리는 때가 지났지만 상대가 아직 안 연 캡슐은 한도에 세지 않는다", async () => {
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const caller = await callerFor(userAId);
+
+    await prisma.capsule.create({
+      data: { spaceId, senderId: userAId, content: "열렸지만 안 읽음", deliverAt: new Date(0) },
+    });
+    for (let i = 0; i < 3; i++) {
+      await caller.capsule.create({ content: `예약 ${i}`, deliverAt: future });
+    }
+
+    await expect(
+      caller.capsule.create({ content: "한도 초과", deliverAt: future }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   describe("착륙하면 열리는 편지 (PRD §3.3.1)", () => {
     async function flightOf(travelerId: string, arrivalInMs: number) {
       return prisma.flight.create({

@@ -20,3 +20,10 @@ export async function isPremiumSpace(spaceId: string) {
   const subscription = await prisma.subscription.findUnique({ where: { spaceId } });
   return subscription?.status === "active";
 }
+
+// 무료 한도의 "예약 캡슐" = 열리는 때가 아직 오지 않은 캡슐. deliveredAt(상대가
+// 처음 열어 본 시각)으로 세면 때가 지났어도 상대가 앱을 열기 전까지 한도를
+// 차지한다. 게이팅(capsule.create)과 사용량 표시(billing.usage)가 함께 쓴다.
+export function countPendingCapsules(spaceId: string, now: Date = new Date()) {
+  return prisma.capsule.count({ where: { spaceId, deliverAt: { gt: now } } });
+}

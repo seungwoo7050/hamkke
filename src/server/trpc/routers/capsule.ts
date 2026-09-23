@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { bestTimes } from "@/lib/flight";
-import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
+import { countPendingCapsules, FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -49,8 +49,8 @@ export const capsuleRouter = router({
   }),
 
   // 무료 티어는 아직 안 열린(예약 중인) 캡슐 개수를 제한한다(PRD.md §3.5
-  // "캡슐 노트 무제한 예약"이 프리미엄 혜택). 이미 배달된 것은 과거 기록이라
-  // 세지 않는다.
+  // "캡슐 노트 무제한 예약"이 프리미엄 혜택). 열리는 때가 지난 것은 상대가
+  // 아직 안 열었어도 과거 기록이라 세지 않는다.
   create: spaceProcedure.input(createInput).mutation(async ({ ctx, input }) => {
     const t = translator(ctx.locale);
     if (!!input.deliverAt === !!input.flightId) {
@@ -60,9 +60,7 @@ export const capsuleRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: t("errors.capsuleFuture") });
     }
     if (!(await isPremiumSpace(ctx.space.id))) {
-      const pendingCount = await prisma.capsule.count({
-        where: { spaceId: ctx.space.id, deliveredAt: null },
-      });
+      const pendingCount = await countPendingCapsules(ctx.space.id);
       if (pendingCount >= FREE_TIER_LIMITS.activeCapsules) {
         throw new TRPCError({
           code: "FORBIDDEN",

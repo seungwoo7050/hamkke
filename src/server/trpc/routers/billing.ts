@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
+import { countPendingCapsules, FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { consumeOrThrow } from "@/server/rate-limit";
@@ -14,7 +14,7 @@ export const billingRouter = router({
   ),
 
   // 무료 한도 대비 현재 사용량(PRD §3.5 "요금제 사용량 표시"). 세는 방식은 각
-  // 기능의 게이팅과 같다 — 사진은 전체 수, 캡슐은 아직 안 열린(예약 중) 수,
+  // 기능의 게이팅과 같다 — 사진은 전체 수, 캡슐은 열리는 때가 아직 안 온(예약 중) 수,
   // 만남 지도는 전체 핀 수(한도를 넘으면 오래된 것부터 정리됨). 프리미엄이면
   // 한도가 없으므로 items는 비운다.
   usage: spaceProcedure.query(async ({ ctx }) => {
@@ -23,7 +23,7 @@ export const billingRouter = router({
     const spaceId = ctx.space.id;
     const [moments, activeCapsules, meetupPins] = await Promise.all([
       prisma.moment.count({ where: { spaceId } }),
-      prisma.capsule.count({ where: { spaceId, deliveredAt: null } }),
+      countPendingCapsules(spaceId),
       prisma.meetupPin.count({ where: { spaceId } }),
     ]);
 
