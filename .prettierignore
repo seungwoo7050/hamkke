@@ -18,3 +18,7 @@ ios/
 
 # 생성된 데이터(scripts/build-airports.mts)
 src/data/airports.json
+
+# docs·devlog 브랜치 워크트리(docs/WORKFLOW.md §4) — main의 코드가 아니다
+.docs/
+.devlog/
