@@ -97,19 +97,20 @@ describe("location 라우터 (통합)", () => {
     expect(onlineStatus?.location?.lat).toBeCloseTo(35.1796);
   });
 
-  it("등록된 지오펜스 반경에 진입하면 isInside가 true로 바뀐다", async () => {
+  it("지오펜스를 벗어났다가 다시 반경에 들어오면 isInside가 true로 바뀐다", async () => {
     const caller = await callerFor(userAId);
     await caller.location.setSharing({ enabled: true });
 
+    // "현재 위치로 등록" — 만든 사람은 이미 그 안에 있다.
     const fence = await caller.geofence.create({
       label: "집",
       lat: 37.5665,
       lng: 126.978,
       radiusM: 500,
     });
-    expect(fence.isInside).toBe(false);
+    expect(fence.isInside).toBe(true);
 
-    // 반경 밖(약 300km 떨어진 부산) → 상태 변화 없음.
+    // 반경 밖(약 300km 떨어진 부산) → 밖으로.
     await caller.location.send({ lat: 35.1796, lng: 129.0756 });
     expect((await prisma.geofence.findUniqueOrThrow({ where: { id: fence.id } })).isInside).toBe(
       false,
