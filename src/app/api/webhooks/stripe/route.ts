@@ -63,7 +63,7 @@ async function resolveDuplicate(keptId: string, duplicate: Stripe.Subscription) 
 }
 
 // customer.subscription.*(created/updated/deleted) 하나로 생성·갱신·취소를
-// 전부 upsert한다 — Stripe가 체크아웃 완료 시에도 subscription.created를
+// 전부 upsert한다(인자는 이벤트 본문이 아니라 Stripe에서 다시 읽은 구독) — Stripe가 체크아웃 완료 시에도 subscription.created를
 // 함께 보내주므로 checkout.session.completed를 따로 처리할 필요가 없다.
 async function syncSubscription(subscription: Stripe.Subscription) {
   const spaceId = subscription.metadata.spaceId;
@@ -125,7 +125,12 @@ export async function POST(request: Request) {
     event.type === "customer.subscription.updated" ||
     event.type === "customer.subscription.deleted"
   ) {
-    await syncSubscription(event.data.object);
+    // 웹훅은 순서를 보장하지 않는다 — 해지 뒤에 그 전의 updated(active)가 재전송으로
+    // 늦게 도착하면 본문을 그대로 쓰는 순간 해지된 구독이 되살아난다. 본문은 "이
+    // 구독이 바뀌었다"는 신호로만 쓰고 지금 상태를 Stripe에서 다시 읽는다. 조회
+    // 실패는 500으로 돌려 Stripe가 다시 보내게 한다.
+    const current = await stripe.subscriptions.retrieve(event.data.object.id);
+    await syncSubscription(current);
   }
 
   return NextResponse.json({ received: true });

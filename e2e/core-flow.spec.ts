@@ -114,40 +114,45 @@ test("페어링 → 채팅 → 위치공유 → 구독", async ({ browser, baseU
     // Stripe가 호스팅하는 결제 페이지 자체는 자동화하지 않는다(Stripe 권장).
     await pa.waitForURL(/checkout\.stripe\.com/, { waitUntil: "commit" });
 
-    // 결제 완료 후 Stripe가 보내는 것과 같은 모양의 서명된 웹훅을 서버에 보낸다.
+    // 결제 완료 후 Stripe가 보내는 서명된 웹훅을 서버에 보낸다. 서버는 본문이 아니라
+    // Stripe에서 다시 읽은 구독을 쓰므로, 테스트 모드에 실제 구독을 만들어 그 객체를 싣는다.
     const space = await spaceOf(a.userId);
-    const payload = JSON.stringify({
-      id: `evt_e2e_${randomBytes(6).toString("hex")}`,
-      object: "event",
-      type: "customer.subscription.created",
-      data: {
-        object: {
-          id: `sub_e2e_${randomBytes(6).toString("hex")}`,
-          object: "subscription",
-          customer: `cus_e2e_${randomBytes(6).toString("hex")}`,
-          status: "active",
-          metadata: { spaceId: space.id },
-          items: {
-            data: [{ current_period_end: Math.floor(Date.now() / 1000) + 30 * 86_400 }],
-          },
-        },
-      },
+    const stripe = new Stripe(secretKey);
+    const customer = await stripe.customers.create({
+      payment_method: "pm_card_visa",
+      invoice_settings: { default_payment_method: "pm_card_visa" },
     });
-    const signature = new Stripe(secretKey).webhooks.generateTestHeaderString({
-      payload,
-      secret: webhookSecret,
-    });
-    const res = await pa.request.post("/api/webhooks/stripe", {
-      data: payload,
-      headers: { "content-type": "application/json", "stripe-signature": signature },
-    });
-    expect(res.ok()).toBe(true);
+    try {
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID! }],
+        metadata: { spaceId: space.id },
+      });
+      const payload = JSON.stringify({
+        id: `evt_e2e_${randomBytes(6).toString("hex")}`,
+        object: "event",
+        type: "customer.subscription.created",
+        data: { object: subscription },
+      });
+      const signature = stripe.webhooks.generateTestHeaderString({
+        payload,
+        secret: webhookSecret,
+      });
+      const res = await pa.request.post("/api/webhooks/stripe", {
+        data: payload,
+        headers: { "content-type": "application/json", "stripe-signature": signature },
+      });
+      expect(res.ok()).toBe(true);
 
-    // 구독 주체는 스페이스 — 결제하지 않은 상대도 프리미엄이다.
-    for (const page of [pa, pb]) {
-      await page.goto("/home");
-      await page.getByRole("button", { name: "설정 열기" }).click();
-      await expect(page.getByText("두 사람 모두 프리미엄 혜택을 받고 있어요")).toBeVisible();
+      // 구독 주체는 스페이스 — 결제하지 않은 상대도 프리미엄이다.
+      for (const page of [pa, pb]) {
+        await page.goto("/home");
+        await page.getByRole("button", { name: "설정 열기" }).click();
+        await expect(page.getByText("두 사람 모두 프리미엄 혜택을 받고 있어요")).toBeVisible();
+      }
+    } finally {
+      // 고객을 지우면 그 구독도 함께 해지된다.
+      await stripe.customers.del(customer.id);
     }
   });
 
