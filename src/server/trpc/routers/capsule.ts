@@ -31,11 +31,20 @@ export const capsuleRouter = router({
       .filter((r) => r.senderId !== ctx.session.user.id && r.deliverAt <= now && !r.deliveredAt)
       .map((r) => r.id);
 
+    // 같은 사람이 두 기기에서 동시에 열면 두 조회 모두 deliveredAt이 비어 있다고
+    // 본다. 조건에 deliveredAt: null을 다시 넣어 먼저 쓴 쪽만 남기고, 응답에는 내가
+    // 쓴 값이 아니라 실제로 저장된 값을 돌려준다.
+    const openedAt = new Map<string, Date | null>();
     if (toMarkDelivered.length > 0) {
       await prisma.capsule.updateMany({
-        where: { id: { in: toMarkDelivered } },
+        where: { id: { in: toMarkDelivered }, deliveredAt: null },
         data: { deliveredAt: now },
       });
+      const stored = await prisma.capsule.findMany({
+        where: { id: { in: toMarkDelivered } },
+        select: { id: true, deliveredAt: true },
+      });
+      for (const c of stored) openedAt.set(c.id, c.deliveredAt);
     }
 
     return rows.map((r) => {
@@ -43,7 +52,7 @@ export const capsuleRouter = router({
       return {
         ...r,
         content: unlocked ? r.content : null,
-        deliveredAt: toMarkDelivered.includes(r.id) ? now : r.deliveredAt,
+        deliveredAt: openedAt.get(r.id) ?? r.deliveredAt,
       };
     });
   }),

@@ -89,6 +89,24 @@ describe("capsule 라우터 (통합)", () => {
     expect(stored.deliveredAt).not.toBeNull();
   });
 
+  // 받는 사람이 두 기기에서 거의 동시에 열면 두 조회가 모두 deliveredAt이 빈 것을
+  // 본다. 먼저 기록된 "처음 열어 본 시각"이 덮이면 안 되고, 두 응답은 저장된 값과
+  // 같아야 한다.
+  it("받는 사람이 동시에 열어도 처음 열어 본 시각은 한 번만 기록된다", async () => {
+    const callerB = await callerFor(userBId);
+    for (let round = 0; round < 10; round++) {
+      const capsule = await prisma.capsule.create({
+        data: { spaceId, senderId: userAId, content: `동시 ${round}`, deliverAt: new Date(0) },
+      });
+      const [first, second] = await Promise.all([callerB.capsule.list(), callerB.capsule.list()]);
+      const stored = await prisma.capsule.findUniqueOrThrow({ where: { id: capsule.id } });
+      for (const list of [first, second]) {
+        expect(list.find((c) => c.id === capsule.id)!.deliveredAt).toEqual(stored.deliveredAt);
+      }
+      await prisma.capsule.delete({ where: { id: capsule.id } });
+    }
+  });
+
   it("발신자만 자기 캡슐을 삭제할 수 있다", async () => {
     const callerA = await callerFor(userAId);
     const callerB = await callerFor(userBId);
