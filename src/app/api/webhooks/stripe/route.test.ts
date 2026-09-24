@@ -1,7 +1,7 @@
 // stripe.webhooks.generateTestHeaderString으로 실제 서명 검증 로직까지
 // 그대로 태운다(constructEvent가 진짜로 통과해야 한다).
 import { randomUUID } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
@@ -32,7 +32,15 @@ function subscriptionEvent(
   };
 }
 
-async function postSignedEvent(event: unknown) {
+// 처리기는 이벤트 본문이 아니라 Stripe에서 다시 읽은 구독을 쓴다. 가짜 구독 ID는
+// Stripe에 없으므로 "지금 Stripe가 아는 상태"를 여기에 두고 조회를 이 값으로
+// 돌려준다(실제 구독 ID는 그대로 Stripe에 묻는다). 보통은 보낸 이벤트가 곧 지금
+// 상태지만, stale로 보내면 늦게 도착한 옛 이벤트라 지금 상태를 바꾸지 않는다.
+const stripeState = new Map<string, unknown>();
+
+async function postSignedEvent(event: unknown, { stale = false } = {}) {
+  const object = (event as { data?: { object?: { id?: string } } }).data?.object;
+  if (!stale && object?.id?.startsWith("sub_test_")) stripeState.set(object.id, object);
   const payload = JSON.stringify(event);
   const header = stripe.webhooks.generateTestHeaderString({
     payload,
@@ -48,6 +56,18 @@ async function postSignedEvent(event: unknown) {
 
 describe("POST /api/webhooks/stripe", () => {
   let spaceId: string;
+
+  beforeAll(() => {
+    const original = stripe.subscriptions.retrieve.bind(stripe.subscriptions);
+    vi.spyOn(stripe.subscriptions, "retrieve").mockImplementation(((id: string, ...rest: []) =>
+      stripeState.has(id)
+        ? Promise.resolve(stripeState.get(id))
+        : original(id, ...rest)) as typeof stripe.subscriptions.retrieve);
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   beforeEach(async () => {
     const space = await prisma.space.create({
@@ -204,6 +224,33 @@ describe("POST /api/webhooks/stripe", () => {
     const stored = await prisma.subscription.findUnique({ where: { spaceId } });
     expect(stored?.stripeSubscriptionId).toBe(newId);
     expect(stored?.status).toBe("active");
+  });
+
+  // Stripe는 웹훅 전달 순서를 보장하지 않는다. 해지 뒤에 그 전에 만들어진
+  // updated(active)가 재전송으로 늦게 도착해도 해지된 구독이 되살아나면 안 된다.
+  it("같은 구독의 늦게 도착한 옛 이벤트는 지금 상태를 되돌리지 않는다", async () => {
+    const id = `sub_test_${randomUUID()}`;
+    const created = subscriptionEvent("customer.subscription.created", {
+      id,
+      metadata: { spaceId },
+    });
+    await postSignedEvent(created);
+    await postSignedEvent(
+      subscriptionEvent("customer.subscription.deleted", {
+        id,
+        metadata: { spaceId },
+        status: "canceled",
+      }),
+    );
+
+    const late = await postSignedEvent(
+      { ...subscriptionEvent("customer.subscription.updated"), data: created.data },
+      { stale: true },
+    );
+    expect(late.status).toBe(200);
+
+    const stored = await prisma.subscription.findUnique({ where: { spaceId } });
+    expect(stored?.status).toBe("canceled");
   });
 
   // 실제 Stripe(테스트 모드)에 결제된 구독 두 개를 만들어 중복 상황을 재현한다.

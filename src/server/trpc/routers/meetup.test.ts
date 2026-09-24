@@ -60,10 +60,10 @@ describe("meetup 라우터 (통합)", () => {
       date: "2026-06-01",
     });
 
-    const list = await caller.meetup.list();
-    expect(list).toHaveLength(2);
-    expect(list[0].label).toBe("공항");
-    expect(list[1].label).toBe("첫 만남 카페");
+    const { pins } = await caller.meetup.list();
+    expect(pins).toHaveLength(2);
+    expect(pins[0].label).toBe("공항");
+    expect(pins[1].label).toBe("첫 만남 카페");
   });
 
   it("삭제하면 목록에서 사라진다", async () => {
@@ -76,7 +76,7 @@ describe("meetup 라우터 (통합)", () => {
     });
 
     await caller.meetup.delete({ id: pin.id });
-    expect(await caller.meetup.list()).toHaveLength(0);
+    expect((await caller.meetup.list()).pins).toHaveLength(0);
   });
 
   it("스페이스 멤버가 아니면 호출할 수 없다(spaceProcedure)", async () => {
@@ -93,22 +93,77 @@ describe("meetup 라우터 (통합)", () => {
     }
   });
 
-  it("무료 티어는 한도(20개)를 넘으면 생성은 막지 않되 가장 오래된 핀을 자동 정리한다", async () => {
-    const caller = await callerFor(userAId);
-
-    for (let i = 0; i < 20; i++) {
+  async function seedPins(count: number) {
+    for (let i = 0; i < count; i++) {
       await prisma.meetupPin.create({
         data: { spaceId, label: `핀 ${i}`, lat: 0, lng: 0, date: new Date(2020, 0, i + 1) },
       });
     }
-    expect(await caller.meetup.list()).toHaveLength(20);
+  }
 
-    // 가장 최신 날짜로 하나 더 만들면, 가장 오래된(핀 0)이 정리되어야 한다.
-    await caller.meetup.create({ label: "새 핀", lat: 0, lng: 0, date: "2026-01-01" });
+  it("무료 티어는 최근 20곳만 보여 주되, 한도를 넘어도 지우지 않는다", async () => {
+    const caller = await callerFor(userAId);
+    await seedPins(20);
 
-    const list = await caller.meetup.list();
-    expect(list).toHaveLength(20);
-    expect(list.some((p) => p.label === "핀 0")).toBe(false);
-    expect(list.some((p) => p.label === "새 핀")).toBe(true);
+    const created = await caller.meetup.create({
+      label: "새 핀",
+      lat: 0,
+      lng: 0,
+      date: "2026-01-01",
+    });
+    expect(created.visible).toBe(true);
+
+    const { pins, hidden } = await caller.meetup.list();
+    expect(pins).toHaveLength(20);
+    expect(hidden).toBe(1);
+    expect(pins.some((p) => p.label === "핀 0")).toBe(false);
+    expect(pins[0].label).toBe("새 핀");
+    expect(await prisma.meetupPin.count({ where: { spaceId } })).toBe(21);
+  });
+
+  // 지난 만남을 소급 기록하면 그 핀이 최근 20곳 밖일 수 있다. 예전엔 같은 요청에서
+  // 바로 지워졌는데 응답은 성공이었다.
+  it("한도에서 지난 날짜로 기록한 핀은 남고, 보이지 않는다고 알려 준다", async () => {
+    const caller = await callerFor(userAId);
+    await seedPins(20);
+
+    const created = await caller.meetup.create({
+      label: "처음 만난 날",
+      lat: 0,
+      lng: 0,
+      date: "2019-03-01",
+    });
+    expect(created.visible).toBe(false);
+    expect(await prisma.meetupPin.findUnique({ where: { id: created.id } })).not.toBeNull();
+  });
+
+  it("프리미엄이 끝나도 모아 둔 핀은 지워지지 않고, 다시 구독하면 다 보인다", async () => {
+    const caller = await callerFor(userAId);
+    await seedPins(35);
+    const subscription = await prisma.subscription.create({
+      data: {
+        spaceId,
+        stripeCustomerId: `cus_${randomUUID()}`,
+        stripeSubscriptionId: `sub_${randomUUID()}`,
+        plan: "premium",
+        status: "canceled",
+        currentPeriodEnd: new Date(),
+      },
+    });
+    try {
+      await caller.meetup.create({ label: "오늘", lat: 0, lng: 0, date: "2026-10-01" });
+      expect(await prisma.meetupPin.count({ where: { spaceId } })).toBe(36);
+      expect((await caller.meetup.list()).hidden).toBe(16);
+
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { status: "active" },
+      });
+      const { pins, hidden } = await caller.meetup.list();
+      expect(pins).toHaveLength(36);
+      expect(hidden).toBe(0);
+    } finally {
+      await prisma.subscription.delete({ where: { id: subscription.id } });
+    }
   });
 });

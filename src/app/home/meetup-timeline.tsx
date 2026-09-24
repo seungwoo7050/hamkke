@@ -27,7 +27,8 @@ export function MeetupTimeline() {
   const deleteMutation = useMutation(
     trpc.meetup.delete.mutationOptions({ onSuccess: () => listQuery.refetch() }),
   );
-  const pins = listQuery.data ?? [];
+  const pins = listQuery.data?.pins ?? [];
+  const hidden = listQuery.data?.hidden ?? 0;
 
   return (
     <Section
@@ -66,6 +67,11 @@ export function MeetupTimeline() {
               />
             ))}
           </div>
+          {hidden > 0 && (
+            <p className="text-muted-foreground mt-2 text-sm">
+              {t("hiddenOlder", { count: hidden })}
+            </p>
+          )}
         </>
       )}
     </Section>
@@ -80,7 +86,10 @@ function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
   const [registering, setRegistering] = useState(false);
   const createMutation = useMutation(
     trpc.meetup.create.mutationOptions({
-      onSuccess: () => {
+      onSuccess: ({ visible }) => {
+        // 한도에서 지난 날짜로 기록하면 최근 N곳 밖이라 목록에 안 나온다 — 사라진 게
+        // 아니라고 알려 준다.
+        if (!visible) toast(t("savedHidden"));
         onCreated();
         onDone();
       },

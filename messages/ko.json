@@ -253,7 +253,9 @@
     "geoFailed": "현재 위치를 가져오지 못했어요",
     "placeholder": "예: 첫 데이트 카페",
     "dateLabel": "만난 날",
-    "saveHere": "지금 있는 곳으로 기록"
+    "saveHere": "지금 있는 곳으로 기록",
+    "hiddenOlder": "더 오래된 {count}곳도 남아 있어요. 프리미엄에서 다시 보여요",
+    "savedHidden": "기록했어요. 무료 플랜에선 최근 기록만 보여서 지금은 목록에 없어요"
   },
   "settings": {
     "open": "설정 열기",
@@ -334,8 +336,8 @@
     }
   },
   "upgrade": {
-    "pinsAtLimit": "무료 플랜은 최근 {limit}곳까지 남아요. 새로 기록하면 가장 오래된 곳이 정리돼요",
-    "pinsNear": "무료 플랜은 최근 {limit}곳까지 남아요 ({used}/{limit})",
+    "pinsAtLimit": "무료 플랜에선 최근 {limit}곳까지 보여요. 더 오래된 곳도 지워지지 않고 남아 있어요",
+    "pinsNear": "무료 플랜에선 최근 {limit}곳까지 보여요 ({used}/{limit})",
     "atLimit": "무료 플랜의 {noun} 한도({limit})에 닿았어요",
     "near": "무료 플랜의 {noun} 한도가 가까워요 ({used}/{limit})",
     "nounMoments": "사진",
