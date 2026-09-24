@@ -89,6 +89,24 @@ describe("capsule 라우터 (통합)", () => {
     expect(stored.deliveredAt).not.toBeNull();
   });
 
+  // 받는 사람이 두 기기에서 거의 동시에 열면 두 조회가 모두 deliveredAt이 빈 것을
+  // 본다. 먼저 기록된 "처음 열어 본 시각"이 덮이면 안 되고, 두 응답은 저장된 값과
+  // 같아야 한다.
+  it("받는 사람이 동시에 열어도 처음 열어 본 시각은 한 번만 기록된다", async () => {
+    const callerB = await callerFor(userBId);
+    for (let round = 0; round < 10; round++) {
+      const capsule = await prisma.capsule.create({
+        data: { spaceId, senderId: userAId, content: `동시 ${round}`, deliverAt: new Date(0) },
+      });
+      const [first, second] = await Promise.all([callerB.capsule.list(), callerB.capsule.list()]);
+      const stored = await prisma.capsule.findUniqueOrThrow({ where: { id: capsule.id } });
+      for (const list of [first, second]) {
+        expect(list.find((c) => c.id === capsule.id)!.deliveredAt).toEqual(stored.deliveredAt);
+      }
+      await prisma.capsule.delete({ where: { id: capsule.id } });
+    }
+  });
+
   it("발신자만 자기 캡슐을 삭제할 수 있다", async () => {
     const callerA = await callerFor(userAId);
     const callerB = await callerFor(userBId);
@@ -141,6 +159,24 @@ describe("capsule 라우터 (통합)", () => {
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
+  });
+
+  // 열리는 때가 지났는데 상대가 아직 앱을 안 열어 deliveredAt이 비어 있는 캡슐은
+  // 더는 "예약 중"이 아니다. 보낸 사람의 한도를 계속 차지하면 안 된다.
+  it("열리는 때가 지났지만 상대가 아직 안 연 캡슐은 한도에 세지 않는다", async () => {
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const caller = await callerFor(userAId);
+
+    await prisma.capsule.create({
+      data: { spaceId, senderId: userAId, content: "열렸지만 안 읽음", deliverAt: new Date(0) },
+    });
+    for (let i = 0; i < 3; i++) {
+      await caller.capsule.create({ content: `예약 ${i}`, deliverAt: future });
+    }
+
+    await expect(
+      caller.capsule.create({ content: "한도 초과", deliverAt: future }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   describe("착륙하면 열리는 편지 (PRD §3.3.1)", () => {

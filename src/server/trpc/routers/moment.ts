@@ -110,8 +110,9 @@ export const momentRouter = router({
   // R2 파일을 먼저 지운다 — 행만 지우면 파일은 계속 요금이 나가고, 지우고 다시
   // 올리는 식으로 한도도 넘길 수 있었다. R2 삭제가 실패하면 행이 남아 다시 지울 수 있다.
   delete: spaceProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    // 올린 사람만 지운다 — 화면이 삭제 버튼을 올린 사람에게만 보이는 것과 같은 규칙.
     const moment = await prisma.moment.findFirst({
-      where: { id: input.id, spaceId: ctx.space.id },
+      where: { id: input.id, spaceId: ctx.space.id, uploaderId: ctx.session.user.id },
       select: { id: true, mediaUrl: true },
     });
     if (!moment) return { ok: true };

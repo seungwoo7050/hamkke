@@ -68,6 +68,13 @@ describe("billing.usage (통합)", () => {
           deliverAt: new Date(Date.now() - 86_400_000),
           deliveredAt: new Date(),
         },
+        {
+          // 열리는 때는 지났지만 상대가 아직 안 열었다 — 예약 중이 아니다.
+          spaceId,
+          senderId: userId,
+          content: "열렸지만 안 읽음",
+          deliverAt: new Date(Date.now() - 60_000),
+        },
       ],
     });
     await prisma.meetupPin.create({
