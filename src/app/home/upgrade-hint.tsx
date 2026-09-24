@@ -12,7 +12,7 @@ type T = ReturnType<typeof useTranslations<"upgrade">>;
 
 function message(t: T, key: UsageKey, used: number, limit: number, atLimit: boolean) {
   if (key === "meetupPins") {
-    // 만남 지도는 막지 않고 오래된 곳부터 정리한다(meetup 라우터).
+    // 만남 지도는 막지 않고, 최근 N곳 밖은 지우지 않고 숨긴다(meetup 라우터).
     return atLimit ? t("pinsAtLimit", { limit }) : t("pinsNear", { limit, used });
   }
   const noun = t(key === "moments" ? "nounMoments" : "nounCapsules");

@@ -253,7 +253,9 @@
     "geoFailed": "Couldn't get your current location",
     "placeholder": "e.g. The café from our first date",
     "dateLabel": "The day",
-    "saveHere": "Save this spot"
+    "saveHere": "Save this spot",
+    "hiddenOlder": "{count, plural, one {# older place is} other {# older places are}} still kept. They'll show again with Premium",
+    "savedHidden": "Saved. The free plan only shows your latest places, so this one isn't in the list"
   },
   "settings": {
     "open": "Open settings",
@@ -334,8 +336,8 @@
     }
   },
   "upgrade": {
-    "pinsAtLimit": "The free plan keeps your latest {limit} places. Saving a new one clears the oldest.",
-    "pinsNear": "The free plan keeps your latest {limit} places ({used}/{limit})",
+    "pinsAtLimit": "The free plan shows your latest {limit} places. Older ones are still kept",
+    "pinsNear": "The free plan shows your latest {limit} places ({used}/{limit})",
     "atLimit": "You've hit the free plan's {noun} limit ({limit})",
     "near": "You're close to the free plan's {noun} limit ({used}/{limit})",
     "nounMoments": "photo",
