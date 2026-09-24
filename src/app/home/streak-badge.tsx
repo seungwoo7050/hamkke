@@ -1,26 +1,25 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Flame } from "lucide-react";
 import { cn } from "cn";
-import { computeStreak } from "@/lib/streak";
 import { useTRPC } from "@/trpc/client";
 
 // 별도 "체크인" 버튼 없이 메시지를 보낸 날을 자동으로 활동일로 센다
-// (PRD.md §3.4 "연속 접속/대화 일수"). 연속 계산은 로컬 타임존 기준으로
-// 클라이언트에서 한다(src/lib/streak.ts).
+// (PRD.md §3.4 "연속 접속/대화 일수"). 하루 경계는 이 기기의 시간대 — 서버가
+// 그 시간대로 날짜를 묶어 연속 일수를 계산한다(src/server/trpc/routers/streak.ts).
 export function StreakBadge() {
   const t = useTranslations("streak");
   const trpc = useTRPC();
-  const { data } = useQuery(trpc.streak.activeDates.queryOptions());
+  const { data } = useQuery(
+    trpc.streak.current.queryOptions({
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }),
+  );
 
-  const { streak, activeToday } = useMemo(() => {
-    if (!data) return { streak: 0, activeToday: false };
-    return computeStreak(data.map((d) => new Date(d)));
-  }, [data]);
-
+  const streak = data?.streak ?? 0;
+  const activeToday = data?.activeToday ?? false;
   if (streak === 0) return null;
 
   return (
