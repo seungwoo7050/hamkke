@@ -53,6 +53,18 @@ describe("daysBetween / nextOccurrence", () => {
     expect(nextOccurrence({ y: 2020, m: 6, d: 1 }, true, today)).toEqual({ y: 2026, m: 6, d: 1 });
   });
 
+  // 윤년이 아닌 해에는 2월 29일이 없다. 그대로 두면 "2월 29일 (월)"이라는 없는
+  // 날짜를 표시하면서 D-day는 3월 1일까지 센다 — 그 달 안에 머물도록 2월 28일로.
+  it("2월 29일 반복 기념일은 윤년이 아닌 해엔 2월 28일, 윤년엔 2월 29일", () => {
+    const fromOctober = { y: 2026, m: 10, d: 1 };
+    const feb29 = { y: 2024, m: 2, d: 29 };
+    expect(nextOccurrence(feb29, true, fromOctober)).toEqual({ y: 2027, m: 2, d: 28 });
+    expect(daysBetween(fromOctober, nextOccurrence(feb29, true, fromOctober))).toBe(150);
+    expect(nextOccurrence(feb29, true, { y: 2027, m: 10, d: 1 })).toEqual({ y: 2028, m: 2, d: 29 });
+    // 윤년이 아닌 해의 2월 28일 당일은 오늘(D-day 0)이다.
+    expect(nextOccurrence(feb29, true, { y: 2027, m: 2, d: 28 })).toEqual({ y: 2027, m: 2, d: 28 });
+  });
+
   it("반복이 아니면 원래 날짜 그대로", () => {
     expect(nextOccurrence({ y: 2020, m: 5, d: 1 }, false, today)).toEqual({ y: 2020, m: 5, d: 1 });
   });

@@ -104,11 +104,21 @@ export function formatDayLabel(date: Date, timeZone: string, now: Date) {
   return formatYMD(target, { weekday: true, year: target.y !== todayIn(timeZone, now).y });
 }
 
+function isLeapYear(y: number) {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+
+/** 반복 기념일을 그해로 옮긴다. 2월 29일은 윤년이 아닌 해에 2월 28일(그 달 안에 머문다). */
+function inYear(date: YMD, y: number): YMD {
+  if (date.m === 2 && date.d === 29 && !isLeapYear(y)) return { y, m: 2, d: 28 };
+  return { ...date, y };
+}
+
 /** 기념일의 다음 발생일 — 매년 반복이면 오늘 이후 가장 가까운 해로 옮긴다. */
 export function nextOccurrence(date: YMD, recurring: boolean, today: YMD): YMD {
   if (!recurring) return date;
-  const thisYear = { ...date, y: today.y };
-  return daysBetween(today, thisYear) >= 0 ? thisYear : { ...date, y: today.y + 1 };
+  const thisYear = inYear(date, today.y);
+  return daysBetween(today, thisYear) >= 0 ? thisYear : inYear(date, today.y + 1);
 }
 
 /**
