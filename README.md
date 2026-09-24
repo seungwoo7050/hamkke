@@ -82,7 +82,7 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 
 ## 배포 체크리스트
 
-1. Vercel에 배포하고 `.env.example`의 값을 환경변수로 넣는다.
+1. Vercel에 배포하고 `.env.example`의 값을 환경변수로 넣는다. `APP_URL`은 운영 도메인(`https://<도메인>`)으로 반드시 넣는다 — 비우면 결제 후 돌아올 주소를 요청의 `Host` 헤더로 만든다.
 2. 운영 DB에 마이그레이션: `DATABASE_URL=<운영 direct 연결> npx prisma migrate deploy`(Supabase는 포트 5432 direct 연결만 쓴다 — `.env.example` 주석 참고).
 3. Stripe 대시보드 → Webhooks에 `https://<도메인>/api/webhooks/stripe`(`customer.subscription.*`)를 등록하고 `STRIPE_WEBHOOK_SECRET`을 교체한다.
 4. Google OAuth 리디렉션 URI와 Resend 발신 도메인을 운영 도메인으로 바꾼다.
