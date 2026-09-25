@@ -29,7 +29,10 @@ interface BackgroundGeolocationPlugin {
 
 const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
 
-let watcherId: string | null = null;
+// 시작 중인 감시까지 기억한다. addWatcher는 비동기라 끝나기 전에 멈추라는 요청이
+// 올 수 있고(화면이 곧바로 내려가거나 개발 모드에서 effect가 두 번 돌 때), 그때
+// id만 기억하면 아직 비어 있어 아무것도 멈추지 못한다.
+let watcher: Promise<string> | null = null;
 
 export function isNativeLocation() {
   return Capacitor.isNativePlatform();
@@ -52,7 +55,7 @@ export async function startNativeLocationWatch(
   onPosition: (position: { lat: number; lng: number; accuracy: number }) => void,
   onError: () => void,
 ) {
-  watcherId = await BackgroundGeolocation.addWatcher(
+  const pending = BackgroundGeolocation.addWatcher(
     {
       requestPermissions: true,
       stale: false,
@@ -66,10 +69,14 @@ export async function startNativeLocationWatch(
       onPosition({ lat: position.latitude, lng: position.longitude, accuracy: position.accuracy });
     },
   );
+  watcher = pending;
+  await pending;
 }
 
 export async function stopNativeLocationWatch() {
-  if (!watcherId) return;
-  await BackgroundGeolocation.removeWatcher({ id: watcherId });
-  watcherId = null;
+  const pending = watcher;
+  watcher = null;
+  if (!pending) return;
+  const id = await pending.catch(() => null);
+  if (id) await BackgroundGeolocation.removeWatcher({ id });
 }
