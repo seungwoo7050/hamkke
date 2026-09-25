@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { distanceKm, formatDistanceKm, isMeetingSoon } from "./geo";
+import { distanceKm, formatDistanceKm, isMeetingSoon, nearSideOf } from "./geo";
 
 describe("distanceKm", () => {
   it("같은 좌표는 0", () => {
@@ -42,5 +42,22 @@ describe("isMeetingSoon", () => {
 
   it("임계값을 직접 지정할 수 있다", () => {
     expect(isMeetingSoon(4, 5)).toBe(true);
+  });
+});
+
+describe("nearSideOf", () => {
+  // 서울(127°E)과 LA(118°W)는 태평양 쪽으로 가까운데, 경도 그대로 범위를 잡으면
+  // 지구 반대편(유럽 쪽)으로 도는 범위가 된다. 상대 경도를 내 쪽으로 이어 붙인다.
+  it("날짜변경선을 사이에 두면 경도를 360만큼 옮겨 가까운 쪽에 둔다", () => {
+    const seoul = { lat: 37.5665, lng: 126.978 };
+    const la = { lat: 34.0522, lng: -118.2437 };
+    expect(nearSideOf(seoul, la)).toEqual({ lat: 34.0522, lng: -118.2437 + 360 });
+    expect(nearSideOf(la, seoul)).toEqual({ lat: 37.5665, lng: 126.978 - 360 });
+  });
+
+  it("가까운 두 점은 그대로 둔다", () => {
+    const seoul = { lat: 37.5665, lng: 126.978 };
+    const busan = { lat: 35.1796, lng: 129.0756 };
+    expect(nearSideOf(seoul, busan)).toEqual(busan);
   });
 });

@@ -16,6 +16,19 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
+/**
+ * 지도에 두 점을 함께 그릴 때 point의 경도를 base에서 180° 안쪽으로 옮긴다.
+ * 경도를 그대로 쓰면 서울(127°E)–LA(118°W)처럼 날짜변경선을 사이에 둔 두 점의
+ * 범위가 가까운 태평양이 아니라 지구 반대편으로 잡힌다. Leaflet은 360°를 넘는
+ * 경도도 옆 지도 사본에 그대로 그린다(비행 경로의 경도 이어 붙이기와 같다).
+ */
+export function nearSideOf<T extends { lat: number; lng: number }>(base: T, point: T): T {
+  let lng = point.lng;
+  while (lng - base.lng > 180) lng -= 360;
+  while (lng - base.lng < -180) lng += 360;
+  return lng === point.lng ? point : { ...point, lng };
+}
+
 // 먼 거리(100km 이상)에서 소수점은 의미 없는 정밀도라 정수로 반올림한다 —
 // 장거리 커플에게 "11,052.6km"의 0.6은 정보가 아니라 소음이다.
 export function formatDistanceKm(km: number) {

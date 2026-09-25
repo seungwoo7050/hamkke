@@ -94,6 +94,29 @@ describe("touch 라우터 (통합)", () => {
     expect(latest?.id).not.toBe(older.id);
   });
 
+  // 상한을 넘으면 잘리는 쪽은 오래된 터치여야 한다 — 대화 흐름의 맨 아래(가장
+  // 최근)가 빠지면 방금 받은 터치가 보이지 않는다.
+  it("list가 상한을 넘으면 가장 최근 터치를 남기고 시간순으로 돌려준다", async () => {
+    const t0 = Date.now() - 60 * 60_000;
+    await prisma.touch.createMany({
+      data: Array.from({ length: 250 }, (_, i) => ({
+        spaceId,
+        senderId: userBId,
+        createdAt: new Date(t0 + i * 10_000),
+      })),
+    });
+    const newest = await prisma.touch.findFirstOrThrow({
+      where: { spaceId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const list = await (await callerFor(userAId)).touch.list({ since: new Date(t0) });
+    expect(list).toHaveLength(200);
+    expect(list.at(-1)!.id).toBe(newest.id);
+    const times = list.map((t) => t.createdAt.getTime());
+    expect(times).toEqual([...times].sort((x, y) => x - y));
+  });
+
   it("list는 since 이후의 터치를 보낸 사람과 무관하게 시간순으로 돌려준다", async () => {
     const since = new Date(Date.now() - 60_000);
     await prisma.touch.create({

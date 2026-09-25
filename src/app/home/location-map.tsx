@@ -5,6 +5,7 @@ import { latLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useTranslations } from "next-intl";
 import { AttributionControl, MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { nearSideOf } from "@/lib/geo";
 import { duskMarkerIcon, emberMarkerIcon } from "@/lib/map-markers";
 
 type LatLng = { lat: number; lng: number };
@@ -16,8 +17,17 @@ const DEFAULT_CENTER: LatLng = { lat: 36.5, lng: 127.8 };
 // 검토한다(docs/COMMIT_PLAN.md Phase 3 각주 참고).
 // 두 사람이 모두 있으면 둘 다 보이게 범위를 맞추고(장거리라 한쪽 중심 고정
 // 줌이면 상대가 화면 밖에 있다), 한 명뿐이면 그 사람 중심으로 가까이 본다.
-export function LocationMap({ me, partner }: { me: LatLng | null; partner: LatLng | null }) {
+export function LocationMap({
+  me,
+  partner: partnerRaw,
+}: {
+  me: LatLng | null;
+  partner: LatLng | null;
+}) {
   const t = useTranslations("common");
+  // 상대 핀은 내 쪽으로 경도를 이어 붙여 그린다 — 날짜변경선을 사이에 두면
+  // 범위가 지구 반대편으로 잡히고 두 핀이 화면 양 끝에 붙는다.
+  const partner = me && partnerRaw ? nearSideOf(me, partnerRaw) : partnerRaw;
   const center = me ?? partner ?? DEFAULT_CENTER;
   const hasAnyPoint = me !== null || partner !== null;
   const bounds =
