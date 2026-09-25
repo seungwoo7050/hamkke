@@ -1,6 +1,6 @@
 "use client";
 
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 
 /**
@@ -18,11 +18,22 @@ export async function requestNativePushToken(): Promise<string | null> {
   const permission = await PushNotifications.requestPermissions();
   if (permission.receive !== "granted") return null;
 
-  return new Promise((resolve) => {
-    PushNotifications.addListener("registration", (token) => resolve(token.value));
-    PushNotifications.addListener("registrationError", () => resolve(null));
-    void PushNotifications.register();
-  });
+  // 이번 요청에 붙인 리스너는 결과를 받으면 뗀다 — 떼지 않으면 앱 화면이 다시
+  // 마운트될 때마다 registration 리스너가 하나씩 쌓인다.
+  const handles: PluginListenerHandle[] = [];
+  try {
+    return await new Promise<string | null>((resolve) => {
+      void Promise.all([
+        PushNotifications.addListener("registration", (token) => resolve(token.value)),
+        PushNotifications.addListener("registrationError", () => resolve(null)),
+      ]).then((added) => {
+        handles.push(...added);
+        return PushNotifications.register();
+      });
+    });
+  } finally {
+    await Promise.all(handles.map((handle) => handle.remove()));
+  }
 }
 
 /** 앱이 포그라운드일 때 도착한 푸시를 처리한다(웹 경로의 onForegroundMessage와 동일한 역할). */
