@@ -13,7 +13,20 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+// 테스트 계정과 30일짜리 세션을 만드는 스크립트라 운영 DB에서 돌면 안 된다. 이
+// 저장소의 .env는 실제 Supabase를 가리키므로, 로컬 호스트가 아니면 연결하기 전에
+// 멈춘다(e2e/db.ts와 같은 규칙).
+const databaseUrl = process.env.DATABASE_URL ?? "";
+const host = URL.canParse(databaseUrl) ? new URL(databaseUrl).hostname : "";
+if (!["localhost", "127.0.0.1"].includes(host)) {
+  console.error(
+    `시드는 로컬 DB에서만 돌아요(지금 DATABASE_URL 호스트: ${host || "없음"}).\n` +
+      "DATABASE_URL=postgresql://hamkke:hamkke@localhost:5432/hamkke npm run dev:seed-couple",
+  );
+  process.exit(1);
+}
+
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 const SESSION_DAYS = 30;
