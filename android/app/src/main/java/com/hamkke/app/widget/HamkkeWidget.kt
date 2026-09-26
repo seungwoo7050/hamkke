@@ -30,6 +30,7 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.layout.wrapContentHeight
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -116,6 +117,7 @@ private fun ReadyBody(state: WidgetState.Ready, strings: WidgetStrings) {
                 setCharSequence(R.id.partner_clock, "setFormat12Hour", pattern)
                 setCharSequence(R.id.partner_clock, "setFormat24Hour", pattern)
             },
+            modifier = GlanceModifier.wrapContentHeight(),
         )
         Spacer(GlanceModifier.height(2.dp))
     }
