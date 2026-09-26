@@ -70,8 +70,12 @@ export async function createPairedCouple(
 }
 
 export async function spaceOf(userId: string) {
-  const { rows } = await pool.query<{ id: string; inviteCode: string }>(
-    `SELECT s.id, s."inviteCode" FROM "Space" s JOIN "User" u ON u."spaceId" = s.id WHERE u.id = $1`,
+  const { rows } = await pool.query<{
+    id: string;
+    inviteCode: string;
+    stripeCustomerId: string | null;
+  }>(
+    `SELECT s.id, s."inviteCode", s."stripeCustomerId" FROM "Space" s JOIN "User" u ON u."spaceId" = s.id WHERE u.id = $1`,
     [userId],
   );
   if (!rows[0]) throw new Error("스페이스가 없어요");

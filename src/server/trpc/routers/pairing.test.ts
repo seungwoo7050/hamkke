@@ -173,6 +173,31 @@ describe("pairing 플로우 (통합)", () => {
       ).rejects.toMatchObject({ code: "NOT_FOUND" });
     });
 
+    it("같은 사용자가 틀린 코드를 한꺼번에 보내도 한도(5번)만큼만 코드를 확인한다", async () => {
+      const b = await callerFor(userBId);
+      const results = await Promise.allSettled(
+        Array.from({ length: 20 }, (_, i) =>
+          b.pairing.redeemInviteCode({ code: `ZZZZ${String(i).padStart(2, "0")}` }),
+        ),
+      );
+      const codes = results.map((r) =>
+        r.status === "rejected" ? (r.reason as { code: string }).code : "OK",
+      );
+      expect(codes.filter((c) => c === "NOT_FOUND")).toHaveLength(5);
+      expect(codes.filter((c) => c === "TOO_MANY_REQUESTS")).toHaveLength(15);
+    });
+
+    it("맞는 코드로 연결된 입력은 실패로 세지 않는다", async () => {
+      const ip = `203.0.113.${Math.floor(Math.random() * 250)}`;
+      const created = await (await callerFor(userAId)).pairing.createInviteCode();
+      await (await callerFor(userBId, ip)).pairing.redeemInviteCode({ code: created.inviteCode });
+      expect(
+        await prisma.rateLimitHit.count({
+          where: { bucket: { startsWith: "invite." }, subject: { in: [userBId, ip] } },
+        }),
+      ).toBe(0);
+    });
+
     it("이미 스페이스가 있어 거절된 입력은 실패로 세지 않는다", async () => {
       const created = await (await callerFor(userAId)).pairing.createInviteCode();
       await expect(

@@ -151,9 +151,17 @@ test("페어링 → 채팅 → 위치공유 → 구독", async ({ browser, baseU
         await expect(page.getByText("두 사람 모두 프리미엄 혜택을 받고 있어요")).toBeVisible();
       }
     } finally {
-      // 고객을 지우면 그 구독도 함께 해지된다.
+      // 고객을 지우면 그 구독도 함께 해지된다. 결제 페이지로 갈 때 앱이 만든
+      // 스페이스 고객도 함께 지운다.
       await stripe.customers.del(customer.id);
+      if (space.stripeCustomerId) await stripe.customers.del(space.stripeCustomerId);
     }
+
+    // 결제 페이지로 갈 때 앱이 스페이스용으로 만든 Stripe 고객도 남기지 않는다
+    // (테스트 모드라도 실행마다 쌓이지 않게).
+    expect(space.stripeCustomerId).toBeTruthy();
+    const leftover = await stripe.customers.retrieve(space.stripeCustomerId!);
+    expect(leftover.deleted).toBe(true);
   });
 
   await seoul.context.close();
