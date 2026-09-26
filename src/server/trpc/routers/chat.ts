@@ -6,7 +6,7 @@ import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import { consumeOrThrow } from "@/server/rate-limit";
 import { chatMessageCheck, uploadUrlCheck } from "@/server/request-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
-import { newUploadKey, verifyUpload } from "@/server/uploads";
+import { newUploadKey, verifyUpload, withUploadRegistrationLock } from "@/server/uploads";
 import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
@@ -29,23 +29,26 @@ type SpaceCtx = {
 };
 
 async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
-  const { size, finalKey } = await verifyUpload(key, {
-    folder: "messages",
-    spaceId: ctx.space.id,
-    allowedTypes: type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES,
-    locale: ctx.locale,
-  });
-  await assertStorageAvailable(ctx.space.id, size, ctx.locale);
-  await promoteUpload(key, finalKey);
-
-  const message = await prisma.message.create({
-    data: {
+  // 확인·옮기기·행 생성은 잠금 아래에서, 브로드캐스트·푸시는 잠금 밖에서.
+  const message = await withUploadRegistrationLock(ctx.space.id, async (tx) => {
+    const { size, finalKey } = await verifyUpload(key, {
+      folder: "messages",
       spaceId: ctx.space.id,
-      senderId: ctx.session.user.id,
-      type,
-      content: finalKey,
-      mediaSize: size,
-    },
+      allowedTypes: type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES,
+      locale: ctx.locale,
+    });
+    await assertStorageAvailable(ctx.space.id, size, ctx.locale, tx);
+    await promoteUpload(key, finalKey);
+
+    return tx.message.create({
+      data: {
+        spaceId: ctx.space.id,
+        senderId: ctx.session.user.id,
+        type,
+        content: finalKey,
+        mediaSize: size,
+      },
+    });
   });
   const content = await resolveContent(message);
 

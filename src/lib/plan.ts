@@ -1,5 +1,9 @@
 import "server-only";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+
+/** 트랜잭션 안에서도 같은 함수를 쓰도록 받는 DB 클라이언트(기본은 전역 prisma). */
+export type Db = Prisma.TransactionClient;
 
 // 무료 티어 한도(PRD.md §3.5). 정확한 숫자는 상품 정책에 없어 합리적
 // 기본값으로 정했다 — 가격 정책이 바뀌면 이 상수만 조정하면 된다.
@@ -16,8 +20,8 @@ export const STORAGE_LIMIT_BYTES = {
   premium: 20 * 1024 * 1024 * 1024,
 } as const;
 
-export async function isPremiumSpace(spaceId: string) {
-  const subscription = await prisma.subscription.findUnique({ where: { spaceId } });
+export async function isPremiumSpace(spaceId: string, db: Db = prisma) {
+  const subscription = await db.subscription.findUnique({ where: { spaceId } });
   return subscription?.status === "active";
 }
 

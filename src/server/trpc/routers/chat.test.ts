@@ -278,6 +278,26 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
   });
 
+  it("같은 임시 키로 동시에 여러 번 보내도 메시지는 하나만 생긴다", async () => {
+    const caller = await callerFor(userAId);
+    const bytes = new Uint8Array([1]);
+    const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
+      contentType: "image/png",
+      size: bytes.length,
+    });
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "image/png" },
+      body: bytes,
+    });
+
+    const results = await Promise.allSettled([1, 2, 3].map(() => caller.chat.sendImage({ key })));
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.message.count({ where: { spaceId } })).toBe(1);
+    await deleteR2Object(key);
+  });
+
   it("서명에 묶이지 않은 Content-Type을 바꿔 올린 파일은 거절한다", async () => {
     const caller = await callerFor(userAId);
     const { uploadUrl, key } = await caller.chat.createImageUploadUrl({

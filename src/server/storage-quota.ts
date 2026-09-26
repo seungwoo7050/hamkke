@@ -1,16 +1,16 @@
 import "server-only";
 import { TRPCError } from "@trpc/server";
 import { translator } from "@/i18n/server";
-import { isPremiumSpace, STORAGE_LIMIT_BYTES } from "@/lib/plan";
+import { type Db, isPremiumSpace, STORAGE_LIMIT_BYTES } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 
 const GB = 1024 * 1024 * 1024;
 
 /** 스페이스가 R2에 올려 둔 첨부 파일(메시지 이미지·음성 + 사진)의 총 바이트. */
-export async function storageUsedBytes(spaceId: string) {
+export async function storageUsedBytes(spaceId: string, db: Db = prisma) {
   const [messages, moments] = await Promise.all([
-    prisma.message.aggregate({ where: { spaceId }, _sum: { mediaSize: true } }),
-    prisma.moment.aggregate({ where: { spaceId }, _sum: { mediaSize: true } }),
+    db.message.aggregate({ where: { spaceId }, _sum: { mediaSize: true } }),
+    db.moment.aggregate({ where: { spaceId }, _sum: { mediaSize: true } }),
   ]);
   return (messages._sum.mediaSize ?? 0) + (moments._sum.mediaSize ?? 0);
 }
@@ -21,10 +21,11 @@ export async function assertStorageAvailable(
   spaceId: string,
   addBytes: number,
   locale: string | null | undefined,
+  db: Db = prisma,
 ) {
-  const premium = await isPremiumSpace(spaceId);
+  const premium = await isPremiumSpace(spaceId, db);
   const limit = premium ? STORAGE_LIMIT_BYTES.premium : STORAGE_LIMIT_BYTES.free;
-  if ((await storageUsedBytes(spaceId)) + addBytes <= limit) return;
+  if ((await storageUsedBytes(spaceId, db)) + addBytes <= limit) return;
 
   const t = translator(locale);
   throw new TRPCError({
