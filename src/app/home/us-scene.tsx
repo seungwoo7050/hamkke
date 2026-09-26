@@ -70,9 +70,7 @@ function Side({
         )}
       </span>
       {timeZone ? (
-        <span className="mt-1 text-3xl font-bold tracking-tight" suppressHydrationWarning>
-          {fmt.time(now, timeZone)}
-        </span>
+        <span className="mt-1 text-3xl font-bold tracking-tight">{fmt.time(now, timeZone)}</span>
       ) : (
         placeholder && (
           <span className="text-muted-foreground mt-1 text-sm leading-snug">{placeholder}</span>
@@ -141,22 +139,19 @@ function FlightSide({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(progress * 100)}
-        suppressHydrationWarning
       >
         <span className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-current opacity-30" />
         <span
           className="absolute top-1/2 left-0 border-t-2 border-current"
           style={{ width: `${progress * 100}%` }}
-          suppressHydrationWarning
         />
         <Plane
           aria-hidden
           className="absolute top-0 size-4 rotate-45"
           style={{ left: `calc(${progress * 100}% - 8px)` }}
-          suppressHydrationWarning
         />
       </span>
-      <span className="text-sm" suppressHydrationWarning>
+      <span className="text-sm">
         {remaining ? t("remaining", { time: remaining }) : t("landingSoon")}
       </span>
       {estimated && <span className="text-xs opacity-70">{t("scheduled")}</span>}
