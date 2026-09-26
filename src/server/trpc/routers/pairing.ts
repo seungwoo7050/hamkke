@@ -2,10 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { prisma } from "@/lib/prisma";
 import { generateInviteCode, inviteCodeExpiryDate } from "@/server/pairing/invite-code";
-import {
-  assertCanRedeemInviteCode,
-  recordFailedInviteCodeAttempt,
-} from "@/server/pairing/rate-limit";
+import { reserveInviteCodeAttempt } from "@/server/pairing/rate-limit";
 import { protectedProcedure, router } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -90,44 +87,48 @@ export const pairingRouter = router({
         });
       }
 
-      // 코드를 찾아보기 전에 먼저 막는다(ARCHITECTURE.md §7).
-      await assertCanRedeemInviteCode(userId, ctx.ip, ctx.locale);
-      const fail = async (
-        code: "NOT_FOUND" | "CONFLICT" | "PRECONDITION_FAILED",
-        message: string,
-      ) => {
-        await recordFailedInviteCodeAttempt(userId, ctx.ip);
+      // 코드를 찾아보기 전에 먼저 막고, 이 입력을 실패 후보로 기록해 둔다(ARCHITECTURE.md §7).
+      const attempt = await reserveInviteCodeAttempt(userId, ctx.ip, ctx.locale);
+      // 추측이 틀린 경우(없는·이미 쓰인·만료된 코드)만 실패로 남긴다.
+      let guessedWrong = false;
+      const fail = (code: "NOT_FOUND" | "CONFLICT" | "PRECONDITION_FAILED", message: string) => {
+        guessedWrong = true;
         return new TRPCError({ code, message });
       };
 
-      const space = await prisma.space.findUnique({
-        where: { inviteCode: input.code.toUpperCase() },
-      });
-      if (!space) {
-        throw await fail("NOT_FOUND", translator(ctx.locale)("errors.inviteInvalid"));
-      }
-      if (space.status !== "pending") {
-        throw await fail("CONFLICT", translator(ctx.locale)("errors.inviteUsed"));
-      }
-      if (space.inviteCodeExpiresAt < new Date()) {
-        throw await fail("PRECONDITION_FAILED", translator(ctx.locale)("errors.inviteExpired"));
-      }
-
-      const spaceId = await prisma.$transaction(async (tx) => {
-        // status가 여전히 pending일 때만 active로 전환 — 동시 입력 레이스 방지
-        const { count } = await tx.space.updateMany({
-          where: { id: space.id, status: "pending" },
-          data: { status: "active" },
+      let spaceId: string;
+      try {
+        const space = await prisma.space.findUnique({
+          where: { inviteCode: input.code.toUpperCase() },
         });
-        if (count === 0) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: translator(ctx.locale)("errors.inviteUsed"),
-          });
+        if (!space) {
+          throw fail("NOT_FOUND", translator(ctx.locale)("errors.inviteInvalid"));
         }
-        await tx.user.update({ where: { id: userId }, data: { spaceId: space.id } });
-        return space.id;
-      });
+        if (space.status !== "pending") {
+          throw fail("CONFLICT", translator(ctx.locale)("errors.inviteUsed"));
+        }
+        if (space.inviteCodeExpiresAt < new Date()) {
+          throw fail("PRECONDITION_FAILED", translator(ctx.locale)("errors.inviteExpired"));
+        }
+
+        spaceId = await prisma.$transaction(async (tx) => {
+          // status가 여전히 pending일 때만 active로 전환 — 동시 입력 레이스 방지
+          const { count } = await tx.space.updateMany({
+            where: { id: space.id, status: "pending" },
+            data: { status: "active" },
+          });
+          if (count === 0) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: translator(ctx.locale)("errors.inviteUsed"),
+            });
+          }
+          await tx.user.update({ where: { id: userId }, data: { spaceId: space.id } });
+          return space.id;
+        });
+      } finally {
+        if (!guessedWrong) await attempt.release();
+      }
 
       return { spaceId };
     }),
