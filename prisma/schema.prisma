@@ -62,6 +62,10 @@ model User {
   /// 화면·알림 언어(PRD §3.8) — "ko" | "en". 비어 있으면 기기 언어 → 한국어.
   /// 사람마다 따로라 두 사람의 언어가 다를 수 있다.
   locale                 String?
+  /// 기기 언어(브라우저가 동기화한 지원 언어 중 하나). locale을 고르지 않은 사람의
+  /// 푸시·서버 문구를 화면과 같은 언어로 만들 때 쓴다 — 화면은 요청마다 Accept-Language로
+  /// 정하지만 푸시는 요청 밖에서 만들어져 기기 언어를 따로 알아 둬야 한다.
+  deviceLocale           String?
 
   spaceId String?
   space   Space?  @relation(fields: [spaceId], references: [id])
