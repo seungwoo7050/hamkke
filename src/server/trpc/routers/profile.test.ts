@@ -83,6 +83,22 @@ describe("profile 라우터 (통합)", () => {
     expect(result).toEqual({ me: "Asia/Seoul", partner: "America/Los_Angeles" });
   });
 
+  it("setDeviceLocale은 기기 언어를 지원 언어로만 기록하고, 고른 언어는 건드리지 않는다", async () => {
+    const caller = await callerFor(userAId);
+    await caller.profile.setLocale({ locale: "ko" });
+    await caller.profile.setDeviceLocale({ locale: "en" });
+    let me = await prisma.user.findUniqueOrThrow({ where: { id: userAId } });
+    expect([me.locale, me.deviceLocale]).toEqual(["ko", "en"]);
+
+    // 지원하지 않는 기기 언어(예: 일본어)는 null로 — 그땐 한국어가 기본이다.
+    await caller.profile.setDeviceLocale({ locale: null });
+    me = await prisma.user.findUniqueOrThrow({ where: { id: userAId } });
+    expect(me.deviceLocale).toBeNull();
+    await expect(
+      caller.profile.setDeviceLocale({ locale: "ja" as unknown as "en" }),
+    ).rejects.toThrow();
+  });
+
   it("setLocale은 내 언어만 바꾸고, 지원하지 않는 언어는 거절한다", async () => {
     const caller = await callerFor(userAId);
     await caller.profile.setLocale({ locale: "en" });

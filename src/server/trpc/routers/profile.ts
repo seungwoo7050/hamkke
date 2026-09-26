@@ -28,6 +28,19 @@ export const profileRouter = router({
       return { locale: input.locale };
     }),
 
+  // 기기 언어 — 화면은 요청마다 Accept-Language로 정하지만 푸시는 요청 밖에서
+  // 만들어지므로, 언어를 고르지 않은 사람의 푸시도 화면과 같은 언어가 되게 알아 둔다.
+  // 지원하지 않는 언어면 null(한국어 기본).
+  setDeviceLocale: protectedProcedure
+    .input(z.object({ locale: z.enum(LOCALES).nullable() }))
+    .mutation(async ({ ctx, input }) => {
+      await prisma.user.update({
+        where: { id: ctx.session.user.id },
+        data: { deviceLocale: input.locale },
+      });
+      return { locale: input.locale };
+    }),
+
   timezones: spaceProcedure.query(async ({ ctx }) => {
     const [me, partner] = await Promise.all([
       prisma.user.findUniqueOrThrow({
