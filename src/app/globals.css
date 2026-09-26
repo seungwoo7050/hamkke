@@ -274,7 +274,10 @@
   background: var(--muted);
   font-family: var(--font-sans);
 }
-.hamkke-map .leaflet-control-attribution {
+/* leaflet.css의 .leaflet-container .leaflet-control-attribution(클래스 둘)과 명시도가
+   같으면 지도 컴포넌트와 함께 나중에 로드되는 leaflet.css가 이겨 흰 배경이 남는다
+   — 클래스 하나를 더 붙여 이 규칙이 이기게 한다. */
+.hamkke-map.leaflet-container .leaflet-control-attribution {
   background: color-mix(in srgb, var(--background) 75%, transparent);
   color: var(--muted-foreground);
   font-size: 10px;
