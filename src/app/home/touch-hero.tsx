@@ -63,7 +63,7 @@ export function TouchHero() {
         <Heart className="size-6" />
         {justSent ? t("sent", { name: partnerName }) : t("send")}
       </Button>
-      <p className="font-handwritten text-dusk-ink mt-2.5 min-h-7 text-lg" suppressHydrationWarning>
+      <p className="font-handwritten text-dusk-ink mt-2.5 min-h-7 text-lg">
         {partnerFlying
           ? // 비행 중엔 인터넷이 없을 수 있다 — 보낸 마음이 사라지지 않는다는 걸 먼저 말한다.
             t("partnerFlying")

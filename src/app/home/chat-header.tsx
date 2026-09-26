@@ -34,10 +34,7 @@ export function ChatHeader() {
       <div>
         <h1 className="text-foreground text-base font-semibold">{partnerName}</h1>
         {tz && (
-          <p
-            className="text-muted-foreground flex items-center gap-1 text-xs"
-            suppressHydrationWarning
-          >
+          <p className="text-muted-foreground flex items-center gap-1 text-xs">
             {sleeping && <Moon className="size-3.5" />}
             {fmt.time(now, tz)}
             {present ? ` · ${t("presentNow")}` : sleeping && ` · ${t("sleeping")}`}
