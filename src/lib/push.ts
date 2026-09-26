@@ -37,7 +37,9 @@ export async function sendPushToUser(
 
 /**
  * Space의 "상대방"(발신자 본인이 아닌 다른 멤버)에게만 발송한다. 문구는 **받는
- * 사람의 언어**로 만든다 — 두 사람의 언어가 다를 수 있어서(PRD §3.8).
+ * 사람의 언어**로 만든다 — 두 사람의 언어가 다를 수 있어서(PRD §3.8). 고른 언어가
+ * 없으면 기기 언어(profile.setDeviceLocale), 그것도 없으면 한국어 — 화면이 고른 언어
+ * → Accept-Language → 한국어 순인 것과 맞춘다.
  */
 export async function sendPushToSpacePartner(
   spaceId: string,
@@ -46,10 +48,10 @@ export async function sendPushToSpacePartner(
 ) {
   const partner = await prisma.user.findFirst({
     where: { spaceId, id: { not: excludeUserId } },
-    select: { id: true, locale: true },
+    select: { id: true, locale: true, deviceLocale: true },
   });
   if (!partner) return;
-  await sendPushToUser(partner.id, build(translator(partner.locale)));
+  await sendPushToUser(partner.id, build(translator(partner.locale ?? partner.deviceLocale)));
 }
 
 type Translator = ReturnType<typeof translator>;
