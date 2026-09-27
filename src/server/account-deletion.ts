@@ -45,6 +45,12 @@ export async function deleteSpace(spaceId: string, deletedByUserId: string) {
     body: t("push.spaceDeleted"),
   })).catch(() => {});
 
+  // 위치 기록은 공간이 아니라 사람에게 묶여 있어 공간을 지워도 상대 것이 남는다. 이 공간
+  // 안에서 나눈 위치라 두 사람 것을 함께 지우고, 상대의 위치 공유 동의도 이 관계에 대한
+  // 것이라 끈다(다음에 다른 사람과 연결돼도 동의 없이 공유되지 않게).
+  await prisma.locationPing.deleteMany({ where: { user: { spaceId } } });
+  await prisma.user.updateMany({ where: { spaceId }, data: { locationSharingEnabled: false } });
+
   // 대화·사진·기억·구독 행은 Space에 연쇄 삭제로 묶여 있고, 상대의 spaceId는 비워진다.
   await prisma.space.delete({ where: { id: spaceId } });
 }
@@ -64,6 +70,13 @@ export async function deleteAccount(userId: string) {
       subject: { in: [user.id, ...(user.email ? [normalizeEmail(user.email)] : [])] },
     },
   });
+  // 쓰지 않은 로그인 링크 토큰도 사용자와 묶여 있지 않다(identifier = 정규화한 이메일).
+  // 링크를 쓰면 지워지지만, 쓰지 않거나 횟수 제한에 걸린 요청의 토큰은 남는다.
+  if (user.email) {
+    await prisma.verificationToken.deleteMany({
+      where: { identifier: { in: [user.email, normalizeEmail(user.email)] } },
+    });
+  }
   // 로그인 계정·세션·푸시 토큰·위치 기록·지오펜스·비행은 User에 연쇄 삭제로 묶여 있다.
   await prisma.user.delete({ where: { id: user.id } });
 }
