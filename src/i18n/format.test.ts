@@ -61,3 +61,13 @@ describe("언어별 표기", () => {
     expect(ko.particles("KE081", "flight").flightSubj).toBe("KE081이");
   });
 });
+
+describe("bytes", () => {
+  it("1GB 미만은 MB, 이상은 GB로 언어에 맞게(100 이상은 정수)", () => {
+    expect(formatters("ko").bytes(1_572_864)).toBe("1.5MB");
+    expect(formatters("en").bytes(1_572_864)).toBe("1.5 MB");
+    expect(formatters("ko").bytes(327_680_000)).toBe("313MB");
+    expect(formatters("ko").bytes(1024 ** 3)).toBe("1GB");
+    expect(formatters("en").bytes(20 * 1024 ** 3)).toBe("20 GB");
+  });
+});

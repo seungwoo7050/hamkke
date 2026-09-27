@@ -5,6 +5,7 @@ import { Crown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useFormat } from "@/i18n/use-format";
 import { isNearLimit } from "@/lib/plan-usage";
 import { useTRPC } from "@/trpc/client";
 
@@ -14,6 +15,7 @@ import { useTRPC } from "@/trpc/client";
 export function BillingSection() {
   const trpc = useTRPC();
   const t = useTranslations("billing");
+  const fmt = useFormat();
   const { data: subscription } = useQuery(trpc.billing.status.queryOptions());
   const { data: usage } = useQuery(trpc.billing.usage.queryOptions());
   const checkoutMutation = useMutation(
@@ -70,18 +72,30 @@ export function BillingSection() {
           </Button>
         )}
       </div>
-      {!premium && usage && !usage.premium && (
+      {usage && (
         // 한도에 부딪힌 뒤 토스트로 알던 걸 미리 보이게(PRD §3.5). 한도 근처면
-        // 숫자만 ember로 — 경고 배너 대신 조용하게.
+        // 숫자만 ember로 — 경고 배너 대신 조용하게. 저장 공간은 프리미엄에도 상한이
+        // 있어 두 요금제 모두 보여 준다.
         <dl className="mt-3 ml-8 flex flex-col gap-2">
-          {usage.items.map((item) => {
+          {[
+            ...(usage.premium ? [] : usage.items).map((item) => ({
+              key: item.key,
+              item,
+              value: `${item.used}/${item.limit}`,
+            })),
+            {
+              key: "storage" as const,
+              item: usage.storage,
+              value: `${fmt.bytes(usage.storage.used)} / ${fmt.bytes(usage.storage.limit)}`,
+            },
+          ].map(({ key, item, value }) => {
             const near = isNearLimit(item);
             return (
-              <div key={item.key} className="flex flex-col gap-1">
+              <div key={key} className="flex flex-col gap-1">
                 <div className="flex justify-between text-sm">
-                  <dt className="text-muted-foreground">{t(`usage.${item.key}`)}</dt>
+                  <dt className="text-muted-foreground">{t(`usage.${key}`)}</dt>
                   <dd className={near ? "text-primary font-semibold" : "text-foreground"}>
-                    {item.used}/{item.limit}
+                    {value}
                   </dd>
                 </div>
                 <div className="bg-muted h-1 overflow-hidden rounded-full" aria-hidden>

@@ -340,7 +340,8 @@
     "usage": {
       "moments": "Photos",
       "activeCapsules": "Scheduled letters",
-      "meetupPins": "Places"
+      "meetupPins": "Places",
+      "storage": "Storage"
     }
   },
   "upgrade": {
@@ -413,8 +414,10 @@
     "inviteRateLimited": "Too many wrong tries, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "questionAnswered": "You've already answered today's question.",
     "uploadNotFound": "The file didn't finish uploading. Please try again.",
-    "storageLimitFree": "You've used all {gb} GB of storage. Delete some older photos, or upgrade to Premium for more room.",
-    "storageLimitPremium": "You've used all {gb} GB of storage. Delete some older photos to make room.",
+    "storageLimitFree": "You've used all {gb} GB of storage. Premium raises it to {premiumGb} GB.",
+    "storageLimitFreePhotos": "You've used all {gb} GB of storage. Delete photos in Memories, or get {premiumGb} GB with Premium.",
+    "storageLimitPremium": "You've used all {gb} GB of storage. Photos and voice messages from your chats have filled it, so nothing more can be added.",
+    "storageLimitPremiumPhotos": "You've used all {gb} GB of storage. Deleting photos in Memories frees up space.",
     "rateLimitedSeconds": "You're going a little fast. Try again in {seconds, plural, one {# second} other {# seconds}}.",
     "rateLimitedMinutes": "That's a lot of requests, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "momentLimit": "The free plan holds up to {limit} photos. Go Premium for unlimited.",

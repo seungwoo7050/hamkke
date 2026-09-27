@@ -1,9 +1,15 @@
 import { TRPCError } from "@trpc/server";
-import { countPendingCapsules, FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
+import {
+  countPendingCapsules,
+  FREE_TIER_LIMITS,
+  isPremiumSpace,
+  STORAGE_LIMIT_BYTES,
+} from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { consumeOrThrow } from "@/server/rate-limit";
 import { billingSessionCheck } from "@/server/request-limits";
+import { storageUsedBytes } from "@/server/storage-quota";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -16,11 +22,20 @@ export const billingRouter = router({
   // 무료 한도 대비 현재 사용량(PRD §3.5 "요금제 사용량 표시"). 세는 방식은 각
   // 기능의 게이팅과 같다 — 사진은 전체 수, 캡슐은 열리는 때가 아직 안 온(예약 중) 수,
   // 만남 지도는 전체 핀 수(한도를 넘으면 오래된 것부터 정리됨). 프리미엄이면
-  // 한도가 없으므로 items는 비운다.
+  // 한도가 없으므로 items는 비운다. 저장 공간은 프리미엄에도 상한(20GB)이 있어
+  // 두 요금제 모두 보여 준다 — 한도에 부딪히기 전에 알 수 있게.
   usage: spaceProcedure.query(async ({ ctx }) => {
-    if (await isPremiumSpace(ctx.space.id)) return { premium: true as const, items: [] };
-
     const spaceId = ctx.space.id;
+    const [premium, storageUsed] = await Promise.all([
+      isPremiumSpace(spaceId),
+      storageUsedBytes(spaceId),
+    ]);
+    const storage = {
+      used: storageUsed,
+      limit: premium ? STORAGE_LIMIT_BYTES.premium : STORAGE_LIMIT_BYTES.free,
+    };
+    if (premium) return { premium: true as const, items: [], storage };
+
     const [moments, activeCapsules, meetupPins] = await Promise.all([
       prisma.moment.count({ where: { spaceId } }),
       countPendingCapsules(spaceId),
@@ -29,6 +44,7 @@ export const billingRouter = router({
 
     return {
       premium: false as const,
+      storage,
       items: [
         { key: "moments" as const, label: "사진", used: moments, limit: FREE_TIER_LIMITS.moments },
         {

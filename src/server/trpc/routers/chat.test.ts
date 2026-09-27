@@ -383,6 +383,66 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
       await deleteR2Object(key);
     });
 
+    // 안내는 실제로 할 수 있는 일만 말한다. 대화로 주고받은 사진·음성은 지울 수 없으니,
+    // 지울 사진이 없는데 "사진을 지우라"고 하면 따를 수 없는 안내가 된다.
+    // mediaSize는 32비트 정수라(파일 하나는 10MB 이하) 1GB씩 나눠 채운다.
+    async function fillWithChat(bytes: number) {
+      const rows: number[] = [];
+      for (let left = bytes; left > 0; left -= GB) rows.push(Math.min(GB, left));
+      await prisma.message.createMany({
+        data: rows.map((mediaSize, i) => ({
+          spaceId,
+          senderId: userAId,
+          type: "image" as const,
+          content: `messages/${spaceId}/fill-${i}`,
+          mediaSize,
+        })),
+      });
+    }
+    async function premium() {
+      await prisma.subscription.create({
+        data: {
+          spaceId,
+          stripeCustomerId: `cus_fake_${randomUUID()}`,
+          stripeSubscriptionId: `sub_fake_${randomUUID()}`,
+          plan: "premium",
+          status: "active",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+    const refusal = async () => {
+      const caller = await callerFor(userAId);
+      const err = await caller.chat
+        .createImageUploadUrl({ contentType: "image/png", size: 4 })
+        .catch((e: Error) => e);
+      return (err as Error).message;
+    };
+
+    it("대화 첨부로만 찬 무료 스페이스에는 사진을 지우라고 하지 않는다", async () => {
+      await fillWithChat(GB - 2);
+      const message = await refusal();
+      expect(message).not.toMatch(/사진을 지/);
+      expect(message).toContain("프리미엄");
+      await prisma.message.deleteMany({ where: { spaceId } });
+    });
+
+    it("사진이 있으면 사진을 지우는 길을 함께 안내한다", async () => {
+      await fillWithChat(GB - 10);
+      await fillStorage(8);
+      expect(await refusal()).toMatch(/사진을 지/);
+      await prisma.message.deleteMany({ where: { spaceId } });
+    });
+
+    it("대화 첨부로 찬 프리미엄에는 할 수 없는 일을 시키지 않는다", async () => {
+      await premium();
+      await fillWithChat(20 * GB);
+      const message = await refusal();
+      expect(message).not.toMatch(/사진을 지/);
+      expect(message).not.toContain("프리미엄으로");
+      await prisma.message.deleteMany({ where: { spaceId } });
+    });
+
     it("프리미엄은 무료 상한을 넘어도 올릴 수 있다", async () => {
       await fillStorage(GB - 2);
       await prisma.subscription.create({
