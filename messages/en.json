@@ -155,6 +155,7 @@
     "imageFailed": "Couldn't send the photo",
     "imageTooLarge": "Photos can be up to {mb} MB",
     "voiceTooLarge": "That voice message is too long — try sending it in shorter parts",
+    "voiceMaxReached": "Recording stopped at {minutes} minutes and was sent",
     "voiceFailed": "Couldn't send the voice message",
     "micPermission": "Hamkke needs microphone access for that",
     "empty": "Nothing here yet. Say hi.",

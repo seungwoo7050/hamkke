@@ -155,6 +155,7 @@
     "imageFailed": "이미지 전송에 실패했어요",
     "imageTooLarge": "{mb}MB 이하 이미지만 보낼 수 있어요",
     "voiceTooLarge": "음성 메시지가 너무 길어요. 조금 짧게 나눠서 보내 주세요",
+    "voiceMaxReached": "{minutes}분이 되어 녹음을 멈추고 보냈어요",
     "voiceFailed": "음성 메시지 전송에 실패했어요",
     "micPermission": "마이크 권한이 필요해요",
     "empty": "아직 나눈 이야기가 없어요",

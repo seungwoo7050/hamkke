@@ -16,7 +16,12 @@ import { useFormat } from "@/i18n/use-format";
 import { groupPositions } from "@/lib/chat-grouping";
 import { daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limits";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_MB,
+  MAX_VOICE_SECONDS,
+  VOICE_BITS_PER_SECOND,
+} from "@/lib/upload-limits";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
@@ -95,6 +100,7 @@ export function ChatView({
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingLimitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const lastTypingSentAt = useRef(0);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -308,7 +314,10 @@ export function ChatView({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = pickSupportedAudioMimeType();
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const recorder = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: VOICE_BITS_PER_SECOND,
+      });
       audioChunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
@@ -323,13 +332,20 @@ export function ChatView({
       recorder.start();
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
+      // 길이 상한에 이르면 버리지 않고 거기까지 보낸다.
+      recordingLimitTimer.current = setTimeout(() => {
+        toast(t("voiceMaxReached", { minutes: MAX_VOICE_SECONDS / 60 }));
+        stopRecording();
+      }, MAX_VOICE_SECONDS * 1000);
     } catch {
       toast.error(t("micPermission"));
     }
   }
 
   function stopRecording() {
-    mediaRecorderRef.current?.stop();
+    if (recordingLimitTimer.current) clearTimeout(recordingLimitTimer.current);
+    recordingLimitTimer.current = null;
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
     setIsRecording(false);
   }
 
