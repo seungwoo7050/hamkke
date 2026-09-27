@@ -155,6 +155,7 @@
     "imageFailed": "이미지 전송에 실패했어요",
     "imageTooLarge": "{mb}MB 이하 이미지만 보낼 수 있어요",
     "voiceTooLarge": "음성 메시지가 너무 길어요. 조금 짧게 나눠서 보내 주세요",
+    "voiceMaxReached": "{minutes}분이 되어 녹음을 멈추고 보냈어요",
     "voiceFailed": "음성 메시지 전송에 실패했어요",
     "micPermission": "마이크 권한이 필요해요",
     "empty": "아직 나눈 이야기가 없어요",
@@ -333,13 +334,14 @@
     "premium": "Hamkke Premium",
     "free": "무료 플랜",
     "premiumSub": "두 사람 모두 프리미엄 혜택을 받고 있어요",
-    "freeSub": "프리미엄이면 전부 무제한이에요",
+    "freeSub": "프리미엄이면 사진·캡슐·지도에 한도가 없어요",
     "manage": "구독 관리",
     "upgrade": "프리미엄",
     "usage": {
       "moments": "사진",
       "activeCapsules": "예약 캡슐",
-      "meetupPins": "만남 지도"
+      "meetupPins": "만남 지도",
+      "storage": "저장 공간"
     }
   },
   "upgrade": {
@@ -412,8 +414,10 @@
     "inviteRateLimited": "여러 번 틀려서 잠시 막아뒀어요. {minutes}분 뒤에 다시 입력해 주세요.",
     "questionAnswered": "오늘 질문에는 이미 답했어요.",
     "uploadNotFound": "파일이 제대로 올라가지 않았어요. 다시 시도해 주세요.",
-    "storageLimitFree": "저장 공간({gb}GB)을 다 썼어요. 오래된 사진을 지우거나 프리미엄으로 늘려 보세요.",
-    "storageLimitPremium": "저장 공간({gb}GB)을 다 썼어요. 오래된 사진을 지워 공간을 만들어 주세요.",
+    "storageLimitFree": "저장 공간({gb}GB)을 다 썼어요. 프리미엄으로 {premiumGb}GB까지 늘릴 수 있어요.",
+    "storageLimitFreePhotos": "저장 공간({gb}GB)을 다 썼어요. 기억 탭의 사진을 지우거나 프리미엄으로 {premiumGb}GB까지 늘려 보세요.",
+    "storageLimitPremium": "저장 공간({gb}GB)을 다 썼어요. 대화로 주고받은 사진과 음성이 공간을 채워 더 올릴 수 없어요.",
+    "storageLimitPremiumPhotos": "저장 공간({gb}GB)을 다 썼어요. 기억 탭의 사진을 지우면 공간이 생겨요.",
     "rateLimitedSeconds": "너무 빨리 보내고 있어요. {seconds}초 뒤에 다시 시도해 주세요.",
     "rateLimitedMinutes": "요청이 너무 많아서 잠시 막아뒀어요. {minutes}분 뒤에 다시 시도해 주세요.",
     "momentLimit": "무료 티어는 사진을 {limit}장까지만 저장할 수 있어요. 프리미엄으로 무제한 저장해보세요.",

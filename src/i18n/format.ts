@@ -110,6 +110,16 @@ export function formatters(locale: Locale) {
         : new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" }).format(
             ymdDate(ymd),
           ),
+    /** 저장 용량 — "312.5MB"·"1GB" / "312.5 MB"·"1 GB"(1GB 미만은 MB) */
+    bytes: (n: number) => {
+      const gb = n / 1024 ** 3;
+      const [value, unit] = gb >= 1 ? [gb, "gigabyte"] : [n / 1024 ** 2, "megabyte"];
+      return new Intl.NumberFormat(ko ? "ko-KR" : "en-US", {
+        style: "unit",
+        unit,
+        maximumFractionDigits: value >= 100 ? 0 : 1,
+      }).format(value);
+    },
     /** "11,053km" · "11,053 km" */
     distance: (km: number) =>
       ko

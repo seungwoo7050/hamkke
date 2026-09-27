@@ -10,3 +10,9 @@ export const MAX_UPLOAD_MB = {
   image: MAX_UPLOAD_BYTES.image / (1024 * 1024),
   voice: MAX_UPLOAD_BYTES.voice / (1024 * 1024),
 } as const;
+
+// 음성 녹음은 비트레이트를 정하고 길이에 상한을 둔다. 브라우저 기본값(Chrome은
+// 128kbps)에 길이 제한이 없으면 5분 반쯤 넘긴 녹음이 다 녹음한 뒤 위 상한에 걸려
+// 버려졌다. 말소리는 64kbps(Opus)로 충분하고, 상한에 이르면 녹음을 멈추고 보낸다.
+export const VOICE_BITS_PER_SECOND = 64_000;
+export const MAX_VOICE_SECONDS = 5 * 60;

@@ -2,7 +2,7 @@
 // 따로 둔다.
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FREE_TIER_LIMITS } from "@/lib/plan";
+import { FREE_TIER_LIMITS, STORAGE_LIMIT_BYTES } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 import { createCallerFactory } from "../init";
 import { appRouter } from "./_app";
@@ -106,6 +106,39 @@ describe("billing.usage (통합)", () => {
         currentPeriodEnd: new Date(Date.now() + 30 * 86_400_000),
       },
     });
-    expect(await (await callerFor(userId)).billing.usage()).toEqual({ premium: true, items: [] });
+    expect(await (await callerFor(userId)).billing.usage()).toMatchObject({
+      premium: true,
+      items: [],
+    });
+  });
+
+  it("저장 공간은 무료·프리미엄 모두 쓴 바이트와 상한을 보여 준다", async () => {
+    await prisma.moment.create({
+      data: { spaceId, uploaderId: userId, mediaUrl: "k-photo", mediaSize: 300 },
+    });
+    await prisma.message.create({
+      data: { spaceId, senderId: userId, type: "voice", content: "k-voice", mediaSize: 200 },
+    });
+    const caller = await callerFor(userId);
+    expect((await caller.billing.usage()).storage).toEqual({
+      used: 500,
+      limit: STORAGE_LIMIT_BYTES.free,
+    });
+
+    await prisma.subscription.create({
+      data: {
+        spaceId,
+        stripeCustomerId: `cus_fake_${randomUUID()}`,
+        stripeSubscriptionId: `sub_fake_${randomUUID()}`,
+        plan: "premium",
+        status: "active",
+        currentPeriodEnd: new Date(Date.now() + 30 * 86_400_000),
+      },
+    });
+    expect((await caller.billing.usage()).storage).toEqual({
+      used: 500,
+      limit: STORAGE_LIMIT_BYTES.premium,
+    });
+    await prisma.message.deleteMany({ where: { spaceId } });
   });
 });

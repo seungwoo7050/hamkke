@@ -277,4 +277,49 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
 
     await deleteR2Object(key);
   });
+
+  // 확인(사진 수·용량)과 등록 사이가 비어 있으면 동시에 들어온 등록이 모두 같은 수를 보고
+  // 통과한다. 화면은 한 장씩 올리지만 두 사람이 같은 순간 올리면 생기는 일이다.
+  async function uploadPending(caller: Awaited<ReturnType<typeof callerFor>>) {
+    const bytes = new Uint8Array([1]);
+    const { uploadUrl, key } = await caller.moment.createUploadUrl({
+      contentType: "image/png",
+      size: bytes.length,
+    });
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "image/png" },
+      body: bytes,
+    });
+    return key;
+  }
+
+  it("한도 직전에 여러 장을 동시에 등록해도 한도를 넘지 않는다", async () => {
+    const caller = await callerFor(userAId);
+    const keys = await Promise.all([1, 2, 3, 4, 5].map(() => uploadPending(caller)));
+    await prisma.moment.createMany({
+      data: Array.from({ length: 29 }, (_, i) => ({
+        spaceId,
+        uploaderId: userAId,
+        mediaUrl: `moments/${spaceId}/fake-${i}`,
+      })),
+    });
+
+    const results = await Promise.allSettled(keys.map((key) => caller.moment.create({ key })));
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.moment.count({ where: { spaceId } })).toBe(30);
+    for (const key of keys) await deleteR2Object(key);
+  });
+
+  it("같은 임시 키를 동시에 여러 번 등록해도 사진은 하나만 생긴다", async () => {
+    const caller = await callerFor(userAId);
+    const key = await uploadPending(caller);
+
+    const results = await Promise.allSettled([1, 2, 3].map(() => caller.moment.create({ key })));
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.moment.count({ where: { spaceId } })).toBe(1);
+    await deleteR2Object(key);
+  });
 });

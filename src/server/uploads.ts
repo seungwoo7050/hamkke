@@ -2,6 +2,8 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { translator } from "@/i18n/server";
+import type { Db } from "@/lib/plan";
+import { prisma } from "@/lib/prisma";
 import { headUpload } from "@/lib/r2";
 
 type Folder = "messages" | "moments";
@@ -42,4 +44,22 @@ export async function verifyUpload(
     throw new TRPCError({ code: "BAD_REQUEST", message: t("errors.uploadNotFound") });
   }
   return { size: head.size, finalKey: key.slice(PENDING_PREFIX.length) };
+}
+
+/**
+ * 첨부 등록을 스페이스 단위로 줄 세운다. 한도(사진 수·저장 용량)를 확인하고 행을
+ * 만드는 사이에 다른 등록이 끼면 모두 같은 수를 보고 통과하고(29장에서 동시에 5장 →
+ * 34장), 같은 임시 키를 동시에 등록하면 모두 임시 파일을 본 뒤 옮겨 한 파일을 가리키는
+ * 행이 여럿 생긴다. 안의 확인과 생성은 넘겨받은 tx로 해야 잠금 아래에서 일어난다.
+ * 결제 시작(billing.createCheckoutSession)과 같은 방식이다.
+ */
+export function withUploadRegistrationLock<T>(spaceId: string, fn: (tx: Db) => Promise<T>) {
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`uploads:${spaceId}`}))`;
+      return fn(tx);
+    },
+    // 잠금을 쥔 채 R2를 두세 번 부르므로(확인·복사·삭제) 기본 5초보다 넉넉하게.
+    { timeout: 20_000, maxWait: 20_000 },
+  );
 }

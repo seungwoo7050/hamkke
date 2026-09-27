@@ -1,13 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
+import { type Db, FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
 import { createDownloadUrl, createUploadUrl, deleteUpload, promoteUpload } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import { consumeOrThrow } from "@/server/rate-limit";
 import { uploadUrlCheck } from "@/server/request-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
-import { newUploadKey, verifyUpload } from "@/server/uploads";
+import { newUploadKey, verifyUpload, withUploadRegistrationLock } from "@/server/uploads";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -15,9 +15,13 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 
 // 무료 티어 사진 개수 한도. 업로드 주소 발급과 등록 두 곳에서 본다 — 발급 때만
 // 보면 주소만 여러 개 받아 두고 나중에 한꺼번에 등록하는 식으로 넘길 수 있다.
-async function assertMomentQuota(spaceId: string, locale: string | null | undefined) {
-  if (await isPremiumSpace(spaceId)) return;
-  const count = await prisma.moment.count({ where: { spaceId } });
+async function assertMomentQuota(
+  spaceId: string,
+  locale: string | null | undefined,
+  db: Db = prisma,
+) {
+  if (await isPremiumSpace(spaceId, db)) return;
+  const count = await db.moment.count({ where: { spaceId } });
   if (count >= FREE_TIER_LIMITS.moments) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -51,24 +55,26 @@ export const momentRouter = router({
   create: spaceProcedure
     .input(z.object({ key: z.string().min(1), caption: z.string().max(300).optional() }))
     .mutation(async ({ ctx, input }) => {
-      await assertMomentQuota(ctx.space.id, ctx.locale);
-      const { size, finalKey } = await verifyUpload(input.key, {
-        folder: "moments",
-        spaceId: ctx.space.id,
-        allowedTypes: ALLOWED_IMAGE_TYPES,
-        locale: ctx.locale,
-      });
-      await assertStorageAvailable(ctx.space.id, size, ctx.locale);
-      await promoteUpload(input.key, finalKey);
-
-      const moment = await prisma.moment.create({
-        data: {
+      const moment = await withUploadRegistrationLock(ctx.space.id, async (tx) => {
+        await assertMomentQuota(ctx.space.id, ctx.locale, tx);
+        const { size, finalKey } = await verifyUpload(input.key, {
+          folder: "moments",
           spaceId: ctx.space.id,
-          uploaderId: ctx.session.user.id,
-          mediaUrl: finalKey,
-          mediaSize: size,
-          caption: input.caption,
-        },
+          allowedTypes: ALLOWED_IMAGE_TYPES,
+          locale: ctx.locale,
+        });
+        await assertStorageAvailable(ctx.space.id, size, ctx.locale, tx);
+        await promoteUpload(input.key, finalKey);
+
+        return tx.moment.create({
+          data: {
+            spaceId: ctx.space.id,
+            uploaderId: ctx.session.user.id,
+            mediaUrl: finalKey,
+            mediaSize: size,
+            caption: input.caption,
+          },
+        });
       });
       return { ...moment, mediaUrl: await createDownloadUrl(moment.mediaUrl) };
     }),
