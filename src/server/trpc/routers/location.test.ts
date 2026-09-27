@@ -173,4 +173,28 @@ describe("location 라우터 (통합)", () => {
     expect(await prisma.locationPing.findUnique({ where: { id: old.id } })).toBeNull();
     expect(await prisma.locationPing.findUnique({ where: { id: recent.id } })).not.toBeNull();
   });
+
+  // 정리가 "그 사람이 새로 저장할 때"에만 일어나면, 공유를 끄거나 앱을 안 쓰는 사람의
+  // 기록은 7일이 지나도 남는다.
+  it("위치공유를 끄면 내 위치 기록을 지운다", async () => {
+    const caller = await callerFor(userAId);
+    await caller.location.setSharing({ enabled: true });
+    await caller.location.send({ lat: 37.5, lng: 127 });
+
+    await caller.location.setSharing({ enabled: false });
+
+    expect(await prisma.locationPing.count({ where: { userId: userAId } })).toBe(0);
+  });
+
+  it("저장할 때 상대의 7일 지난 기록도 지운다", async () => {
+    const old = await prisma.locationPing.create({
+      data: { userId: userBId, lat: 1, lng: 1, capturedAt: new Date(Date.now() - 8 * 86_400_000) },
+    });
+    const caller = await callerFor(userAId);
+    await caller.location.setSharing({ enabled: true });
+
+    await caller.location.send({ lat: 37.5, lng: 127 });
+
+    expect(await prisma.locationPing.findUnique({ where: { id: old.id } })).toBeNull();
+  });
 });

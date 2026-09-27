@@ -51,6 +51,12 @@ export const locationRouter = router({
         where: { id: ctx.session.user.id },
         data: { locationSharingEnabled: input.enabled },
       });
+      // 끄면 지금까지의 위치 기록을 지운다. 기록은 공유가 켜져 있을 때만 읽히고(장면·
+      // 날씨·상대 화면), 꺼진 동안엔 저장이 없어 아래 7일 정리도 돌지 않으므로, 남겨 두면
+      // 마지막 한 주의 기록이 영영 남는다.
+      if (!input.enabled) {
+        await prisma.locationPing.deleteMany({ where: { userId: ctx.session.user.id } });
+      }
 
       await broadcastToSpace(ctx.space.id, "location-sharing", {
         userId: ctx.session.user.id,
@@ -107,10 +113,11 @@ export const locationRouter = router({
           accuracy: input.accuracy,
         },
       });
-      // 보관 기간이 지난 스냅샷은 저장할 때마다 정리한다(스케줄러 없이).
+      // 보관 기간이 지난 스냅샷은 저장할 때마다 정리한다(스케줄러 없이). 공유는 켜 둔 채
+      // 앱을 안 쓰는 사람의 기록도 지워지게 스페이스 두 사람 모두를 본다.
       await prisma.locationPing.deleteMany({
         where: {
-          userId,
+          user: { spaceId: ctx.space.id },
           capturedAt: { lt: new Date(Date.now() - LOCATION_PING_RETENTION_MS) },
         },
       });
