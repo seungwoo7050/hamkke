@@ -117,6 +117,55 @@ describe("계정 삭제", { timeout: 60_000 }, () => {
     }
   });
 
+  // 외래 키로 묶이지 않았거나 상대에게 묶인 것: 쓰지 않은 로그인 링크 토큰(이메일), 상대의
+  // 위치 기록. 안내 페이지는 "두 사람 모두에게서 지워지고, 그 밖의 데이터는 남기지 않는다"고 한다.
+  it("쓰지 않은 로그인 링크 토큰과 두 사람의 위치 기록을 지우고, 상대의 위치 공유를 끈다", async () => {
+    const email = `Del-D-${randomUUID()}@Example.com`;
+    const [a, b] = await Promise.all([
+      prisma.user.create({ data: { email, locationSharingEnabled: true } }),
+      prisma.user.create({
+        data: { email: `del-e-${randomUUID()}@example.com`, locationSharingEnabled: true },
+      }),
+    ]);
+    const space = await prisma.space.create({
+      data: {
+        status: "active",
+        inviteCode: randomUUID().slice(0, 6).toUpperCase(),
+        inviteCodeExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    await prisma.user.updateMany({
+      where: { id: { in: [a.id, b.id] } },
+      data: { spaceId: space.id },
+    });
+    await prisma.locationPing.createMany({
+      data: [a.id, b.id].map((userId) => ({ userId, lat: 37.5, lng: 127 })),
+    });
+    // Auth.js는 소문자로 정규화한 이메일을 토큰의 identifier로 쓴다.
+    await prisma.verificationToken.create({
+      data: {
+        identifier: email.toLowerCase(),
+        token: randomUUID(),
+        expires: new Date(Date.now() + 86_400_000),
+      },
+    });
+    try {
+      await deleteAccount(a.id);
+
+      expect(
+        await prisma.verificationToken.count({ where: { identifier: email.toLowerCase() } }),
+      ).toBe(0);
+      expect(await prisma.locationPing.count({ where: { userId: b.id } })).toBe(0);
+      const partner = await prisma.user.findUniqueOrThrow({ where: { id: b.id } });
+      expect(partner.locationSharingEnabled).toBe(false);
+    } finally {
+      await prisma.verificationToken.deleteMany({ where: { identifier: email.toLowerCase() } });
+      await prisma.locationPing.deleteMany({ where: { userId: { in: [a.id, b.id] } } });
+      await prisma.user.deleteMany({ where: { id: { in: [a.id, b.id] } } });
+      await prisma.space.deleteMany({ where: { id: space.id } });
+    }
+  });
+
   it("페어링 전(초대코드만 만든) 계정도 지울 수 있다", async () => {
     const a = await prisma.user.create({ data: { email: `del-c-${randomUUID()}@example.com` } });
     await (await callerFor(a.id)).pairing.createInviteCode();
