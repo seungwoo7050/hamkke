@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
+import { SceneIllustration } from "@/components/brand/scene-illustration";
 import { Button } from "@/components/ui/button";
 import { getCurrentPairingStatus } from "@/server/pairing/current-status";
 
@@ -15,6 +16,9 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 flex-col justify-center gap-8 px-6 py-16">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl">
+        <SceneIllustration scene="together" sizes="(min-width: 30rem) 28rem, 100vw" priority />
+      </div>
       <div className="flex flex-col gap-3">
         <p className="font-handwritten text-dusk-ink text-lg">{t("tagline")}</p>
         <h1 className="text-foreground text-3xl font-semibold tracking-tight">Hamkke</h1>
