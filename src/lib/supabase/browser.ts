@@ -57,3 +57,20 @@ export function getSupabaseBrowserClient() {
   );
   return client;
 }
+
+let authReady: Promise<void> | null = null;
+
+/**
+ * 채널을 구독하기 전에 기다린다. private 채널은 입장할 때 토큰을 보는데, supabase-js는
+ * accessToken 콜백을 첫 입장 전에 부르지 않아 첫 입장이 공개 키로 나가 거절되고 몇 초 뒤
+ * 재시도에서야 들어갔다. 공개 채널 모드에서는 콜백이 공개 키를 돌려주므로 그대로 통과한다.
+ */
+export function ensureRealtimeAuth() {
+  authReady ??= getSupabaseBrowserClient()
+    .realtime.setAuth()
+    .catch(() => {
+      // 실패하면 다음 구독 때 다시 시도한다(그사이엔 supabase-js의 재시도에 맡긴다).
+      authReady = null;
+    });
+  return authReady;
+}

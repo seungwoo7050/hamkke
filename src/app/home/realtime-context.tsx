@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { ensureRealtimeAuth, getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 
 type Handler = (payload: unknown) => void;
@@ -39,18 +39,25 @@ export function SpaceRealtimeProvider({
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    const channel = supabase
-      .channel(spaceChannelName(spaceId), { config: { private: privateChannel } })
-      .on("broadcast", { event: "*" }, (msg) => {
-        handlers.current.get(msg.event)?.forEach((handler) => handler(msg.payload));
-      })
-      .subscribe((status) => setConnected(status === "SUBSCRIBED"));
-    channelRef.current = channel;
+    let channel: RealtimeChannel | null = null;
+    let cancelled = false;
+    // 토큰을 먼저 넣고 구독한다(private 채널의 첫 입장이 공개 키로 거절되지 않게).
+    void ensureRealtimeAuth().then(() => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(spaceChannelName(spaceId), { config: { private: privateChannel } })
+        .on("broadcast", { event: "*" }, (msg) => {
+          handlers.current.get(msg.event)?.forEach((handler) => handler(msg.payload));
+        })
+        .subscribe((status) => setConnected(status === "SUBSCRIBED"));
+      channelRef.current = channel;
+    });
 
     return () => {
+      cancelled = true;
       channelRef.current = null;
       setConnected(false);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [spaceId, privateChannel]);
 

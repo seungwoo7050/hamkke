@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { isPartnerPresent, type PresenceState } from "@/lib/presence";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { ensureRealtimeAuth, getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spacePresenceChannelName } from "@/lib/supabase/channels";
 
 const PresenceContext = createContext(false);
@@ -25,25 +26,34 @@ export function PresenceProvider({
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    const channel = supabase.channel(spacePresenceChannelName(spaceId), {
-      config: { presence: { key: currentUserId }, private: privateChannel },
-    });
+    let channel: RealtimeChannel | null = null;
+    let cancelled = false;
 
-    const sync = () =>
-      setPartnerPresent(isPartnerPresent(channel.presenceState() as PresenceState, currentUserId));
     const trackVisibility = () => {
+      if (!channel) return;
       if (document.visibilityState === "visible") void channel.track({ at: Date.now() });
       else void channel.untrack();
     };
 
-    channel.on("presence", { event: "sync" }, sync).subscribe((status) => {
-      if (status === "SUBSCRIBED") trackVisibility();
+    // 토큰을 먼저 넣고 구독한다(private 채널의 첫 입장이 공개 키로 거절되지 않게).
+    void ensureRealtimeAuth().then(() => {
+      if (cancelled) return;
+      const ch = supabase.channel(spacePresenceChannelName(spaceId), {
+        config: { presence: { key: currentUserId }, private: privateChannel },
+      });
+      channel = ch;
+      ch.on("presence", { event: "sync" }, () =>
+        setPartnerPresent(isPartnerPresent(ch.presenceState() as PresenceState, currentUserId)),
+      ).subscribe((status) => {
+        if (status === "SUBSCRIBED") trackVisibility();
+      });
     });
     document.addEventListener("visibilitychange", trackVisibility);
 
     return () => {
+      cancelled = true;
       document.removeEventListener("visibilitychange", trackVisibility);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [spaceId, currentUserId, privateChannel]);
 
