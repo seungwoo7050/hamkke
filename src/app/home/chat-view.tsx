@@ -26,6 +26,7 @@ import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { ChatHeader } from "./chat-header";
 import { VoiceMessage } from "./voice-message";
+import { useTypingChannel } from "./presence-context";
 import { useSpaceBroadcast, useSpaceRealtime } from "./realtime-context";
 import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
@@ -85,7 +86,8 @@ export function ChatView({
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const { currentUserId } = useSpace();
-  const { send: sendRealtime, connected: realtimeConnected } = useSpaceRealtime();
+  const { connected: realtimeConnected } = useSpaceRealtime();
+  const { sendTyping, listenTyping } = useTypingChannel();
   const myTz = useMyTimeZone();
   const now = useNow();
   const t = useTranslations("chat");
@@ -154,12 +156,16 @@ export function ChatView({
     setLiveTouches((prev) => [...prev, { ...touch, createdAt: new Date(touch.createdAt) }]);
   });
 
-  useSpaceBroadcast<{ userId: string }>("typing", ({ userId }) => {
-    if (userId === currentUserId) return;
-    setPartnerTyping(true);
-    if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
-    typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
-  });
+  useEffect(
+    () =>
+      listenTyping((userId) => {
+        if (userId === currentUserId) return;
+        setPartnerTyping(true);
+        if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+        typingClearTimer.current = setTimeout(() => setPartnerTyping(false), TYPING_CLEAR_MS);
+      }),
+    [listenTyping, currentUserId],
+  );
 
   // 끊겼다 다시 연결되면 그사이 온 메시지가 있을 수 있어 다시 읽음 처리한다.
   useEffect(() => {
@@ -354,7 +360,7 @@ export function ChatView({
     const now = Date.now();
     if (now - lastTypingSentAt.current > TYPING_THROTTLE_MS) {
       lastTypingSentAt.current = now;
-      sendRealtime("typing", { userId: currentUserId });
+      sendTyping();
     }
   }
 
