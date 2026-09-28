@@ -51,7 +51,7 @@ describe("streak 라우터 (통합)", () => {
     });
   }
 
-  it("기간 상한 없이 센다 — 70일 연속이면 70", async () => {
+  it("기간 상한 없이 센다 - 70일 연속이면 70", async () => {
     const now = Date.now();
     for (let i = 0; i < 70; i++) {
       // 하루에 여러 번 보내도 하루로 센다.
@@ -64,7 +64,7 @@ describe("streak 라우터 (통합)", () => {
   });
 
   it("하루 경계는 보는 사람의 시간대로 자른다", async () => {
-    // 서울 기준 오늘 00:30과 어제 23:30 — UTC로는 같은 날(어제) 15:30, 14:30이다.
+    // 서울 기준 오늘 00:30과 어제 23:30 - UTC로는 같은 날(어제) 15:30, 14:30이다.
     const { y, m, d } = todayIn("Asia/Seoul", new Date());
     const pad = (n: number) => String(n).padStart(2, "0");
     const todayMidnightKst = fromZonedLocal(`${y}-${pad(m)}-${pad(d)}T00:00`, "Asia/Seoul");

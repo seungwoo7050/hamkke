@@ -1,4 +1,4 @@
-// 비행(PRD §3.3.1)의 순수 계산 — 서버·클라이언트 공용. 실제 이륙·착륙을 모르는
+// 비행(PRD §3.3.1)의 순수 계산 - 서버·클라이언트 공용. 실제 이륙·착륙을 모르는
 // 무료 범위라 모든 판단은 "가장 믿을 만한 시각"(실제 시각이 있으면 그것, 없으면
 // 예정 시각) 하나에서 나온다. 유료 항공편 API가 실제 시각을 채우면 이 파일을
 // 쓰는 화면은 그대로 정확해진다.
@@ -17,7 +17,7 @@ export function bestTimes(f: FlightTimes) {
   return {
     departureAt: new Date(f.actualDepartureAt ?? f.scheduledDepartureAt),
     arrivalAt: new Date(f.actualArrivalAt ?? f.scheduledArrivalAt),
-    /** 실제 착륙 시각을 모른다 — 화면은 "예정 기준"이라고 밝힌다 */
+    /** 실제 착륙 시각을 모른다 - 화면은 "예정 기준"이라고 밝힌다 */
     estimated: !f.actualArrivalAt,
   };
 }
@@ -61,7 +61,7 @@ const rad = (d: number) => (d * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
 
 /**
- * 대권(지구 위 최단) 경로에서 t(0~1) 지점 — 추정 위치. 실제 항로는 바람·
+ * 대권(지구 위 최단) 경로에서 t(0~1) 지점 - 추정 위치. 실제 항로는 바람·
  * 항로 규칙으로 다르지만, "지금 어디쯤"을 보여주기엔 충분하다.
  */
 export function greatCirclePoint(a: LatLng, b: LatLng, t: number): LatLng {
@@ -107,7 +107,7 @@ export function greatCirclePath(a: LatLng, b: LatLng, segments = 64): [number, n
 
 /**
  * 도착은 현지 "시각"만 받는다(탑승권에도 날짜는 출발일뿐). 출발 순간 이후
- * 20시간 안에서 그 현지 시각이 되는 첫 순간을 도착으로 본다 — 날짜변경선을
+ * 20시간 안에서 그 현지 시각이 되는 첫 순간을 도착으로 본다 - 날짜변경선을
  * 넘어 같은 날짜나 전날로 도착하는 경우(인천 10:30 → 뉴욕 같은 날 11:20)도 맞는다.
  */
 export const MAX_FLIGHT_MS = 20 * 60 * 60_000;
@@ -136,7 +136,7 @@ export function normalizeFlightNumber(input: string) {
 
 /**
  * 우리 장면·상황 카드가 다룰 항공편 하나(PRD §3.3.1). 비행 중 > 막 도착 >
- * 곧 출발 순 — 비행 중이면 장면이 바뀌고, 나머지는 카드로 간다.
+ * 곧 출발 순 - 비행 중이면 장면이 바뀌고, 나머지는 카드로 간다.
  */
 export function pickFlight<F extends FlightTimes>(flights: F[], now: Date) {
   const withPhase = flights.map((f) => ({ flight: f, phase: flightPhase(f, now) }));

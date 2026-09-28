@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useTRPC } from "@/trpc/client";
 
 // 상대가 이 장소들 중 하나의 반경 안에 들어오면 도착 알림이 간다(위치
-// 전송 때마다 서버가 확인 — src/server/trpc/routers/location.ts 참고).
+// 전송 때마다 서버가 확인 - src/server/trpc/routers/location.ts 참고).
 // 한 번 등록하면 거의 안 건드리는 설정이라 설정 시트 안에 둔다(DESIGN.md §4).
 export function GeofenceManager() {
   const trpc = useTRPC();

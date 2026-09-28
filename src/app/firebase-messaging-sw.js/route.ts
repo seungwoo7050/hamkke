@@ -1,7 +1,7 @@
 // Next.js는 public/ 정적 파일에 빌드타임 env를 주입할 수 없고, 서비스워커는
 // 루트 스코프("/")로 서빙돼야 site-wide push를 받을 수 있다. 그래서 이 파일을
 // public/ 대신 라우트 핸들러로 만들어 /firebase-messaging-sw.js 경로에 직접
-// 응답한다 — env는 여기서 request 시점에 주입한다.
+// 응답한다 - env는 여기서 request 시점에 주입한다.
 export function GET() {
   const config = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,7 +21,7 @@ firebase.initializeApp(${JSON.stringify(config)});
 
 const messaging = firebase.messaging();
 
-// 앱이 백그라운드(탭 비활성/닫힘)일 때만 여기로 온다 — 포그라운드는
+// 앱이 백그라운드(탭 비활성/닫힘)일 때만 여기로 온다 - 포그라운드는
 // src/lib/firebase-client.ts의 onForegroundMessage가 처리한다.
 // notification 필드가 있는 메시지는 SDK가 이 핸들러를 부르기 전에 이미 알림을
 // 띄운다. 여기서 또 띄우면 같은 알림이 두 번 뜨므로 data 전용 메시지만 직접 띄운다.

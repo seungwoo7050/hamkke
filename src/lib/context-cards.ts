@@ -30,7 +30,7 @@ export type ContextInputs = {
   /** 가장 가까운 앞으로의 카운트다운 */
   nextCountdown: { title: string; days: number } | null;
   /**
-   * 첫날 안내 — 기념일/다음 만남이 하나도 없을 때(가입 직후). 아무것도 없는
+   * 첫날 안내 - 기념일/다음 만남이 하나도 없을 때(가입 직후). 아무것도 없는
    * 빈 홈 대신 처음 할 일을 가장 낮은 우선순위로 제안한다(PRD §6 온보딩 5단계).
    */
   setup?: { needsAnniversary: boolean; needsMeetupDate: boolean };

@@ -13,7 +13,7 @@ export function skyPhase(timeZone: string, date: Date = new Date()): SkyPhase {
 }
 
 /**
- * 비행 중인 쪽의 하늘(PRD §3.3.1) — 시간대가 없는 하늘 위라, 추정 위치의
+ * 비행 중인 쪽의 하늘(PRD §3.3.1) - 시간대가 없는 하늘 위라, 추정 위치의
  * 경도로 계산한 태양시(UTC + 경도/15)를 쓴다.
  */
 export function skyPhaseAtLongitude(lng: number, date: Date = new Date()): SkyPhase {

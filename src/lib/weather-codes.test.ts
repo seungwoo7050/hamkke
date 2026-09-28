@@ -4,7 +4,7 @@ import ko from "../../messages/ko.json";
 import { describeWeatherCode, isRainOrSnow } from "./weather";
 import { WeatherIcon, isRainOrSnowCode, weatherMessageKey } from "./weather-codes";
 
-// 아이콘은 이름만 비교한다 — lucide-react는 테스트의 react-server 조건에서 불러올 수 없다.
+// 아이콘은 이름만 비교한다 - lucide-react는 테스트의 react-server 조건에서 불러올 수 없다.
 vi.mock("lucide-react", () =>
   Object.fromEntries(
     ["Cloud", "CloudFog", "CloudLightning", "CloudRain", "CloudSun", "Snowflake", "Sun"].map(

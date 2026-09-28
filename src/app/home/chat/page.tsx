@@ -6,7 +6,7 @@ import { ChatView } from "../chat-view";
 
 const createCaller = createCallerFactory(appRouter);
 
-// "대화" 탭. 인증·페어링 가드는 layout.tsx가 맡는다 — 레이아웃과 페이지는
+// "대화" 탭. 인증·페어링 가드는 layout.tsx가 맡는다 - 레이아웃과 페이지는
 // 병렬로 렌더되므로 여기서 가드를 반복하는 대신, 비로그인·미페어링이면
 // chat.list(spaceProcedure)가 거절하는 걸 받아 아무것도 그리지 않고 레이아웃의
 // redirect에 맡긴다.

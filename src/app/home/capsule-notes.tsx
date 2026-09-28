@@ -173,7 +173,7 @@ export function OpenedCapsules() {
 }
 
 // 캡슐이 열리는 순간(DESIGN.md §3.4 "열림" 상태 변화, §2 감정적 순간).
-// 받은 편지는 처음엔 봉인된 채로 도착해 있고, 직접 눌러야 펼쳐진다 — 목록을
+// 받은 편지는 처음엔 봉인된 채로 도착해 있고, 직접 눌러야 펼쳐진다 - 목록을
 // 여는 것만으로 내용이 한꺼번에 쏟아지지 않게. 봉인이 걷히면 손글씨가 위에서
 // 아래로 펼쳐지듯 드러난다(spring 프리셋 하나). 내가 보낸 편지는 처음부터 펼침.
 function CapsuleLetter({
@@ -193,7 +193,7 @@ function CapsuleLetter({
 }) {
   const t = useTranslations("capsule");
   const reduce = useReducedMotion();
-  // 이 화면에서 직접 연 경우에만 펼침 모션 — 이미 열어둔 편지는 그대로 보인다.
+  // 이 화면에서 직접 연 경우에만 펼침 모션 - 이미 열어둔 편지는 그대로 보인다.
   const [justOpened, setJustOpened] = useState(false);
 
   return (
@@ -264,7 +264,7 @@ function CapsuleForm({
   const partnerName = usePartnerName();
   const now = useNow();
   const flights = useFlights();
-  // 착륙 편지를 걸 수 있는 비행 — 상대가 타고, 아직 착륙 전(PRD §3.3.1).
+  // 착륙 편지를 걸 수 있는 비행 - 상대가 타고, 아직 착륙 전(PRD §3.3.1).
   const landable = (flights.data ?? []).filter(
     (f) => f.travelerId !== currentUserId && bestTimes(f).arrivalAt > now,
   );

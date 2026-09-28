@@ -2,11 +2,11 @@
 node_modules
 package-lock.json
 
-# 고정 기획 문서 — 자동 포맷팅 대상 아님 (docs/CLAUDE.md 참고)
+# 고정 기획 문서 - 자동 포맷팅 대상 아님 (docs/CLAUDE.md 참고)
 docs/
 CLAUDE.md
 
-# 벤더 문서 — prisma init/upgrade가 생성하는 AI 에이전트 레퍼런스, 우리가 손대지 않는다
+# 벤더 문서 - prisma init/upgrade가 생성하는 AI 에이전트 레퍼런스, 우리가 손대지 않는다
 .agents/skills/
 .claude/skills/
 .windsurf/skills/
@@ -19,6 +19,6 @@ ios/
 # 생성된 데이터(scripts/build-airports.mts)
 src/data/airports.json
 
-# docs·devlog 브랜치 워크트리(docs/WORKFLOW.md §4) — main의 코드가 아니다
+# docs·devlog 브랜치 워크트리(docs/WORKFLOW.md §4) - main의 코드가 아니다
 .docs/
 .devlog/

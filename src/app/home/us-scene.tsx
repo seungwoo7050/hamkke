@@ -48,7 +48,7 @@ function Side({
   const tw = useTranslations("weather");
   const fmt = useFormat();
   const sleeping = timeZone ? isLikelySleeping(timeZone, now) : false;
-  // 두 사람의 하늘이 다르다는 것 자체가 시차의 시각화다(Calm Technology —
+  // 두 사람의 하늘이 다르다는 것 자체가 시차의 시각화다(Calm Technology -
   // 숫자를 읽지 않아도 느껴지게). 시간대를 모르거나 하이드레이션 전엔 중립색.
   const sky = timeZone ? SKY_CLASS[skyPhase(timeZone, now)] : "bg-muted";
 
@@ -91,7 +91,7 @@ function Side({
   );
 }
 
-// 비행 중인 쪽(PRD §3.3.1) — 시각·날씨 대신 "하늘 위"와 진행. 하늘색은
+// 비행 중인 쪽(PRD §3.3.1) - 시각·날씨 대신 "하늘 위"와 진행. 하늘색은
 // 추정 위치 경도의 태양시. 실제 이륙·착륙을 모르면 "예정 기준"이라고 밝힌다.
 function FlightSide({
   label,
@@ -159,7 +159,7 @@ function FlightSide({
   );
 }
 
-// "곧 만나요" — 거리가 임계값 안으로 들어오면(src/lib/geo.ts) 둘로 나뉜 장면
+// "곧 만나요" - 거리가 임계값 안으로 들어오면(src/lib/geo.ts) 둘로 나뉜 장면
 // 대신 두 사람이 한 장면에 모인다. 상황 카드보다 우선하는 최상위 상태라
 // 카드가 아니라 장면 자체를 바꾼다(PRD §3.3 만남 모드, §3.7 우선순위).
 function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolean }) {
@@ -189,7 +189,7 @@ function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolea
 }
 
 // "우리" 탭의 주인공 장면(DESIGN.md §2 Calm Technology, §4). 흘끗 보면 되는
-// 정보 — 서로의 현지 시각·날씨·수면 상태·거리 — 를 숫자 나열이 아니라 두
+// 정보 - 서로의 현지 시각·날씨·수면 상태·거리 - 를 숫자 나열이 아니라 두
 // 사람이 나란히 선 한 장면으로 압축한다. 가운데 기댄 모티프(§1)가 두 영역을
 // 잇고, 누르면 위치 시트가 열린다.
 export function UsScene() {

@@ -10,7 +10,7 @@ function formatSeconds(total: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-// 음성 메시지 — 브라우저 기본 <audio controls>는 플랫폼마다 모양이 다르고 앱에서
+// 음성 메시지 - 브라우저 기본 <audio controls>는 플랫폼마다 모양이 다르고 앱에서
 // 가장 이질적인 요소였다. 텍스트 말풍선과 같은 면·모서리 규칙 안에 재생 버튼,
 // 진행 막대, 길이만 둔다. MediaRecorder로 만든 webm은 재생 전까지 길이가
 // Infinity로 나오는 브라우저가 있어, 그땐 재생하면서 알게 된 길이를 쓴다.

@@ -41,7 +41,7 @@ describe("언어별 표기", () => {
     expect(en.distance(11053)).toBe("11,053 km");
   });
 
-  it("D-day — 영어엔 D-day 관습이 없어 풀어 쓴다", () => {
+  it("D-day - 영어엔 D-day 관습이 없어 풀어 쓴다", () => {
     expect(ko.dday(18)).toBe("D-18");
     expect(en.dday(18)).toBe("in 18 days");
     expect(en.dday(1)).toBe("in 1 day");

@@ -18,7 +18,7 @@ export function isValidTimeZone(timeZone: string) {
   return valid;
 }
 
-/** 저장된 시간대를 화면으로 내보낼 때 — 검증 전에 저장된 잘못된 값은 "모름"으로. */
+/** 저장된 시간대를 화면으로 내보낼 때 - 검증 전에 저장된 잘못된 값은 "모름"으로. */
 export function validTimeZoneOrNull(timeZone: string | null | undefined) {
   return timeZone && isValidTimeZone(timeZone) ? timeZone : null;
 }
@@ -61,7 +61,7 @@ export function timezoneDiffHours(a: string, b: string, date: Date = new Date())
 const SLEEP_START_HOUR = 23;
 const SLEEP_END_HOUR = 7;
 
-/** 단순 시간대 기반 추정 — 실제 수면 패턴을 학습하지 않는다(PRD.md §3.3). */
+/** 단순 시간대 기반 추정 - 실제 수면 패턴을 학습하지 않는다(PRD.md §3.3). */
 export function isLikelySleeping(timeZone: string, date: Date = new Date()) {
   const hour = Number(
     new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(date),

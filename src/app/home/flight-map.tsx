@@ -31,7 +31,7 @@ function airportIcon(filled: boolean) {
   });
 }
 
-// 화면 방위(위쪽 0°, 시계 방향) — 지도가 메르카토르라 짧은 구간에선 충분하다.
+// 화면 방위(위쪽 0°, 시계 방향) - 지도가 메르카토르라 짧은 구간에선 충분하다.
 function screenBearing(a: [number, number], b: [number, number]) {
   const dy = b[0] - a[0];
   const dx = (b[1] - a[1]) * Math.cos((a[0] * Math.PI) / 180);
@@ -39,7 +39,7 @@ function screenBearing(a: [number, number], b: [number, number]) {
 }
 
 /**
- * 위치 시트의 비행 지도(PRD §3.3.1) — 대권 경로(지나온 부분은 실선, 남은
+ * 위치 시트의 비행 지도(PRD §3.3.1) - 대권 경로(지나온 부분은 실선, 남은
  * 부분은 점선)와 예정 시각으로 계산한 추정 위치. 실제 항적이 아니다.
  */
 export function FlightMap({ from, to, progress }: { from: LatLng; to: LatLng; progress: number }) {

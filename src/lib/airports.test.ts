@@ -25,7 +25,7 @@ describe("공항 데이터", () => {
     expect(searchAirports("  ")).toEqual([]);
   });
 
-  it("한국어 이름은 한국어 화면에서만 — 다른 언어는 영어 원문", () => {
+  it("한국어 이름은 한국어 화면에서만 - 다른 언어는 영어 원문", () => {
     expect(getAirport("ICN", "en")?.name).toBe("Incheon International Airport");
     expect(getAirport("JFK", "en")?.city).toBe("New York");
     expect(searchAirports("뉴욕", 8, "en").map((a) => a.iata)).toContain("JFK");

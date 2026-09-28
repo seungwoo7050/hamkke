@@ -111,7 +111,7 @@ function MomentTile({
   const partnerName = usePartnerName();
   const who = mine ? tc("me") : partnerName;
   return (
-    // 2:1 줄의 두 칸은 폭이 달라도 높이가 같아야 한 줄로 읽힌다 — 줄 칸은 높이를
+    // 2:1 줄의 두 칸은 폭이 달라도 높이가 같아야 한 줄로 읽힌다 - 줄 칸은 높이를
     // 고정하고 사진을 그 안에 채운다(폭 비율로 높이를 정하면 좁은 칸이 짧아짐).
     <figure
       className={`group relative overflow-hidden rounded-lg ${large ? "aspect-4/3" : "h-40"}`}

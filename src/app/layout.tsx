@@ -8,7 +8,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCClientProvider } from "@/trpc/client";
 
-// 감성 포인트 전용(DESIGN.md §3.2) — 본문/버튼/내비게이션에는 사용하지 않는다.
+// 감성 포인트 전용(DESIGN.md §3.2) - 본문/버튼/내비게이션에는 사용하지 않는다.
 const gaegu = Gaegu({
   variable: "--font-handwritten",
   weight: ["400", "700"],
@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang={locale} className={`${gaegu.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
-        {/* DESIGN.md §9: 아이콘 stroke-width 1.5 고정 — 아이콘마다 prop을
+        {/* DESIGN.md §9: 아이콘 stroke-width 1.5 고정 - 아이콘마다 prop을
             반복하지 않고 전역 하나로 강제한다. */}
         <LucideProvider strokeWidth={1.5}>
           <NextIntlClientProvider>

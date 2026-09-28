@@ -13,7 +13,7 @@ import { translator } from "@/i18n/server";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
-// 무료 티어 사진 개수 한도. 업로드 주소 발급과 등록 두 곳에서 본다 — 발급 때만
+// 무료 티어 사진 개수 한도. 업로드 주소 발급과 등록 두 곳에서 본다 - 발급 때만
 // 보면 주소만 여러 개 받아 두고 나중에 한꺼번에 등록하는 식으로 넘길 수 있다.
 async function assertMomentQuota(
   spaceId: string,
@@ -31,9 +31,9 @@ async function assertMomentQuota(
 }
 
 export const momentRouter = router({
-  // R2에 직접 업로드할 presigned PUT URL 발급 — chat.createImageUploadUrl과
+  // R2에 직접 업로드할 presigned PUT URL 발급 - chat.createImageUploadUrl과
   // 동일한 패턴(서버는 파일 바이트를 거치지 않는다). 무료 티어는 사진 개수를
-  // 제한한다(PRD.md §3.5 "무제한 사진/영상 저장"이 프리미엄 혜택) — 업로드
+  // 제한한다(PRD.md §3.5 "무제한 사진/영상 저장"이 프리미엄 혜택) - 업로드
   // 자체를 여기서 막아야 "업로드는 됐는데 저장은 안 됨" 혼란이 없다.
   createUploadUrl: spaceProcedure
     .input(
@@ -113,10 +113,10 @@ export const momentRouter = router({
       return { moments, nextCursor };
     }),
 
-  // R2 파일을 먼저 지운다 — 행만 지우면 파일은 계속 요금이 나가고, 지우고 다시
+  // R2 파일을 먼저 지운다 - 행만 지우면 파일은 계속 요금이 나가고, 지우고 다시
   // 올리는 식으로 한도도 넘길 수 있었다. R2 삭제가 실패하면 행이 남아 다시 지울 수 있다.
   delete: spaceProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    // 올린 사람만 지운다 — 화면이 삭제 버튼을 올린 사람에게만 보이는 것과 같은 규칙.
+    // 올린 사람만 지운다 - 화면이 삭제 버튼을 올린 사람에게만 보이는 것과 같은 규칙.
     const moment = await prisma.moment.findFirst({
       where: { id: input.id, spaceId: ctx.space.id, uploaderId: ctx.session.user.id },
       select: { id: true, mediaUrl: true },

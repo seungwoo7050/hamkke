@@ -1,4 +1,4 @@
-// 탑승권 바코드(IATA BCBP, Resolution 792) 해석 — PRD §3.3.1. 종이·모바일
+// 탑승권 바코드(IATA BCBP, Resolution 792) 해석 - PRD §3.3.1. 종이·모바일
 // 탑승권의 PDF417/Aztec/QR에 같은 고정 폭 문자열이 들어 있다. 여기서 쓰는 건
 // 편명·출발/도착 공항·출발 날짜뿐이고, 이름·예약번호·좌석은 읽지 않고
 // 버린다(저장하지 않음). 바코드엔 시각이 없어 시각은 사람이 채운다.
@@ -34,7 +34,7 @@ export function parseBoardingPass(raw: string, today: Date = new Date()): Boardi
   };
 }
 
-// 바코드엔 연도가 없다 — 탑승권은 보통 출발 며칠 전~당일에 받으므로, 오늘
+// 바코드엔 연도가 없다 - 탑승권은 보통 출발 며칠 전~당일에 받으므로, 오늘
 // 기준 한 달 전보다 이르면 내년으로 본다(12월에 1월 탑승권을 받는 경우).
 function resolveDayOfYear(dayOfYear: number, today: Date) {
   const monthAgo = today.getTime() - 30 * 86_400_000;

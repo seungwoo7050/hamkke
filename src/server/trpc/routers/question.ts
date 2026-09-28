@@ -20,7 +20,7 @@ function withText(question: DailyQuestion, locale?: string) {
 }
 
 export const questionRouter = router({
-  // 오늘의 질문 + 내 답. 상대 답은 내가 먼저 답한 뒤에만 공개한다(PRD §3.2) —
+  // 오늘의 질문 + 내 답. 상대 답은 내가 먼저 답한 뒤에만 공개한다(PRD §3.2) -
   // 먼저 보고 맞춰 쓰는 걸 막아야 답이 솔직해진다. 답하기 전에는 "상대가
   // 답했는지" 여부만 알려준다.
   today: spaceProcedure.query(async ({ ctx }) => {
@@ -40,7 +40,7 @@ export const questionRouter = router({
     };
   }),
 
-  // 한 번 답하면 고치지 않는다 — 상대가 이미 내 답을 봤을 수 있어서다.
+  // 한 번 답하면 고치지 않는다 - 상대가 이미 내 답을 봤을 수 있어서다.
   answer: spaceProcedure
     .input(z.object({ content: z.string().trim().min(1).max(1000) }))
     .mutation(async ({ ctx, input }) => {
@@ -67,7 +67,7 @@ export const questionRouter = router({
       }
 
       // 상대 화면의 "오늘의 질문" 카드가 바로 "답했어요"로 바뀌게 알린다(내용은
-      // 싣지 않는다 — 상대 답은 상대가 먼저 답해야 열린다, PRD §3.2).
+      // 싣지 않는다 - 상대 답은 상대가 먼저 답해야 열린다, PRD §3.2).
       await broadcastToSpace(ctx.space.id, "question-answered", {
         userId: ctx.session.user.id,
         dateKey,
@@ -93,7 +93,7 @@ export const questionRouter = router({
       return answer;
     }),
 
-  // "기억 › 지나온"용 — 내가 답한 날만, 최신순. 내가 답한 날이므로 상대 답도
+  // "기억 › 지나온"용 - 내가 답한 날만, 최신순. 내가 답한 날이므로 상대 답도
   // 공개 조건을 만족한다. 커서는 마지막으로 받은 dateKey(그보다 이전 날부터).
   history: spaceProcedure
     .input(

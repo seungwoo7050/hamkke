@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import "dotenv/config";
 import { Pool } from "pg";
 
-// e2e는 사용자·스페이스를 만들고 지운다 — 실수로 운영 DB를 가리키면 안 되므로
+// e2e는 사용자·스페이스를 만들고 지운다 - 실수로 운영 DB를 가리키면 안 되므로
 // 로컬 호스트가 아니면 명시적으로 허용(E2E_ALLOW_REMOTE_DB=1)하지 않는 한 멈춘다.
 // (생성된 Prisma 클라이언트는 ESM이라 Playwright의 CJS 변환과 맞지 않아, 여기선
 // 필요한 몇 개의 쿼리만 pg로 직접 쓴다.)
@@ -45,7 +45,7 @@ export async function createSignedInUser(name: string) {
   return { userId, sessionCookie: { name: "authjs.session-token", value: sessionToken } };
 }
 
-/** 이미 연결된 커플(언어 지정) — 페어링 자체가 아닌 화면을 볼 때. */
+/** 이미 연결된 커플(언어 지정) - 페어링 자체가 아닌 화면을 볼 때. */
 export async function createPairedCouple(
   names: [string, string],
   opts: { locale: "ko" | "en"; timezones?: [string, string] },

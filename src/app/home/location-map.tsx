@@ -25,7 +25,7 @@ export function LocationMap({
   partner: LatLng | null;
 }) {
   const t = useTranslations("common");
-  // 상대 핀은 내 쪽으로 경도를 이어 붙여 그린다 — 날짜변경선을 사이에 두면
+  // 상대 핀은 내 쪽으로 경도를 이어 붙여 그린다 - 날짜변경선을 사이에 두면
   // 범위가 지구 반대편으로 잡히고 두 핀이 화면 양 끝에 붙는다.
   const partner = me && partnerRaw ? nearSideOf(me, partnerRaw) : partnerRaw;
   const center = me ?? partner ?? DEFAULT_CENTER;
@@ -45,7 +45,7 @@ export function LocationMap({
       {...(bounds ? { bounds } : { center: [center.lat, center.lng], zoom: hasAnyPoint ? 11 : 6 })}
       scrollWheelZoom={false}
       className="hamkke-map h-64 w-full"
-      // 모바일은 두 손가락으로 확대한다 — 기본 +/− 버튼은 앱 크롬과 어긋나 뺐다(Find My처럼).
+      // 모바일은 두 손가락으로 확대한다 - 기본 +/− 버튼은 앱 크롬과 어긋나 뺐다(Find My처럼).
       zoomControl={false}
       attributionControl={false}
       minZoom={1}
@@ -55,7 +55,7 @@ export function LocationMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {/* OSM 저작자 표시는 라이선스상 필수 — 문구만 남기고 토큰 톤으로(globals.css .hamkke-map). */}
+      {/* OSM 저작자 표시는 라이선스상 필수 - 문구만 남기고 토큰 톤으로(globals.css .hamkke-map). */}
       <AttributionControl position="bottomright" prefix={false} />
       {me && (
         <Marker position={[me.lat, me.lng]} icon={emberMarkerIcon}>

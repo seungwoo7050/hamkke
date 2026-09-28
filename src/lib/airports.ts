@@ -2,12 +2,12 @@ import "server-only";
 import data from "@/data/airports.json";
 
 // 공항 좌표·시간대(PRD §3.3.1 비행). 데이터는 scripts/build-airports.mts가
-// mwgg/Airports(MIT)에서 만든 번들 — 런타임 네트워크·API 키가 없다. 7,900여 곳
+// mwgg/Airports(MIT)에서 만든 번들 - 런타임 네트워크·API 키가 없다. 7,900여 곳
 // 이라 클라이언트로 보내지 않고 서버에서 조회·검색만 한다.
 
 export type Airport = {
   iata: string;
-  /** 짧은 도시 이름 — 장면·카드의 "인천 → 뉴욕" */
+  /** 짧은 도시 이름 - 장면·카드의 "인천 → 뉴욕" */
   city: string;
   /** 목록·검색 결과용 전체 이름 */
   name: string;
@@ -18,7 +18,7 @@ export type Airport = {
 };
 
 // 한국어 화면에서만 자주 오가는 공항에 한국어 이름을 붙인다(나머지는 원문
-// 도시명). 다른 언어는 데이터의 영어 원문 그대로 — 새 언어에 현지 이름이
+// 도시명). 다른 언어는 데이터의 영어 원문 그대로 - 새 언어에 현지 이름이
 // 필요하면 이런 표를 언어별로 하나 더 둔다(PRD §3.8).
 // [짧은 도시, 전체 이름]
 const KO: Record<string, [string, string]> = {
@@ -109,7 +109,7 @@ for (const [iata, city, name, country, lat, lng, timeZone] of data.rows as Row[]
   byIata.set(iata, { iata, city, name, country, lat, lng, timeZone });
 }
 
-/** 그 언어로 보여줄 공항 — 한국어면 한국어 이름을 덧씌운다. */
+/** 그 언어로 보여줄 공항 - 한국어면 한국어 이름을 덧씌운다. */
 function localized(a: Row0, locale: string): Airport {
   const ko = locale === "ko" ? KO[a.iata] : undefined;
   return ko ? { ...a, city: ko[0], name: ko[1] } : a;

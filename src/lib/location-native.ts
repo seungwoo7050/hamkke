@@ -15,7 +15,7 @@ interface WatcherError {
 
 interface BackgroundGeolocationPlugin {
   addWatcher(
-    // backgroundTitle/backgroundMessage는 의도적으로 쓰지 않는다 —
+    // backgroundTitle/backgroundMessage는 의도적으로 쓰지 않는다 -
     // startNativeLocationWatch의 주석 참고.
     options: {
       requestPermissions?: boolean;
@@ -44,7 +44,7 @@ export function isNativeLocation() {
  * 앱이 백그라운드로 간 뒤 foregroundServiceType="location" 서비스를
  * 승격하려면 이 권한이 필요해서, backgroundTitle/backgroundMessage를 채워
  * "진짜" 백그라운드 추적을 시도하면 서비스 승격이 조용히 실패한다(로그만
- * 남고 알림은 안 뜸). 그래서 범위를 포그라운드 전용으로 낮췄다 — 이 두
+ * 남고 알림은 안 뜸). 그래서 범위를 포그라운드 전용으로 낮췄다 - 이 두
  * 옵션을 비워두면 플러그인이 애초에 포그라운드 서비스 승격을 시도하지
  * 않는다(공식 문서: backgroundMessage가 없으면 위치 갱신은 포그라운드에서만
  * 보장됨). distanceFilter(이동 거리 기준)로 배터리 소모를 최소화한다.

@@ -23,7 +23,7 @@ import { displayName, usePartnerName, useSpace } from "./space-context";
 
 // 설정성 기능(위치공유·도착 알림 장소·구독·로그아웃)은 탭이나 홈 본문에 두지
 // 않고 우상단 아바타에서 여는 이 시트에만 모은다(DESIGN.md §4, Calm
-// Technology — 거의 안 쓰는 것은 시야 밖으로).
+// Technology - 거의 안 쓰는 것은 시야 밖으로).
 export function SettingsSheet() {
   const { summary } = useSpace();
   const { sharing, toggleSharing, togglePending } = useLocationSharing();

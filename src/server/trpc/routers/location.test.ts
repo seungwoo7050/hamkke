@@ -101,7 +101,7 @@ describe("location 라우터 (통합)", () => {
     const caller = await callerFor(userAId);
     await caller.location.setSharing({ enabled: true });
 
-    // "현재 위치로 등록" — 만든 사람은 이미 그 안에 있다.
+    // "현재 위치로 등록" - 만든 사람은 이미 그 안에 있다.
     const fence = await caller.geofence.create({
       label: "집",
       lat: 37.5665,

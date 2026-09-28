@@ -8,21 +8,21 @@ import { normalizeEmail } from "@/server/magic-link-limit";
 import { PENDING_PREFIX } from "@/server/uploads";
 
 // 계정 삭제(Google Play 요건·개인정보 파기). 2026-09-30 결정: 한 사람이 탈퇴하면
-// 스페이스를 통째로 지운다 — 대화·사진·기억은 두 사람이 함께 만든 것이라 한쪽만
+// 스페이스를 통째로 지운다 - 대화·사진·기억은 두 사람이 함께 만든 것이라 한쪽만
 // 남기지 않는다. 상대 계정은 남고 스페이스 없는 상태(다시 페어링 가능)가 된다.
 //
 // 순서가 중요하다: 돈이 나가는 구독 해지 → R2 파일 → DB. 앞 단계가 실패하면
 // 던져서 멈추고(아무것도 지우지 않은 채 다시 시도 가능), 구독이 살아 있는 채로
 // 데이터만 사라지는 일이 없게 한다.
 
-/** 해지할 게 남은 구독 상태 — 이미 끝난 구독은 건드리지 않는다. */
+/** 해지할 게 남은 구독 상태 - 이미 끝난 구독은 건드리지 않는다. */
 const LIVE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
 
 async function cancelSubscription(spaceId: string) {
   const subscription = await prisma.subscription.findUnique({ where: { spaceId } });
   if (!subscription || !LIVE_STATUSES.has(subscription.status)) return;
   try {
-    // 즉시 해지 — 이후 청구가 멈춘다(남은 기간 환불은 하지 않는다).
+    // 즉시 해지 - 이후 청구가 멈춘다(남은 기간 환불은 하지 않는다).
     await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
   } catch (err) {
     // Stripe 쪽에 이미 없는 구독이면 해지할 것도 없다.

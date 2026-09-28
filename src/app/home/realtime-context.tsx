@@ -7,12 +7,12 @@ import { spaceChannelName } from "@/lib/supabase/channels";
 
 type Handler = (payload: unknown) => void;
 
-// 메인 채널은 서버만 보낸다(src/lib/supabase/broadcast.ts) — 화면은 받기만 한다. 클라이언트가
+// 메인 채널은 서버만 보낸다(src/lib/supabase/broadcast.ts) - 화면은 받기만 한다. 클라이언트가
 // 보내는 타이핑 신호는 Presence 채널(presence-context)로 간다.
 type SpaceRealtime = {
   /** 이벤트 핸들러를 등록하고 해제 함수를 돌려준다. */
   listen: (event: string, handler: Handler) => () => void;
-  /** 채널 구독이 성립했는지 — 재연결될 때마다 false→true로 바뀐다. */
+  /** 채널 구독이 성립했는지 - 재연결될 때마다 false→true로 바뀐다. */
   connected: boolean;
 };
 

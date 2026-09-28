@@ -6,7 +6,7 @@ let client: SupabaseClient | undefined;
 
 type IssuedToken = { token: string; expiresAt: number };
 
-// Realtime 토큰(src/server/realtime-token.ts)을 만료 5분 전까지 재사용한다 —
+// Realtime 토큰(src/server/realtime-token.ts)을 만료 5분 전까지 재사용한다 -
 // supabase-js는 연결할 때와 하트비트(약 25초)마다 accessToken 콜백을 부른다.
 const REFRESH_BEFORE_MS = 5 * 60_000;
 let cached: IssuedToken | null = null;
@@ -46,7 +46,7 @@ async function realtimeAccessToken(): Promise<string> {
 /**
  * 브라우저 전체에서 하나만 쓰는 Supabase 클라이언트(Realtime 구독용).
  * 컴포넌트마다 새로 만들면 WebSocket이 여러 벌 생기고 같은 토픽 채널을 두 번
- * 구독할 수도 없다 — 채널 공유는 src/app/home/realtime-context.tsx가 맡는다.
+ * 구독할 수도 없다 - 채널 공유는 src/app/home/realtime-context.tsx가 맡는다.
  * 인증은 Supabase Auth가 아니라 우리 서버가 서명한 스페이스 토큰(accessToken)이다.
  */
 export function getSupabaseBrowserClient() {

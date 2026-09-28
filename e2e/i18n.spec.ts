@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { cleanup, createPairedCouple } from "./db";
 
 // 영어 화면 e2e(ARCHITECTURE.md §12 품질 게이트). 영어를 고른 커플의 화면에 한국어가
-// 한 글자도 나오지 않아야 한다 — 이름도 영어로 만들어 사람이 쓴 글과 섞이지 않게.
+// 한 글자도 나오지 않아야 한다 - 이름도 영어로 만들어 사람이 쓴 글과 섞이지 않게.
 // 가짜 언어(개발 서버 전용 쿠키)로 한 번 더 돌면, 문구 파일을 거치지 않은 문장은
 // 대괄호·악센트 없이 그대로 보여 눈에 띈다(스크린샷은 테스트 결과에 첨부).
 
@@ -51,7 +51,7 @@ test("영어를 고른 사람의 화면엔 한국어가 없다(일반·가짜 �
   userIds = [a.userId, b.userId];
 
   for (const pseudo of [false, true]) {
-    // 브라우저 언어는 한국어 — 사용자가 고른 언어(User.locale)가 이겨야 한다.
+    // 브라우저 언어는 한국어 - 사용자가 고른 언어(User.locale)가 이겨야 한다.
     const context = await browser.newContext({ locale: "ko-KR", timezoneId: "America/New_York" });
     await context.addCookies([
       { ...a.sessionCookie, url: baseURL! },

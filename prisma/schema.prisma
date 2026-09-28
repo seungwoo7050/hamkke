@@ -20,7 +20,7 @@ model Space {
   status    SpaceStatus @default(pending)
   createdAt DateTime    @default(now())
 
-  // 초대코드 페어링(docs/ARCHITECTURE.md §3) — 24시간 TTL
+  // 초대코드 페어링(docs/ARCHITECTURE.md §3) - 24시간 TTL
   inviteCode          String   @unique
   inviteCodeExpiresAt DateTime
 
@@ -56,14 +56,14 @@ model User {
 
   timezone String?
 
-  // 옵트인 위치공유(docs/ARCHITECTURE.md §5) — 기본 꺼짐, 사용자가 명시적으로
+  // 옵트인 위치공유(docs/ARCHITECTURE.md §5) - 기본 꺼짐, 사용자가 명시적으로
   // 켜야 하고 언제든 끌 수 있어야 한다.
   locationSharingEnabled Boolean @default(false)
-  /// 화면·알림 언어(PRD §3.8) — "ko" | "en". 비어 있으면 기기 언어 → 한국어.
+  /// 화면·알림 언어(PRD §3.8) - "ko" | "en". 비어 있으면 기기 언어 → 한국어.
   /// 사람마다 따로라 두 사람의 언어가 다를 수 있다.
   locale                 String?
   /// 기기 언어(브라우저가 동기화한 지원 언어 중 하나). locale을 고르지 않은 사람의
-  /// 푸시·서버 문구를 화면과 같은 언어로 만들 때 쓴다 — 화면은 요청마다 Accept-Language로
+  /// 푸시·서버 문구를 화면과 같은 언어로 만들 때 쓴다 - 화면은 요청마다 Accept-Language로
   /// 정하지만 푸시는 요청 밖에서 만들어져 기기 언어를 따로 알아 둬야 한다.
   deviceLocale           String?
 
@@ -133,7 +133,7 @@ model Message {
   type      MessageType @default(text)
   // text 타입은 본문, image/voice 타입은 R2에 업로드된 미디어의 signed URL 경로.
   content   String
-  // image/voice의 R2 파일 크기(바이트) — 스페이스 저장 용량 상한 계산용. text는 null.
+  // image/voice의 R2 파일 크기(바이트) - 스페이스 저장 용량 상한 계산용. text는 null.
   mediaSize Int?
   createdAt DateTime    @default(now())
   // 상대방이 읽은 시각. 2인 전용 Space라 수신자가 항상 1명이라 단일 필드로 충분.
@@ -171,7 +171,7 @@ model PushToken {
 }
 
 // 위치공유(PRD.md §3.3)는 옵트인 기능이라 매번 최신 좌표만 갱신하지 않고
-// 스로틀링된 스냅샷을 계속 쌓는다(ARCHITECTURE.md §4 — 만남 지도 등 히스토리
+// 스로틀링된 스냅샷을 계속 쌓는다(ARCHITECTURE.md §4 - 만남 지도 등 히스토리
 // 활용을 염두에 둠). 최신 위치는 userId+capturedAt으로 정렬해 조회한다.
 model LocationPing {
   id         String   @id @default(cuid())
@@ -226,7 +226,7 @@ model MeetupPin {
 
 // 공유 캘린더(PRD.md §3.4). startAt/endAt은 UTC로 저장하고, 생성 시점의
 // 작성자 timezone을 함께 남겨 "어느 기준 시간대로 입력했는지"를 보존한다
-// (조회 시 각자 User.timezone으로 다시 변환해서 보여준다 — §5 시차 위젯과
+// (조회 시 각자 User.timezone으로 다시 변환해서 보여준다 - §5 시차 위젯과
 // 동일한 IANA 타임존 유틸 재사용).
 model CalendarEvent {
   id        String   @id @default(cuid())
@@ -245,14 +245,14 @@ model CalendarEvent {
 }
 
 // "오늘의 사진" 피드(PRD.md §3.4). mediaUrl은 PRD 명명 그대로 두지만 실제
-// 값은 Message의 image 타입과 동일하게 R2 오브젝트 키다 — 응답 시점에만
+// 값은 Message의 image 타입과 동일하게 R2 오브젝트 키다 - 응답 시점에만
 // presigned GET URL로 변환한다(ARCHITECTURE.md §10, 영구 public URL 금지).
 model Moment {
   id         String   @id @default(cuid())
   spaceId    String
   uploaderId String
   mediaUrl   String
-  // R2 파일 크기(바이트) — 스페이스 저장 용량 상한 계산용.
+  // R2 파일 크기(바이트) - 스페이스 저장 용량 상한 계산용.
   mediaSize  Int?
   caption    String?
   createdAt  DateTime @default(now())
@@ -296,7 +296,7 @@ model Countdown {
 
 // 예약 메시지/캡슐 노트(PRD.md §3.4). deliverAt이 지나기 전에는 상대에게
 // content를 숨긴다("아직 도착하지 않았어요"만 보여줌). deliveredAt은
-// 상대가 실제로 처음 열람한 시각 — 정확한 시각 push는 스케줄러가 없어
+// 상대가 실제로 처음 열람한 시각 - 정확한 시각 push는 스케줄러가 없어
 // 지원하지 않고(Phase 4 각주), 상대가 조회할 때 deliverAt을 지났는지만
 // 확인하는 pull 방식이다.
 model Capsule {
@@ -320,7 +320,7 @@ model Capsule {
   @@index([spaceId, deliverAt])
 }
 
-// 구독 주체는 User가 아니라 Space(ARCHITECTURE.md §6) — 한쪽이 결제하면
+// 구독 주체는 User가 아니라 Space(ARCHITECTURE.md §6) - 한쪽이 결제하면
 // 둘 다 프리미엄 혜택을 받는다. status는 Stripe subscription status를
 // 그대로 저장한다(active/past_due/canceled/trialing 등, Stripe가 값을
 // 늘려도 깨지지 않게 Prisma enum이 아닌 문자열로 둔다).
@@ -339,7 +339,7 @@ model Subscription {
 }
 
 // 하루 한 질문 답변(PRD §3.2). 질문 본문은 DB가 아니라 앱 내장 목록
-// (src/lib/daily-question.ts)이라 questionKey로만 참조한다 — 콘텐츠 운영
+// (src/lib/daily-question.ts)이라 questionKey로만 참조한다 - 콘텐츠 운영
 // 없이 목록 순서대로 순환한다. 두 사람이 서로 다른 시간대에 있어 "오늘"을
 // 로컬 기준으로 맞출 수 없으므로 dateKey는 UTC 날짜(YYYY-MM-DD)다.
 model DailyAnswer {
@@ -372,7 +372,7 @@ enum FlightSource {
 }
 
 // 비행(PRD §3.3.1). 지금은 예정 시각만 채운다(무료 범위). 실제 시각·status는
-// 유료 항공편 API 단계에서 채울 자리 — 화면은 src/lib/flight.ts의 "가장 믿을
+// 유료 항공편 API 단계에서 채울 자리 - 화면은 src/lib/flight.ts의 "가장 믿을
 // 만한 시각"만 읽으므로 그때 화면 코드는 바뀌지 않는다. 시각은 UTC로 저장하고,
 // 입력은 각 공항 현지 시각으로 받는다(공항 시간대는 src/lib/airports.ts).
 model Flight {
@@ -380,7 +380,7 @@ model Flight {
   spaceId              String
   travelerId           String
   flightNumber         String
-  /// 출발 공항 현지 날짜 — 날짜 필드 관례대로 UTC 자정으로 저장
+  /// 출발 공항 현지 날짜 - 날짜 필드 관례대로 UTC 자정으로 저장
   departureDate        DateTime
   fromIata             String
   toIata               String
@@ -402,7 +402,7 @@ model Flight {
 
 // 요청 횟수 제한 기록(ARCHITECTURE.md §7). bucket은 한도 종류(예: "chat.send"),
 // subject는 세는 단위(사용자 ID·IP·이메일 등). 가장 긴 창이 지난 기록은 기록할
-// 때마다 정리한다 — 스케줄러 없이 테이블이 커지지 않게.
+// 때마다 정리한다 - 스케줄러 없이 테이블이 커지지 않게.
 model RateLimitHit {
   id        String   @id @default(cuid())
   bucket    String

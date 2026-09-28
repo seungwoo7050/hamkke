@@ -3,9 +3,9 @@ import { cn } from "cn";
 import { MARK } from "./mark-geometry";
 
 /**
- * Hamkke 브랜드 심볼(DESIGN.md §1.1) — 곧게 선 H(ember)의 등에 K(dusk)가 어깨와
+ * Hamkke 브랜드 심볼(DESIGN.md §1.1) - 곧게 선 H(ember)의 등에 K(dusk)가 어깨와
  * 머리를 기댄 구도. 두 획이 겹치는 곳은 K 둘레만큼 H를 마스크로 비워 배경색
- * 틈을 만든다 — 배경색을 따로 알 필요가 없어 어떤 면 위에서도 같게 보인다.
+ * 틈을 만든다 - 배경색을 따로 알 필요가 없어 어떤 면 위에서도 같게 보인다.
  * 온보딩·빈 상태·장면에서 항상 이 하나만 재사용한다(§8).
  */
 export function Wordmark({ className }: { className?: string }) {

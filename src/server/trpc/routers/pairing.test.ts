@@ -1,4 +1,4 @@
-// 로컬 Postgres(docker compose up -d)가 떠 있어야 통과한다 — 실제 DB에 대고
+// 로컬 Postgres(docker compose up -d)가 떠 있어야 통과한다 - 실제 DB에 대고
 // 트랜잭션/레이스 처리를 검증하는 통합 테스트라 목(mock)을 쓰지 않는다.
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -159,7 +159,7 @@ describe("pairing 플로우 (통합)", () => {
 
     it("같은 IP에서 1시간에 20번 틀리면 다른 계정이어도 막는다", async () => {
       const ip = `203.0.113.${Math.floor(Math.random() * 250)}`;
-      // 계정을 여럿 만들어 사용자 한도를 피해 간 경우 — 실패 20건이 이미 쌓였다.
+      // 계정을 여럿 만들어 사용자 한도를 피해 간 경우 - 실패 20건이 이미 쌓였다.
       await prisma.rateLimitHit.createMany({
         data: Array.from({ length: 20 }, () => ({ bucket: "invite.fail.ip", subject: ip })),
       });

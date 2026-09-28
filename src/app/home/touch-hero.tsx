@@ -16,7 +16,7 @@ import { usePartnerName, useSpace } from "./space-context";
 
 const SENT_FEEDBACK_MS = 2400;
 
-// "생각하고 있어요" — 이 앱의 주인공(DESIGN.md §2 Minimal Intimate Objects).
+// "생각하고 있어요" - 이 앱의 주인공(DESIGN.md §2 Minimal Intimate Objects).
 // 1비트 신호라도 받은 사실이 드러나야 친밀감 채널로 기능하므로(Kaye, CHI '05)
 // 마지막으로 받은 시각을 버튼 바로 아래 손글씨로 상시 보여준다.
 export function TouchHero() {
@@ -65,7 +65,7 @@ export function TouchHero() {
       </Button>
       <p className="font-handwritten text-dusk-ink mt-2.5 min-h-7 text-lg">
         {partnerFlying
-          ? // 비행 중엔 인터넷이 없을 수 있다 — 보낸 마음이 사라지지 않는다는 걸 먼저 말한다.
+          ? // 비행 중엔 인터넷이 없을 수 있다 - 보낸 마음이 사라지지 않는다는 걸 먼저 말한다.
             t("partnerFlying")
           : lastReceivedAt
             ? t("lastReceived", {

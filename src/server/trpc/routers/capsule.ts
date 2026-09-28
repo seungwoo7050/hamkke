@@ -18,7 +18,7 @@ const createInput = z.object({
 export const capsuleRouter = router({
   // 발신자는 항상 내용을 볼 수 있고, 수신자는 deliverAt이 지나야 볼 수
   // 있다. 정확한 시각 push 스케줄러가 없어(Phase 4 각주), 이 조회 자체가
-  // "배달"을 겸한다 — deliverAt이 지났는데 아직 deliveredAt이 없는 걸
+  // "배달"을 겸한다 - deliverAt이 지났는데 아직 deliveredAt이 없는 걸
   // 수신자가 조회하면 그 순간 deliveredAt을 채운다.
   list: spaceProcedure.query(async ({ ctx }) => {
     const rows = await prisma.capsule.findMany({
@@ -84,7 +84,7 @@ export const capsuleRouter = router({
         where: { id: input.flightId, spaceId: ctx.space.id },
       });
       if (!flight) throw new TRPCError({ code: "NOT_FOUND", message: t("errors.flightNotFound") });
-      // 착륙 편지는 타는 사람에게 남기는 것 — 내가 타는 비행기엔 걸 수 없다.
+      // 착륙 편지는 타는 사람에게 남기는 것 - 내가 타는 비행기엔 걸 수 없다.
       if (flight.travelerId === ctx.session.user.id) {
         throw new TRPCError({
           code: "BAD_REQUEST",

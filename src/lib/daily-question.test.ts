@@ -4,7 +4,7 @@ import { DAILY_QUESTIONS, questionForDateKey, utcDateKey } from "./daily-questio
 
 describe("하루 한 질문 선택", () => {
   it("UTC 날짜 기준이라 시간대가 다른 두 시각도 같은 날이면 같은 키가 된다", () => {
-    // 서울 오전 8시 = UTC 전날 23시, 런던 자정 = UTC 당일 0시 — 서로 다른 UTC 날
+    // 서울 오전 8시 = UTC 전날 23시, 런던 자정 = UTC 당일 0시 - 서로 다른 UTC 날
     expect(utcDateKey(new Date("2026-09-27T23:00:00+09:00"))).toBe("2026-09-27");
     expect(utcDateKey(new Date("2026-09-27T08:00:00+09:00"))).toBe("2026-09-26");
   });

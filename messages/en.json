@@ -154,7 +154,7 @@
     "imageTypes": "You can send JPG, PNG, WebP or GIF images",
     "imageFailed": "Couldn't send the photo",
     "imageTooLarge": "Photos can be up to {mb} MB",
-    "voiceTooLarge": "That voice message is too long — try sending it in shorter parts",
+    "voiceTooLarge": "That voice message is too long. Try sending it in shorter parts",
     "voiceMaxReached": "Recording stopped at {minutes} minutes and was sent",
     "voiceFailed": "Couldn't send the voice message",
     "micPermission": "Hamkke needs microphone access for that",
@@ -242,7 +242,7 @@
   "moments": {
     "title": "Photos",
     "addTitle": "Add a photo",
-    "empty": "Today's sky, what you had for lunch — the small moments are the best ones",
+    "empty": "Today's sky, what you had for lunch. The small moments are the best ones",
     "altDefault": "Photo of the day",
     "delete": "Delete photo",
     "imageTypes": "You can upload JPG, PNG, WebP or GIF images",
@@ -272,7 +272,7 @@
     "locationSharingSub": "{name} can see your distance and weather",
     "signOut": "Sign out",
     "language": "Language",
-    "languageSub": "Only changes the app for you — {name} keeps theirs",
+    "languageSub": "Only changes the app for you. {name} keeps theirs",
     "languageFailed": "Couldn't change the language"
   },
   "account": {
@@ -294,7 +294,7 @@
     "step2": "Tap your photo in the top right to open Settings.",
     "step3": "Tap \"Delete account\" at the bottom and confirm. If you're already signed in, you can also delete it below.",
     "deletedTitle": "What gets deleted",
-    "deletedBody": "Your account (name, email and sign-in details) and everything in the space you share — chats, photos, voice messages, plans, anniversaries, capsules, location history and flights — for both of you. If you're subscribed, it's canceled right away and you won't be charged again. Your partner's account stays, so they can connect again.",
+    "deletedBody": "Your account (name, email and sign-in details) and everything in the space you share (chats, photos, voice messages, plans, anniversaries, capsules, location history and flights) for both of you. If you're subscribed, it's canceled right away and you won't be charged again. Your partner's account stays, so they can connect again.",
     "keptTitle": "What we keep",
     "keptBody": "Payment records such as receipts are kept by our payment provider (Stripe) for the period the law requires. We don't keep anything else.",
     "signIn": "Sign in to delete"
@@ -434,7 +434,7 @@
     "airportNotFound": "Couldn't find that airport",
     "sameAirport": "Departure and arrival airports are the same",
     "noPartner": "Your person hasn't joined yet",
-    "arrivalTime": "Check the arrival time — it has to be within 20 hours of departure"
+    "arrivalTime": "Check the arrival time. It has to be within 20 hours of departure"
   },
   "push": {
     "touch": "Your person is thinking of you",

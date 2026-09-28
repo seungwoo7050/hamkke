@@ -9,7 +9,7 @@ import {
   Loader2Icon,
 } from "lucide-react";
 
-// next-themes 없이 시스템 다크모드만 따른다(DESIGN.md — 수동 토글 없음).
+// next-themes 없이 시스템 다크모드만 따른다(DESIGN.md - 수동 토글 없음).
 // Sonner의 theme="system"은 자체적으로 prefers-color-scheme을 읽는다.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (

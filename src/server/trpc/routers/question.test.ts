@@ -107,7 +107,7 @@ describe("question 라우터 (통합)", () => {
         { spaceId, userId: userAId, dateKey: "2026-09-01", questionKey: "q001", content: "A1" },
         { spaceId, userId: userBId, dateKey: "2026-09-01", questionKey: "q001", content: "B1" },
         { spaceId, userId: userAId, dateKey: "2026-09-02", questionKey: "q002", content: "A2" },
-        // A가 답하지 않은 날 — A의 history에 나오면 안 된다
+        // A가 답하지 않은 날 - A의 history에 나오면 안 된다
         { spaceId, userId: userBId, dateKey: "2026-09-03", questionKey: "q003", content: "B3" },
       ],
     });
@@ -132,7 +132,7 @@ describe("question 라우터 (통합)", () => {
     ];
     expect(calledSpaceId).toBe(spaceId);
     expect(excludeUserId).toBe(userAId);
-    // 문구는 받는 사람의 언어로 만든다(PRD §3.8) — 한국어는 조사까지 맞게.
+    // 문구는 받는 사람의 언어로 만든다(PRD §3.8) - 한국어는 조사까지 맞게.
     const ko = build(translator("ko")).body;
     expect(ko).toBe("민준이 오늘의 질문에 답했어요");
     expect(build(translator("en")).body).toBe("민준 answered today's question");

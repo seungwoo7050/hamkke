@@ -1,4 +1,4 @@
-// 날씨는 실제 Open-Meteo 대신 목으로 대체한다 — 여기서 검증할 건 장면 값의
+// 날씨는 실제 Open-Meteo 대신 목으로 대체한다 - 여기서 검증할 건 장면 값의
 // 조합 규칙(옵트인·거리·마지막 터치·미읽음)이고, 날씨 API 자체는
 // weather.test.ts가 실제 네트워크로 검증한다.
 import { randomUUID } from "node:crypto";

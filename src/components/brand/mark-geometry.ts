@@ -1,4 +1,4 @@
-// 브랜드 심볼 기하(DESIGN.md §1.1) — 120 격자, 둥근 끝 획. 정적 심볼
+// 브랜드 심볼 기하(DESIGN.md §1.1) - 120 격자, 둥근 끝 획. 정적 심볼
 // (wordmark.tsx)과 터치 수신 모티프(touch-motif.tsx)가 같은 값을 쓴다.
 export const MARK = {
   viewBox: "1.5 5.5 120 120",

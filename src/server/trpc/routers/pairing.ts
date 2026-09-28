@@ -46,7 +46,7 @@ export const pairingRouter = router({
         };
       }
 
-      // 코드가 만료됐을 뿐 Space 자체는 재사용 — 같은 Space에 새 코드만 발급
+      // 코드가 만료됐을 뿐 Space 자체는 재사용 - 같은 Space에 새 코드만 발급
       const refreshed = await prisma.space.update({
         where: { id: existing.id },
         data: {
@@ -112,7 +112,7 @@ export const pairingRouter = router({
         }
 
         spaceId = await prisma.$transaction(async (tx) => {
-          // status가 여전히 pending일 때만 active로 전환 — 동시 입력 레이스 방지
+          // status가 여전히 pending일 때만 active로 전환 - 동시 입력 레이스 방지
           const { count } = await tx.space.updateMany({
             where: { id: space.id, status: "pending" },
             data: { status: "active" },

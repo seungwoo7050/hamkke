@@ -2,9 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 
-// 받은 캡슐을 "내가 직접 열어봤는지" — 이 기기에서의 편의 상태라 서버에 두지
+// 받은 캡슐을 "내가 직접 열어봤는지" - 이 기기에서의 편의 상태라 서버에 두지
 // 않는다(상대에게 알리는 기능이 아님). 저장소를 못 쓰는 환경(시크릿 창·차단)
-// 에선 매번 봉인된 채로 보이고 한 번 누르면 열린다 — 내용을 잃지는 않는다.
+// 에선 매번 봉인된 채로 보이고 한 번 누르면 열린다 - 내용을 잃지는 않는다.
 const KEY = "hamkke:unsealed-capsules";
 const EMPTY: ReadonlySet<string> = new Set();
 

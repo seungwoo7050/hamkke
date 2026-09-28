@@ -7,7 +7,7 @@ import java.util.TimeZone
 import kotlin.math.abs
 
 /**
- * 위젯 표기 — 웹(src/i18n/format.ts)과 같은 한국어·영어 표기를 기기 로케일과
+ * 위젯 표기 - 웹(src/i18n/format.ts)과 같은 한국어·영어 표기를 기기 로케일과
  * 상관없이 직접 조립한다(lang = "ko" | "en"). minSdk 24라 java.time 대신 TimeZone/Calendar를 쓴다.
  * 새로고침(30분) 사이에 낡지 않도록 "58분 전" 같은 상대 표기는 쓰지 않는다.
  */
@@ -16,7 +16,7 @@ object WidgetFormat {
     fun distance(km: Int, lang: String = "ko"): String =
         NumberFormat.getIntegerInstance(Locale.US).format(km) + if (lang == "ko") "km" else " km"
 
-    /** 상대 시각이 나보다 얼마나 빠르고 느린지 — "나보다 13시간 느려요", "나보다 9시간 30분 빨라요". */
+    /** 상대 시각이 나보다 얼마나 빠르고 느린지 - "나보다 13시간 느려요", "나보다 9시간 30분 빨라요". */
     fun timeDifference(myTz: String, partnerTz: String, nowMillis: Long, lang: String = "ko"): String {
         val diffMinutes = (TimeZone.getTimeZone(partnerTz).getOffset(nowMillis) -
             TimeZone.getTimeZone(myTz).getOffset(nowMillis)) / 60_000
@@ -51,7 +51,7 @@ object WidgetFormat {
         return "${if (hour < 12) "오전" else "오후"} $h12:${"%02d".format(c.get(Calendar.MINUTE))}"
     }
 
-    /** 마지막으로 받은 터치 — "오늘 오후 2:25" · "어제 오후 11:03" · "9월 25일". */
+    /** 마지막으로 받은 터치 - "오늘 오후 2:25" · "어제 오후 11:03" · "9월 25일". */
     fun lastTouch(touchMillis: Long, tz: String, nowMillis: Long, lang: String = "ko"): String {
         val days = dayNumber(nowMillis, tz) - dayNumber(touchMillis, tz)
         if (lang != "ko") {
@@ -80,7 +80,7 @@ object WidgetFormat {
     private fun calendar(millis: Long, tz: String) =
         Calendar.getInstance(TimeZone.getTimeZone(tz)).apply { timeInMillis = millis }
 
-    // 그 시간대의 달력 날짜를 일 단위 정수로 — 날짜 경계 비교용.
+    // 그 시간대의 달력 날짜를 일 단위 정수로 - 날짜 경계 비교용.
     private fun dayNumber(millis: Long, tz: String): Long {
         val c = calendar(millis, tz)
         val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {

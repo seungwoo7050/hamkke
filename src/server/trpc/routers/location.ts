@@ -95,7 +95,7 @@ export const locationRouter = router({
       }
 
       // 너무 잦은 전송은 저장·브로드캐스트·지오펜스 확인 없이 무시하고 마지막
-      // 스냅샷을 돌려준다 — 오류로 돌려주면 정상 화면도 토스트가 뜰 수 있어서.
+      // 스냅샷을 돌려준다 - 오류로 돌려주면 정상 화면도 토스트가 뜰 수 있어서.
       const userId = ctx.session.user.id;
       if ((await consume(locationSendCheck(userId))) > 0) {
         const last = await prisma.locationPing.findFirst({

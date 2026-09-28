@@ -23,7 +23,7 @@ export const touchRouter = router({
   }),
 
   // 상대가 나에게 마지막으로 보낸 터치. "우리" 장면과 Android 홈 위젯의
-  // "3시간 전에 생각해줬어요" 표시용(PRD §3.2) — 내가 보낸 터치는 제외한다.
+  // "3시간 전에 생각해줬어요" 표시용(PRD §3.2) - 내가 보낸 터치는 제외한다.
   latest: spaceProcedure.query(({ ctx }) =>
     prisma.touch.findFirst({
       where: { spaceId: ctx.space.id, senderId: { not: ctx.session.user.id } },
@@ -33,8 +33,8 @@ export const touchRouter = router({
 
   // 대화 흐름 안에 "생각하고 있어요"를 끼워 넣기 위한 조회(승인 목업 ②).
   // 채팅이 불러온 가장 오래된 메시지 시각을 since로 넘기면 그 구간의
-  // 터치만 온다 — 채팅 페이지네이션과 같은 범위를 맞춘다.
-  // 상한을 넘으면 오래된 쪽을 버린다 — 최신순으로 잘라 시간순으로 뒤집는다.
+  // 터치만 온다 - 채팅 페이지네이션과 같은 범위를 맞춘다.
+  // 상한을 넘으면 오래된 쪽을 버린다 - 최신순으로 잘라 시간순으로 뒤집는다.
   // (오름차순으로 자르면 잘리는 쪽이 방금 받은 터치가 된다.)
   list: spaceProcedure.input(z.object({ since: z.coerce.date() })).query(async ({ ctx, input }) => {
     const recent = await prisma.touch.findMany({

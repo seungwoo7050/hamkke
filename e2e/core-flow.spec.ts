@@ -6,7 +6,7 @@ import { cleanup, countLocationPings, createSignedInUser, spaceOf } from "./db";
 // 핵심 플로우: 페어링 → 채팅 → 위치공유 → 구독(docs/COMMIT_PLAN.md Phase 8).
 // 두 사람은 서로 다른 브라우저 컨텍스트(서울·뉴욕 시간대/좌표)로 움직인다.
 // 실시간(Supabase Realtime)이 없는 환경에서도 돌도록, 상대 화면은 필요한 곳에서
-// 다시 열어 서버 상태로 확인한다 — 실시간 경로는 단위·통합 테스트와 수동 두 기기
+// 다시 열어 서버 상태로 확인한다 - 실시간 경로는 단위·통합 테스트와 수동 두 기기
 // 확인이 맡는다(CLAUDE.md 미완료 검증 항목 3).
 
 const SEOUL = { latitude: 37.5665, longitude: 126.978 };
@@ -92,7 +92,7 @@ test("페어링 → 채팅 → 위치공유 → 구독", async ({ browser, baseU
   await test.step("위치공유: 둘 다 켜면 두 사람 사이 거리가 장면에 보인다", async () => {
     await turnOnLocationSharing(pa);
     await turnOnLocationSharing(pb);
-    // 켜는 순간 현재 좌표를 한 번 보낸다 — 두 좌표가 모두 저장될 때까지 기다린다.
+    // 켜는 순간 현재 좌표를 한 번 보낸다 - 두 좌표가 모두 저장될 때까지 기다린다.
     await expect.poll(() => countLocationPings(userIds)).toBeGreaterThanOrEqual(2);
 
     await pa.goto("/home");
@@ -144,7 +144,7 @@ test("페어링 → 채팅 → 위치공유 → 구독", async ({ browser, baseU
       });
       expect(res.ok()).toBe(true);
 
-      // 구독 주체는 스페이스 — 결제하지 않은 상대도 프리미엄이다.
+      // 구독 주체는 스페이스 - 결제하지 않은 상대도 프리미엄이다.
       for (const page of [pa, pb]) {
         await page.goto("/home");
         await page.getByRole("button", { name: "설정 열기" }).click();

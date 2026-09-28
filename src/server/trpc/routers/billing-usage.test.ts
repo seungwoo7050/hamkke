@@ -49,7 +49,7 @@ describe("billing.usage (통합)", () => {
     await prisma.space.delete({ where: { id: spaceId } });
   });
 
-  it("게이팅과 같은 방식으로 센다 — 캡슐은 아직 안 열린 것만", async () => {
+  it("게이팅과 같은 방식으로 센다 - 캡슐은 아직 안 열린 것만", async () => {
     await prisma.moment.createMany({
       data: [1, 2].map((i) => ({ spaceId, uploaderId: userId, mediaUrl: `k${i}` })),
     });
@@ -69,7 +69,7 @@ describe("billing.usage (통합)", () => {
           deliveredAt: new Date(),
         },
         {
-          // 열리는 때는 지났지만 상대가 아직 안 열었다 — 예약 중이 아니다.
+          // 열리는 때는 지났지만 상대가 아직 안 열었다 - 예약 중이 아니다.
           spaceId,
           senderId: userId,
           content: "열렸지만 안 읽음",

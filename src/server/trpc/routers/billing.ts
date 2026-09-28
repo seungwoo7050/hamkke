@@ -14,16 +14,16 @@ import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
 export const billingRouter = router({
-  // 구독 주체는 Space(ARCHITECTURE.md §6) — 한쪽이 결제하면 둘 다 프리미엄.
+  // 구독 주체는 Space(ARCHITECTURE.md §6) - 한쪽이 결제하면 둘 다 프리미엄.
   status: spaceProcedure.query(({ ctx }) =>
     prisma.subscription.findUnique({ where: { spaceId: ctx.space.id } }),
   ),
 
   // 무료 한도 대비 현재 사용량(PRD §3.5 "요금제 사용량 표시"). 세는 방식은 각
-  // 기능의 게이팅과 같다 — 사진은 전체 수, 캡슐은 열리는 때가 아직 안 온(예약 중) 수,
+  // 기능의 게이팅과 같다 - 사진은 전체 수, 캡슐은 열리는 때가 아직 안 온(예약 중) 수,
   // 만남 지도는 전체 핀 수(한도를 넘으면 오래된 것부터 정리됨). 프리미엄이면
   // 한도가 없으므로 items는 비운다. 저장 공간은 프리미엄에도 상한(20GB)이 있어
-  // 두 요금제 모두 보여 준다 — 한도에 부딪히기 전에 알 수 있게.
+  // 두 요금제 모두 보여 준다 - 한도에 부딪히기 전에 알 수 있게.
   usage: spaceProcedure.query(async ({ ctx }) => {
     const spaceId = ctx.space.id;
     const [premium, storageUsed] = await Promise.all([
@@ -64,7 +64,7 @@ export const billingRouter = router({
   }),
 
   // 이중 구독 방지: 두 사람이 동시에 누르거나 결제 화면을 여러 번 열어도
-  // 스페이스당 Customer 하나, 열린 Checkout 세션 하나만 쓴다 — 같은 세션은 한
+  // 스페이스당 Customer 하나, 열린 Checkout 세션 하나만 쓴다 - 같은 세션은 한
   // 번만 결제할 수 있다. 스페이스 단위 잠금으로 확인과 생성을 직렬화한다.
   createCheckoutSession: spaceProcedure.mutation(async ({ ctx }) => {
     await consumeOrThrow(billingSessionCheck(ctx.session.user.id), ctx.locale);

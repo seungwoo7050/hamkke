@@ -116,7 +116,7 @@ describe("POST /api/webhooks/stripe", () => {
     const event = subscriptionEvent("customer.subscription.created");
     const res = await postSignedEvent(event);
     expect(res.status).toBe(200);
-    // 예외 없이 200을 돌려주는 것 자체가 검증 대상 — 별도로 조회할 spaceId가 없다.
+    // 예외 없이 200을 돌려주는 것 자체가 검증 대상 - 별도로 조회할 spaceId가 없다.
   });
 
   it("subscription.updated가 오면 기존 Subscription의 status가 갱신된다", async () => {
