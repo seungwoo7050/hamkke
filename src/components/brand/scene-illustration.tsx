@@ -9,7 +9,7 @@ import { cn } from "cn";
  */
 const SCENES = {
   together: { day: "together-day", night: "together-night", width: 1000, height: 750 },
-  apart: { day: "apart-day", night: null, width: 1200, height: 630 },
+  apart: { day: "apart-day", night: "apart-night", width: 1200, height: 630 },
   leaning: { day: "leaning-day", night: "leaning-night", width: 520, height: 620 },
 } as const;
 
