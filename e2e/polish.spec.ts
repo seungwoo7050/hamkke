@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { cleanup, createPairedCouple, shareLocation } from "./db";
 
 // 12편 폴리시 검증에서 나온 화면 결함(docs/COMMIT_PLAN.md "devlog 검증 중 발견 6").
-// 둘 다 브라우저에서만 드러난다 — 하이드레이션 직후의 글자, 다른 스타일시트와의
+// 둘 다 브라우저에서만 드러난다 - 하이드레이션 직후의 글자, 다른 스타일시트와의
 // 우선순위.
 
 const userIds: string[] = [];
@@ -44,7 +44,7 @@ test("서버가 그린 뒤 분이 넘어가도 하이드레이션된 시계는 �
   });
   page.on("pageerror", (e) => errors.push(e.message));
 
-  // 브라우저 시계를 서버보다 정확히 1분 앞에 둔다 — 서버 렌더와 하이드레이션
+  // 브라우저 시계를 서버보다 정확히 1분 앞에 둔다 - 서버 렌더와 하이드레이션
   // 사이에 분이 넘어간 상황을 매번 재현한다.
   await page.clock.install({ time: Date.now() + 60_000 });
   const serverMinute = koTime(Date.now(), "Asia/Seoul");

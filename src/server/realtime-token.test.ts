@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("Realtime 토큰", () => {
-  it("키가 없으면 null — 공개 채널로 동작하는 전환 전 상태", async () => {
+  it("키가 없으면 null - 공개 채널로 동작하는 전환 전 상태", async () => {
     delete process.env.SUPABASE_JWT_PRIVATE_KEY;
     expect(isPrivateRealtimeEnabled()).toBe(false);
     expect(await signRealtimeToken("user-1", "space-1")).toBeNull();

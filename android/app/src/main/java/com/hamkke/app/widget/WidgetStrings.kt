@@ -3,7 +3,7 @@ package com.hamkke.app.widget
 import java.util.Locale
 
 /**
- * 위젯 문구(PRD §3.8). 웹은 messages 폴더의 문구 파일이지만 위젯은 네이티브라 여기 둔다 —
+ * 위젯 문구(PRD §3.8). 웹은 messages 폴더의 문구 파일이지만 위젯은 네이티브라 여기 둔다 -
  * 언어는 서버가 알려준 사용자 언어(/api/widget의 locale), 로그인 전엔 기기 언어.
  * 새 언어를 더하면 웹 문구 파일과 함께 여기에도 분기를 더한다.
  */
@@ -23,7 +23,7 @@ class WidgetStrings(val lang: String) {
     fun partnerNow(name: String) = if (ko) "${name}의 지금" else "$name's time"
 
     companion object {
-        /** 서버 기본값과 같은 규칙 — 한국어·영어가 아니면 한국어. */
+        /** 서버 기본값과 같은 규칙 - 한국어·영어가 아니면 한국어. */
         fun deviceLang(): String = if (Locale.getDefault().language == "en") "en" else "ko"
 
         fun normalize(lang: String?): String = if (lang == "ko" || lang == "en") lang else deviceLang()

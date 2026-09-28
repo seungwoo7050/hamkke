@@ -46,7 +46,7 @@ export const homeRouter = router({
       prisma.message.count({
         where: { spaceId: ctx.space.id, senderId: { not: myId }, readAt: null },
       }),
-      // 비행 중이면 장면 자체가 바뀌므로(PRD §3.3.1) 첫 렌더부터 알아야 한다 —
+      // 비행 중이면 장면 자체가 바뀌므로(PRD §3.3.1) 첫 렌더부터 알아야 한다 -
       // flight.list의 초기값. 커플 둘의 항공편이라 양이 적다.
       prisma.flight.findMany({
         where: { spaceId: ctx.space.id },
@@ -77,10 +77,10 @@ export const homeRouter = router({
     };
   }),
 
-  // Android 홈 화면 위젯(Phase 6, /api/widget)용 — 흘끗 보는 세 가지(거리·시차·
+  // Android 홈 화면 위젯(Phase 6, /api/widget)용 - 흘끗 보는 세 가지(거리·시차·
   // 마지막 터치)만. 위젯은 30분마다 조용히 새로고침하므로 외부 날씨 API를
   // 부르지 않고, 시각은 시간대만 넘겨 위젯이 기기 시계로 직접 그린다(TextClock
-  // — 새로고침 사이에도 시각이 멈추지 않게).
+  // - 새로고침 사이에도 시각이 멈추지 않게).
   widget: spaceProcedure.query(async ({ ctx }) => {
     const myId = ctx.session.user.id;
     const [me, partner, lastTouch] = await Promise.all([

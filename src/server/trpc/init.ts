@@ -16,7 +16,7 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 /**
- * 로그인만 요구한다 — 아직 Space가 없는 사용자도 통과(페어링 절차 자체가 이걸 씀).
+ * 로그인만 요구한다 - 아직 Space가 없는 사용자도 통과(페어링 절차 자체가 이걸 씀).
  * 변경 요청(mutation)은 사용자별 전체 상한을 한 번 센다(src/server/request-limits.ts).
  */
 export const protectedProcedure = t.procedure.use(async ({ ctx, type, next }) => {
@@ -35,7 +35,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, type, next }) =>
 
 /**
  * 로그인 + 활성 Space 멤버십을 요구한다. Phase 2 이후 실제 기능(채팅/위치 등)
- * 라우터가 전부 이걸 쓴다 — "요청자가 이 spaceId의 멤버인가"만 확인하면 되는
+ * 라우터가 전부 이걸 쓴다 - "요청자가 이 spaceId의 멤버인가"만 확인하면 되는
  * docs/ARCHITECTURE.md §2의 단순한 권한 모델을 그대로 구현한 것.
  */
 export const spaceProcedure = protectedProcedure.use(async ({ ctx, next }) => {

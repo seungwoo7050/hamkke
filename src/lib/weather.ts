@@ -1,6 +1,6 @@
 import "server-only";
 
-// WMO Weather interpretation codes — open-meteo.com/en/docs 표에서 발췌.
+// WMO Weather interpretation codes - open-meteo.com/en/docs 표에서 발췌.
 const WEATHER_CODE_KO: Record<number, string> = {
   0: "맑음",
   1: "대체로 맑음",
@@ -46,7 +46,7 @@ export function isRainOrSnow(code: number) {
 
 export type Weather = { temperatureC: number; weatherCode: number; description: string };
 
-// API 키 없이 쓸 수 있는 Open-Meteo(비상업 용도 무료) — 2인 전용 앱이라
+// API 키 없이 쓸 수 있는 Open-Meteo(비상업 용도 무료) - 2인 전용 앱이라
 // 트래픽이 극히 적어 별도 캐싱 없이 그대로 호출한다.
 // 날씨는 장면의 주변부 정보다. 공통 레이아웃이 이 조회를 기다리므로, 응답하지
 // 않는 날씨 서버가 앱 전체를 붙잡지 않게 짧게 끊는다(제한이 없으면 Node fetch는

@@ -35,7 +35,7 @@ describe("computeStreak", () => {
     });
   });
 
-  it("상한 없이 센다 — 400일 연속이면 400", () => {
+  it("상한 없이 센다 - 400일 연속이면 400", () => {
     const days: string[] = [];
     for (let i = 0; i < 400; i++) {
       const d = new Date(Date.UTC(2026, 5, 10 - i));

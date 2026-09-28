@@ -9,7 +9,7 @@ import { PersonAvatar } from "./person-avatar";
 import { usePartnerPresent } from "./presence-context";
 import { usePartnerName, useSpace } from "./space-context";
 
-// 대화 상단 — 상대가 지금 몇 시에 있는지를 대화 맥락 바로 위에 둔다(승인
+// 대화 상단 - 상대가 지금 몇 시에 있는지를 대화 맥락 바로 위에 둔다(승인
 // 목업 ②). 새벽에 보내는 메시지가 어떻게 닿을지 보내기 전에 알 수 있게.
 export function ChatHeader() {
   const { summary } = useSpace();

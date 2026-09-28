@@ -242,7 +242,7 @@
   "moments": {
     "title": "사진",
     "addTitle": "사진 올리기",
-    "empty": "오늘 본 하늘, 먹은 것 — 사소한 장면일수록 좋아요",
+    "empty": "오늘 본 하늘, 먹은 것. 사소한 장면일수록 좋아요",
     "altDefault": "오늘의 사진",
     "delete": "사진 삭제",
     "imageTypes": "jpg, png, webp, gif 이미지만 올릴 수 있어요",
@@ -272,7 +272,7 @@
     "locationSharingSub": "켜두면 거리·날씨가 {name}에게 보여요",
     "signOut": "로그아웃",
     "language": "언어",
-    "languageSub": "나에게만 바뀌어요 — {name}의 화면은 그대로예요",
+    "languageSub": "나에게만 바뀌어요. {name}의 화면은 그대로예요",
     "languageFailed": "언어를 바꾸지 못했어요"
   },
   "account": {
@@ -434,7 +434,7 @@
     "airportNotFound": "공항을 찾지 못했어요",
     "sameAirport": "출발과 도착 공항이 같아요",
     "noPartner": "아직 상대가 없어요",
-    "arrivalTime": "도착 시각을 확인해 주세요 — 출발 후 20시간 안이어야 해요"
+    "arrivalTime": "도착 시각을 확인해 주세요. 출발 후 20시간 안이어야 해요"
   },
   "push": {
     "touch": "상대방이 생각하고 있어요",

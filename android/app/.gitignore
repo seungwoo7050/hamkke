@@ -1,5 +1,5 @@
 /build/*
 !/build/.npmkeep
 
-# Firebase 프로젝트 크리덴셜 — .env와 동일한 이유로 커밋하지 않는다.
+# Firebase 프로젝트 크리덴셜 - .env와 동일한 이유로 커밋하지 않는다.
 google-services.json

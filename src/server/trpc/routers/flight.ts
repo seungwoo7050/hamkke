@@ -9,8 +9,8 @@ import type { Flight } from "@/generated/prisma/client";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
-// 비행(PRD §3.3.1). 입력은 사람이 탑승권에서 보는 그대로 — 편명, 출발 현지
-// 날짜, 공항 코드, 각 공항 현지 시각 — 을 받고, 서버가 공항 시간대로 UTC 순간을
+// 비행(PRD §3.3.1). 입력은 사람이 탑승권에서 보는 그대로 - 편명, 출발 현지
+// 날짜, 공항 코드, 각 공항 현지 시각 - 을 받고, 서버가 공항 시간대로 UTC 순간을
 // 만든다. 도착 날짜는 받지 않고 추론한다(src/lib/flight.ts resolveArrival).
 
 const flightInput = z.object({
@@ -86,7 +86,7 @@ const airportView = (a: Airport) => ({
   timeZone: a.timeZone,
 });
 
-/** 화면용 — 공항 정보와 거리를 붙인다(공항 데이터는 서버에만 있다). */
+/** 화면용 - 공항 정보와 거리를 붙인다(공항 데이터는 서버에만 있다). */
 export function serializeFlight(f: Flight, locale?: string) {
   const from = getAirport(f.fromIata, locale);
   const to = getAirport(f.toIata, locale);

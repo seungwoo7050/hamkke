@@ -9,7 +9,7 @@ import { type YMD } from "@/lib/datetime";
 import { Calendar } from "./calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 
-// 폼 값은 기존 네이티브 입력과 같은 문자열 형식을 그대로 쓴다 — 날짜는
+// 폼 값은 기존 네이티브 입력과 같은 문자열 형식을 그대로 쓴다 - 날짜는
 // "YYYY-MM-DD", 날짜+시각은 로컬 "YYYY-MM-DDTHH:mm". 저장 경로를 바꾸지 않고
 // 입력 UI만 교체하기 위해서다.
 
@@ -79,14 +79,14 @@ export function DateField({
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const MINUTES = [0, 10, 20, 30, 40, 50];
 
-/** 시 선택지 — "오전 10시" / "10 AM" */
+/** 시 선택지 - "오전 10시" / "10 AM" */
 function useHourLabel() {
   const t = useTranslations("dateField");
   return (h: number) =>
     t("hourOption", { period: h < 12 ? "am" : "pm", hour: h % 12 === 0 ? 12 : h % 12 });
 }
 
-/** 날짜(달력) + 시·분(선택). 분은 10분 단위 — 약속 시각에 1분 단위는 필요 없다. */
+/** 날짜(달력) + 시·분(선택). 분은 10분 단위 - 약속 시각에 1분 단위는 필요 없다. */
 export function DateTimeField({
   value,
   onChange,
@@ -146,7 +146,7 @@ export function DateTimeField({
 const FIVE_MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
 /**
- * 시·분만("HH:mm"). 비행 시각처럼 날짜가 따로 정해진 경우 — 항공편 시각은
+ * 시·분만("HH:mm"). 비행 시각처럼 날짜가 따로 정해진 경우 - 항공편 시각은
  * 5분 단위로 적혀 있어 분은 5분 단위.
  */
 export function TimeField({

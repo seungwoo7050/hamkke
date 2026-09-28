@@ -25,7 +25,7 @@ import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 export type FlightView = inferRouterOutputs<AppRouter>["flight"]["list"][number];
 type AirportView = FlightView["from"];
 
-/** 항공편 목록 — 기억 탭·우리 장면·위치 시트가 같은 쿼리를 쓴다. */
+/** 항공편 목록 - 기억 탭·우리 장면·위치 시트가 같은 쿼리를 쓴다. */
 export function useFlights() {
   const trpc = useTRPC();
   const { summary } = useSpace();
@@ -40,7 +40,7 @@ export function useTravelerName() {
   return (travelerId: string) => (travelerId === currentUserId ? tc("me") : partnerName);
 }
 
-/** "10월 14일 (수) 오전 10:30" — 출발 공항 현지 시각(탑승권에 적힌 그대로). */
+/** "10월 14일 (수) 오전 10:30" - 출발 공항 현지 시각(탑승권에 적힌 그대로). */
 export function formatDeparture(fmt: Formatters, f: FlightView) {
   return fmt.dateTime(new Date(f.scheduledDepartureAt), f.from.timeZone);
 }
@@ -211,7 +211,7 @@ export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: 
       {!initial && (
         <BoardingPassScan
           onScanned={async (leg) => {
-            // 바코드엔 공항 코드만 있다 — 한국어 도시명을 붙이려고 서버에서 찾는다.
+            // 바코드엔 공항 코드만 있다 - 한국어 도시명을 붙이려고 서버에서 찾는다.
             const find = async (iata: string) =>
               (
                 await queryClient.fetchQuery(trpc.flight.searchAirports.queryOptions({ q: iata }))
@@ -288,7 +288,7 @@ export function FlightForm({ initial, onDone }: { initial?: FlightView; onDone: 
   );
 }
 
-/** 공항 고르기 — 접힌 상태엔 고른 공항, 누르면 그 자리에서 검색(DateField와 같은 문법). */
+/** 공항 고르기 - 접힌 상태엔 고른 공항, 누르면 그 자리에서 검색(DateField와 같은 문법). */
 function AirportField({
   label,
   value,
@@ -373,7 +373,7 @@ function AirportField({
 
 const EARTH_CIRCUMFERENCE_KM = 40_075;
 
-// 기억 › 지나온 › "함께 난 하늘"(PRD §3.3.1) — 도착 시각이 지난 비행과 올해
+// 기억 › 지나온 › "함께 난 하늘"(PRD §3.3.1) - 도착 시각이 지난 비행과 올해
 // 서로에게 날아간 거리(공항 사이 대권거리 합). 기록이 없으면 섹션을 숨긴다.
 export function FlightHistory() {
   const trpc = useTRPC();

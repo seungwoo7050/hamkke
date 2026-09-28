@@ -38,7 +38,7 @@ import androidx.glance.unit.ColorProvider
 import com.hamkke.app.MainActivity
 import com.hamkke.app.R
 
-// DESIGN.md 토큰 — 앱 아이콘과 같은 밤하늘(dusk) 면 위에 크림 글자(§1.1 앱
+// DESIGN.md 토큰 - 앱 아이콘과 같은 밤하늘(dusk) 면 위에 크림 글자(§1.1 앱
 // 아이콘). ember는 대비가 낮아(dusk 위 약 2.4:1) 글자가 아닌 하트·심볼에만.
 private val Dusk = Color(0xFF4B4468)
 private val Cream = Color(0xFFFFF4E6)
@@ -46,7 +46,7 @@ private val CreamMuted = Color(0xB3FFF4E6)
 private val Ember = Color(0xFFF2653A)
 
 /**
- * Android 홈 화면 위젯(Phase 6, PRD 연결 기능) — 앱을 열지 않고 흘끗 보는 세 가지:
+ * Android 홈 화면 위젯(Phase 6, PRD 연결 기능) - 앱을 열지 않고 흘끗 보는 세 가지:
  * 상대의 지금 시각(=시차), 거리, 마지막으로 받은 터치(Calm Technology 주변부).
  * 상대 시각은 TextClock이 기기 시계로 매분 그려서 새로고침 사이에도 멈추지 않는다.
  */
@@ -111,7 +111,7 @@ private fun ReadyBody(state: WidgetState.Ready, strings: WidgetStrings) {
         AndroidRemoteViews(
             remoteViews = RemoteViews(LocalContext.current.packageName, R.layout.widget_partner_clock).apply {
                 setString(R.id.partner_clock, "setTimeZone", state.partnerTimezone)
-                // 어순만 언어에 맞춘다 — "오후/PM" 표시 자체는 RemoteViews로 로케일을
+                // 어순만 언어에 맞춘다 - "오후/PM" 표시 자체는 RemoteViews로 로케일을
                 // 정할 수 없어 기기 언어를 따른다.
                 val pattern = if (state.lang == "ko") "a h:mm" else "h:mm a"
                 setCharSequence(R.id.partner_clock, "setFormat12Hour", pattern)

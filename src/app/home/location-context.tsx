@@ -27,7 +27,7 @@ type LocationBroadcastPayload = { userId: string; capturedAt: string } & Omit<
 
 // ARCHITECTURE.md §5: 포그라운드에서 수 초~수십 초 간격. 완전한 움직임 기반
 // adaptive 전송은 과해서, 고정 간격 스로틀로 단순화했다. 네이티브(Android)
-// 에서도 포그라운드 전용으로 동작한다 — src/lib/location-native.ts 각주 참고
+// 에서도 포그라운드 전용으로 동작한다 - src/lib/location-native.ts 각주 참고
 // (ACCESS_BACKGROUND_LOCATION 없이는 앱이 백그라운드로 간 뒤 위치 서비스
 // 승격이 조용히 실패한다는 걸 실기기에서 확인, 배경위치는 범위 밖으로 뺌).
 const SEND_THROTTLE_MS = 15000;
@@ -46,7 +46,7 @@ type LocationContextValue = {
 const LocationContext = createContext<LocationContextValue | null>(null);
 
 // 위치공유 토글은 설정 시트(DESIGN.md §4)에 있지만, 좌표 감시(watchPosition)는
-// 시트가 닫혀도 계속 돌아야 한다 — 그래서 토글 UI에서 떼어 layout.tsx
+// 시트가 닫혀도 계속 돌아야 한다 - 그래서 토글 UI에서 떼어 layout.tsx
 // 수준의 컨텍스트로 올렸다. 상대 위치 Broadcast 구독도 여기서 한 번만 한다.
 export function LocationProvider({
   currentUserId,
@@ -97,7 +97,7 @@ export function LocationProvider({
     }
 
     // watchPosition 최초 호출 시 브라우저가 네이티브 위치 권한 다이얼로그를
-    // 띄운다 — 별도 권한 요청 API가 없다.
+    // 띄운다 - 별도 권한 요청 API가 없다.
     const watchId = navigator.geolocation.watchPosition(
       (position) =>
         handlePosition({

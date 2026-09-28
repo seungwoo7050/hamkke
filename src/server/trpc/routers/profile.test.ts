@@ -90,7 +90,7 @@ describe("profile 라우터 (통합)", () => {
     let me = await prisma.user.findUniqueOrThrow({ where: { id: userAId } });
     expect([me.locale, me.deviceLocale]).toEqual(["ko", "en"]);
 
-    // 지원하지 않는 기기 언어(예: 일본어)는 null로 — 그땐 한국어가 기본이다.
+    // 지원하지 않는 기기 언어(예: 일본어)는 null로 - 그땐 한국어가 기본이다.
     await caller.profile.setDeviceLocale({ locale: null });
     me = await prisma.user.findUniqueOrThrow({ where: { id: userAId } });
     expect(me.deviceLocale).toBeNull();

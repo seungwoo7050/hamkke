@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { retryAfterMs, type Check } from "@/server/rate-limit";
 
 // 초대코드 입력 rate limiting(ARCHITECTURE.md §7). 실패한 입력만 세고, 한도에
-// 걸리면 올바른 코드여도 거절한다 — 맞는 코드를 찾아내는 것 자체를 막는 게
+// 걸리면 올바른 코드여도 거절한다 - 맞는 코드를 찾아내는 것 자체를 막는 게
 // 목적이라. IP 한도는 매직링크로 계정을 여럿 만들어 사용자 한도를 우회하는
 // 경우를 막는다.
 export const INVITE_CODE_LIMITS = {
@@ -22,7 +22,7 @@ function inviteChecks(userId: string, ip: string | null | undefined): Check[] {
 /**
  * 입력 하나를 "틀릴 수도 있는 시도"로 먼저 기록해 둔다. 같은 사용자·IP의 입력은
  * advisory lock으로 줄을 세워, 한도 확인과 기록 사이에 다른 입력이 끼어들지 못한다
- * — 확인만 하고 틀린 뒤에 기록하던 때는 동시에 보낸 입력이 모두 "0번 틀림"을 읽고
+ * - 확인만 하고 틀린 뒤에 기록하던 때는 동시에 보낸 입력이 모두 "0번 틀림"을 읽고
  * 통과했다. 코드가 맞아 연결되면(또는 추측이 아닌 이유로 거절되면) release()로
  * 기록을 되돌려 실패로 세지 않는다.
  */

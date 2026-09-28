@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 const GB = 1024 * 1024 * 1024;
 
-/** 스페이스가 R2에 올려 둔 첨부 파일(메시지 이미지·음성 + 사진)의 바이트 — 사진만 따로도. */
+/** 스페이스가 R2에 올려 둔 첨부 파일(메시지 이미지·음성 + 사진)의 바이트 - 사진만 따로도. */
 export async function storageUsage(spaceId: string, db: Db = prisma) {
   const [messages, moments] = await Promise.all([
     db.message.aggregate({ where: { spaceId }, _sum: { mediaSize: true } }),
@@ -21,7 +21,7 @@ export async function storageUsedBytes(spaceId: string, db: Db = prisma) {
 }
 
 // 스페이스별 총 저장 용량 상한(무료·프리미엄 모두). 업로드 주소 발급(신고한
-// 크기)과 등록(실제 크기) 두 곳에서 본다 — 사진 개수 한도와 같은 이유.
+// 크기)과 등록(실제 크기) 두 곳에서 본다 - 사진 개수 한도와 같은 이유.
 export async function assertStorageAvailable(
   spaceId: string,
   addBytes: number,

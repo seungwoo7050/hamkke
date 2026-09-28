@@ -7,7 +7,7 @@ import { cn } from "cn";
 import { useTRPC } from "@/trpc/client";
 
 // 별도 "체크인" 버튼 없이 메시지를 보낸 날을 자동으로 활동일로 센다
-// (PRD.md §3.4 "연속 접속/대화 일수"). 하루 경계는 이 기기의 시간대 — 서버가
+// (PRD.md §3.4 "연속 접속/대화 일수"). 하루 경계는 이 기기의 시간대 - 서버가
 // 그 시간대로 날짜를 묶어 연속 일수를 계산한다(src/server/trpc/routers/streak.ts).
 export function StreakBadge() {
   const t = useTranslations("streak");
@@ -24,7 +24,7 @@ export function StreakBadge() {
 
   return (
     // glow = 터치·스트릭 하이라이트 전용 토큰(DESIGN.md §3.1). 오늘 아직 대화
-    // 전이면 흐리게 — 이어갈 수 있다는 신호만 조용히.
+    // 전이면 흐리게 - 이어갈 수 있다는 신호만 조용히.
     <span
       className={cn(
         "text-foreground flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",

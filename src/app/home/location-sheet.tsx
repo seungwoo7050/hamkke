@@ -30,7 +30,7 @@ const FlightMap = dynamic(() => import("./flight-map").then((m) => m.FlightMap),
 });
 
 // Find My/지도 앱처럼 작게·중간·전체 세 단계로 걸리는 시트(DESIGN.md §4).
-// 지도는 홈 바탕에 상시 깔지 않고 거리를 눌렀을 때만 연다 — 위치공유가
+// 지도는 홈 바탕에 상시 깔지 않고 거리를 눌렀을 때만 연다 - 위치공유가
 // 꺼지면 빈 화면이 되고, 상시 렌더링은 배터리·데이터 부담이라서.
 const SNAP_POINTS = [0.4, 0.65, 1] as const;
 
@@ -116,7 +116,7 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
           <EmptyState caption={t("empty")} className="py-8" />
         )}
         {!sharing && !flying && (
-          // 첫날엔 여기가 막다른 곳이었다 — 설명만 하고 켜는 곳(설정 시트)은 따로
+          // 첫날엔 여기가 막다른 곳이었다 - 설명만 하고 켜는 곳(설정 시트)은 따로
           // 있었음. 옵트인 원칙(ARCHITECTURE.md §5)대로 누르기 전엔 켜지 않는다.
           <div className="mt-4 flex flex-col gap-2">
             <Button size="lg" disabled={togglePending} onClick={() => void toggleSharing()}>

@@ -42,7 +42,7 @@ function Answer({ who, children }: { who: string; children: React.ReactNode }) {
   );
 }
 
-// 하루 한 질문(PRD §3.2, 신규 기능 N6). 상대 답은 내가 먼저 답해야 열린다 —
+// 하루 한 질문(PRD §3.2, 신규 기능 N6). 상대 답은 내가 먼저 답해야 열린다 -
 // 서버(question.today)가 그 전엔 내용을 아예 보내지 않는다. 답하는 순간 여는
 // 카드(상황 카드)는 사라지지만 시트는 열린 채로 상대 답을 보여줘야 하므로,
 // 트리거와 분리된 제어형 시트로 둔다.
@@ -132,7 +132,7 @@ function dateKeyToYMD(dateKey: string) {
   return { y, m, d };
 }
 
-// 기억 › 지나온 — 내가 답한 날만(그래야 상대 답도 열려 있다).
+// 기억 › 지나온 - 내가 답한 날만(그래야 상대 답도 열려 있다).
 export function QuestionHistory() {
   const trpc = useTRPC();
   const t = useTranslations("question");

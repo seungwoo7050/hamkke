@@ -17,7 +17,7 @@ export function computeStreak(activeDays: Iterable<string>, today: YMD) {
   const days = new Set(activeDays);
   const activeToday = days.has(dayKey(today));
   // 오늘 아직 활동이 없어도 스트릭이 바로 끊긴 것으로 보지 않는다(하루가
-  // 끝나기 전까지는 "아직 기회가 남은" 상태) — 어제부터 거슬러 센다.
+  // 끝나기 전까지는 "아직 기회가 남은" 상태) - 어제부터 거슬러 센다.
   let cursor = activeToday ? today : previousDay(today);
 
   let streak = 0;

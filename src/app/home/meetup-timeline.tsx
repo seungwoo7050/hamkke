@@ -87,7 +87,7 @@ function MeetupForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
   const createMutation = useMutation(
     trpc.meetup.create.mutationOptions({
       onSuccess: ({ visible }) => {
-        // 한도에서 지난 날짜로 기록하면 최근 N곳 밖이라 목록에 안 나온다 — 사라진 게
+        // 한도에서 지난 날짜로 기록하면 최근 N곳 밖이라 목록에 안 나온다 - 사라진 게
         // 아니라고 알려 준다.
         if (!visible) toast(t("savedHidden"));
         onCreated();

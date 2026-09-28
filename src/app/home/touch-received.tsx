@@ -11,7 +11,7 @@ import { usePartnerName } from "./space-context";
 export const TOUCH_RECEIVED_EVENT = "hamkke:touch-received";
 const VISIBLE_MS = 2600;
 
-// 터치를 받은 순간(DESIGN.md §8 "터치 알림 수신") — 평범한 토스트 대신 기대는
+// 터치를 받은 순간(DESIGN.md §8 "터치 알림 수신") - 평범한 토스트 대신 기대는
 // 모티프가 화면 가운데 잠깐 나타났다 사라진다. Calm Technology의 "주변부에서
 // 중심으로 올라오는 순간"이라 이때만 손글씨(§2 Maggie Appleton)를 쓴다.
 // 수신 자체는 app-effects.tsx가 Broadcast로 받아 이 이벤트로 알린다.

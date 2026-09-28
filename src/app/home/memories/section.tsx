@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/drawer";
 
 // 기억 탭의 한 묶음(기념일·일정·캡슐…). 입력 폼은 목록 위에 상시 펼쳐두지
-// 않고 제목 옆 "+"가 여는 시트 안에 둔다 — 목록이 화면의 주인공이고, 추가는
+// 않고 제목 옆 "+"가 여는 시트 안에 둔다 - 목록이 화면의 주인공이고, 추가는
 // 가끔 하는 행동이라서(DESIGN.md §4 화면당 하나의 초점).
 export function Section({
   title,
@@ -63,7 +63,7 @@ export function Section({
   );
 }
 
-/** 섹션 안 한 줄 — 아이콘 · 제목/보조문구 · 오른쪽 끝 값. */
+/** 섹션 안 한 줄 - 아이콘 · 제목/보조문구 · 오른쪽 끝 값. */
 export function Row({
   icon,
   title,
@@ -100,7 +100,7 @@ export function LoadingRow() {
   );
 }
 
-/** 목록 끝 "더 보기" — 다음 페이지가 있을 때만. */
+/** 목록 끝 "더 보기" - 다음 페이지가 있을 때만. */
 export function LoadMore({
   hasMore,
   loading,

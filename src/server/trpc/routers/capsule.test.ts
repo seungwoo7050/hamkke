@@ -139,7 +139,7 @@ describe("capsule 라우터 (통합)", () => {
     const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const caller = await callerFor(userAId);
 
-    // 이미 배달된 것 — 한도에 포함되면 안 된다.
+    // 이미 배달된 것 - 한도에 포함되면 안 된다.
     await prisma.capsule.create({
       data: {
         spaceId,

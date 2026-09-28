@@ -54,7 +54,7 @@ describe("daysBetween / nextOccurrence", () => {
   });
 
   // 윤년이 아닌 해에는 2월 29일이 없다. 그대로 두면 "2월 29일 (월)"이라는 없는
-  // 날짜를 표시하면서 D-day는 3월 1일까지 센다 — 그 달 안에 머물도록 2월 28일로.
+  // 날짜를 표시하면서 D-day는 3월 1일까지 센다 - 그 달 안에 머물도록 2월 28일로.
   it("2월 29일 반복 기념일은 윤년이 아닌 해엔 2월 28일, 윤년엔 2월 29일", () => {
     const fromOctober = { y: 2026, m: 10, d: 1 };
     const feb29 = { y: 2024, m: 2, d: 29 };
@@ -82,7 +82,7 @@ describe("표기", () => {
     );
   });
 
-  it("채팅 구분선 — 오늘·어제·그 전(올해가 아니면 연도)", () => {
+  it("채팅 구분선 - 오늘·어제·그 전(올해가 아니면 연도)", () => {
     const now = new Date("2026-09-28T03:00:00Z");
     expect(formatDayLabel(new Date("2026-09-28T01:00:00Z"), "Asia/Seoul", now)).toBe("오늘");
     expect(formatDayLabel(new Date("2026-09-27T01:00:00Z"), "Asia/Seoul", now)).toBe("어제");

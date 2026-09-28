@@ -30,7 +30,7 @@ sealed interface WidgetState {
 }
 
 /**
- * /api/widget(서버 home.widget)을 웹뷰와 같은 세션 쿠키로 부른다 — 위젯은 앱과
+ * /api/widget(서버 home.widget)을 웹뷰와 같은 세션 쿠키로 부른다 - 위젯은 앱과
  * 같은 프로세스라 CookieManager의 쿠키를 그대로 쓸 수 있어 별도 토큰이 없다.
  * 서버 주소는 capacitor.config의 server.url(웹뷰가 여는 곳)을 그대로 따른다.
  * 네트워크가 안 되면 마지막으로 받은 값을 보여준다(시각은 어차피 기기 시계).
@@ -50,7 +50,7 @@ object WidgetRepository {
                 parse(fresh)
             }
             else -> {
-                // 로그아웃·연결 해제는 캐시로 덮지 않는다 — 남의 화면이 남으면 안 됨.
+                // 로그아웃·연결 해제는 캐시로 덮지 않는다 - 남의 화면이 남으면 안 됨.
                 prefs.edit().remove(KEY_LAST).apply()
                 val lang = WidgetStrings.normalize(fresh.optStringOrNull("locale"))
                 if (fresh.optString("status") == "unpaired") WidgetState.Unpaired(lang)
@@ -97,7 +97,7 @@ object WidgetRepository {
     private fun JSONObject.optStringOrNull(key: String) =
         if (!has(key) || isNull(key)) null else getString(key)
 
-    // "2026-09-27T05:25:00.000Z" — minSdk 24라 java.time 대신 SimpleDateFormat.
+    // "2026-09-27T05:25:00.000Z" - minSdk 24라 java.time 대신 SimpleDateFormat.
     private fun parseIso(iso: String): Long? = runCatching {
         java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX", java.util.Locale.US).parse(iso)?.time
     }.getOrNull()

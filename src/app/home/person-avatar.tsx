@@ -4,7 +4,7 @@ import { cn } from "cn";
 const SIZES = { 32: "size-8 text-sm", 48: "size-12 text-lg", 64: "size-16 text-2xl" } as const;
 
 // DESIGN.md §9: 아바타는 32/48/64 세 사이즈만. 사진이 없으면 이름 첫 글자를
-// 워드마크 색 체계(나=ember, 상대=dusk — 지도 마커와 같은 규칙)로 표시한다.
+// 워드마크 색 체계(나=ember, 상대=dusk - 지도 마커와 같은 규칙)로 표시한다.
 export function PersonAvatar({
   person,
   who,

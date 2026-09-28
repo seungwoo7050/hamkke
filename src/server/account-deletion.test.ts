@@ -37,7 +37,7 @@ async function uploadMoment(userId: string) {
 }
 
 describe("계정 삭제", { timeout: 60_000 }, () => {
-  it("스페이스를 통째로 지운다 — 구독 해지, R2 파일, 대화·사진, 탈퇴자 계정. 상대는 스페이스 없이 남는다", async () => {
+  it("스페이스를 통째로 지운다 - 구독 해지, R2 파일, 대화·사진, 탈퇴자 계정. 상대는 스페이스 없이 남는다", async () => {
     const [a, b] = await Promise.all([
       prisma.user.create({ data: { email: `Del-A-${randomUUID()}@Example.com` } }),
       prisma.user.create({ data: { email: `del-b-${randomUUID()}@example.com` } }),

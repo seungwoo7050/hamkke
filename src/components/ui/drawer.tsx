@@ -6,7 +6,7 @@ import { Drawer as DrawerPrimitive } from "vaul";
 
 /**
  * 바텀시트(DESIGN.md §2 Emil Kowalski/Vaul, §4 "상세는 시트로"). shadcn/ui
- * drawer 레지스트리 항목과 같은 구조 — 이 환경에서 shadcn 레지스트리
+ * drawer 레지스트리 항목과 같은 구조 - 이 환경에서 shadcn 레지스트리
  * (ui.shadcn.com)가 네트워크 정책으로 막혀 있어 같은 구조를 토큰 기준으로
  * 직접 옮겼다. Vaul 기본 전환 곡선이 --ease-standard(0.32, 0.72, 0, 1)와
  * 같아 별도로 덮어쓰지 않는다. snap point가 필요한 시트는 Root에
@@ -31,7 +31,7 @@ function DrawerOverlay({
   return (
     <DrawerPrimitive.Overlay
       data-slot="drawer-overlay"
-      // 순수 black 금지(DESIGN.md §3.3) — zinc-900 토큰 기반 반투명.
+      // 순수 black 금지(DESIGN.md §3.3) - zinc-900 토큰 기반 반투명.
       className={cn("fixed inset-0 z-50 bg-zinc-900/40", className)}
       {...props}
     />

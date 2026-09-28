@@ -29,7 +29,7 @@ export function nearSideOf<T extends { lat: number; lng: number }>(base: T, poin
   return lng === point.lng ? point : { ...point, lng };
 }
 
-// 먼 거리(100km 이상)에서 소수점은 의미 없는 정밀도라 정수로 반올림한다 —
+// 먼 거리(100km 이상)에서 소수점은 의미 없는 정밀도라 정수로 반올림한다 -
 // 장거리 커플에게 "11,052.6km"의 0.6은 정보가 아니라 소음이다.
 export function formatDistanceKm(km: number) {
   if (km < 1) return `${Math.round(km * 1000)}m`;

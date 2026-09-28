@@ -10,7 +10,7 @@ import { isNearLimit } from "@/lib/plan-usage";
 import { useTRPC } from "@/trpc/client";
 
 // 구독 시작은 Checkout, 해지/결제수단 변경은 Customer Portal로 위임한다
-// (ARCHITECTURE.md §6 — 자체 UI로 결제 로직을 구현하지 않는다). 설정성
+// (ARCHITECTURE.md §6 - 자체 UI로 결제 로직을 구현하지 않는다). 설정성
 // 기능이라 홈이 아니라 설정 시트의 한 줄로 둔다(DESIGN.md §4).
 export function BillingSection() {
   const trpc = useTRPC();
@@ -74,7 +74,7 @@ export function BillingSection() {
       </div>
       {usage && (
         // 한도에 부딪힌 뒤 토스트로 알던 걸 미리 보이게(PRD §3.5). 한도 근처면
-        // 숫자만 ember로 — 경고 배너 대신 조용하게. 저장 공간은 프리미엄에도 상한이
+        // 숫자만 ember로 - 경고 배너 대신 조용하게. 저장 공간은 프리미엄에도 상한이
         // 있어 두 요금제 모두 보여 준다.
         <dl className="mt-3 ml-8 flex flex-col gap-2">
           {[

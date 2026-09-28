@@ -18,7 +18,7 @@ export async function requestNativePushToken(): Promise<string | null> {
   const permission = await PushNotifications.requestPermissions();
   if (permission.receive !== "granted") return null;
 
-  // 이번 요청에 붙인 리스너는 결과를 받으면 뗀다 — 떼지 않으면 앱 화면이 다시
+  // 이번 요청에 붙인 리스너는 결과를 받으면 뗀다 - 떼지 않으면 앱 화면이 다시
   // 마운트될 때마다 registration 리스너가 하나씩 쌓인다.
   const handles: PluginListenerHandle[] = [];
   try {

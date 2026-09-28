@@ -30,7 +30,7 @@ function hoursFromNow(h: number) {
   return toLocalInputValue(d);
 }
 
-// 상대 쪽은 시각만 — 날짜가 내 쪽과 달라질 때만 요일을 붙인다(한 줄에 담기게).
+// 상대 쪽은 시각만 - 날짜가 내 쪽과 달라질 때만 요일을 붙인다(한 줄에 담기게).
 function formatPartner(fmt: Formatters, date: Date, myTz: string, partnerTz: string) {
   const mine = todayIn(myTz, date);
   const theirs = todayIn(partnerTz, date);
@@ -39,7 +39,7 @@ function formatPartner(fmt: Formatters, date: Date, myTz: string, partnerTz: str
 }
 
 // 달력 그리드 대신 다가오는 순 리스트로 단순화했다(PRD.md §3.4 범위).
-// 같은 일정을 두 사람 시간대로 나란히 보여준다 — "양쪽 시간대 자동 변환".
+// 같은 일정을 두 사람 시간대로 나란히 보여준다 - "양쪽 시간대 자동 변환".
 export function CalendarView() {
   const trpc = useTRPC();
   const myTz = useMyTimeZone();
@@ -115,7 +115,7 @@ function CalendarForm({ onDone, onCreated }: { onDone: () => void; onCreated: ()
   const [title, setTitle] = useState("");
   const [startAt, setStartAt] = useState(() => hoursFromNow(1));
   const [endAt, setEndAt] = useState(() => hoursFromNow(2));
-  // 시작을 옮기면 끝도 같은 길이만큼 따라 옮긴다 — 날짜를 바꿨는데 끝이 그대로면
+  // 시작을 옮기면 끝도 같은 길이만큼 따라 옮긴다 - 날짜를 바꿨는데 끝이 그대로면
   // "끝이 시작보다 앞"이 되어 저장이 거절됐다(실제 검증 중 발견).
   function changeStart(next: string) {
     const duration = new Date(endAt).getTime() - new Date(startAt).getTime();

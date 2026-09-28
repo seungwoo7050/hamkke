@@ -11,7 +11,7 @@ import { stripe } from "@/lib/stripe";
  * 웹훅 재시도에도 두 번 환불하지 않게 멱등 키를 쓴다.
  */
 async function resolveDuplicate(keptId: string, duplicate: Stripe.Subscription) {
-  // 조회 실패는 삼키지 않는다 — 네트워크 오류로 갈아타면 이중 청구가 조용히
+  // 조회 실패는 삼키지 않는다 - 네트워크 오류로 갈아타면 이중 청구가 조용히
   // 남는다. 던지면 500이 나고 Stripe가 웹훅을 다시 보낸다.
   const kept = await stripe.subscriptions.retrieve(keptId).catch((err: unknown) => {
     if (err instanceof Stripe.errors.StripeError && err.code === "resource_missing") return null;
@@ -63,7 +63,7 @@ async function resolveDuplicate(keptId: string, duplicate: Stripe.Subscription) 
 }
 
 // customer.subscription.*(created/updated/deleted) 하나로 생성·갱신·취소를
-// 전부 upsert한다(인자는 이벤트 본문이 아니라 Stripe에서 다시 읽은 구독) — Stripe가 체크아웃 완료 시에도 subscription.created를
+// 전부 upsert한다(인자는 이벤트 본문이 아니라 Stripe에서 다시 읽은 구독) - Stripe가 체크아웃 완료 시에도 subscription.created를
 // 함께 보내주므로 checkout.session.completed를 따로 처리할 필요가 없다.
 async function syncSubscription(subscription: Stripe.Subscription) {
   const spaceId = subscription.metadata.spaceId;
@@ -75,12 +75,12 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   const stripeCustomerId = subscription.customer as string;
 
   // 스페이스당 Subscription은 한 행(spaceId @unique)이라 구독 ID가 아니라
-  // spaceId로 찾는다 — 해지 후 재구독하면 Stripe가 새 구독 ID를 주므로, 구독
+  // spaceId로 찾는다 - 해지 후 재구독하면 Stripe가 새 구독 ID를 주므로, 구독
   // ID로 upsert하면 같은 spaceId로 새 행을 만들려다 unique 충돌이 났다(결제는
   // 됐는데 프리미엄이 안 켜짐).
   const existing = await prisma.subscription.findUnique({ where: { spaceId } });
 
-  // 다른 구독의 이벤트인데 지금 행이 활성이면 덮지 않는다 — 지난 구독의 늦게
+  // 다른 구독의 이벤트인데 지금 행이 활성이면 덮지 않는다 - 지난 구독의 늦게
   // 도착한 이벤트(예: 이전 구독 deleted)가 새 활성 구독을 무효로 만들면 안 된다.
   // 둘 다 활성이면 중복 결제라 새로 들어온 쪽을 해지·환불한다.
   if (
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     event.type === "customer.subscription.updated" ||
     event.type === "customer.subscription.deleted"
   ) {
-    // 웹훅은 순서를 보장하지 않는다 — 해지 뒤에 그 전의 updated(active)가 재전송으로
+    // 웹훅은 순서를 보장하지 않는다 - 해지 뒤에 그 전의 updated(active)가 재전송으로
     // 늦게 도착하면 본문을 그대로 쓰는 순간 해지된 구독이 되살아난다. 본문은 "이
     // 구독이 바뀌었다"는 신호로만 쓰고 지금 상태를 Stripe에서 다시 읽는다. 조회
     // 실패는 500으로 돌려 Stripe가 다시 보내게 한다.

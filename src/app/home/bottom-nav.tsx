@@ -11,7 +11,7 @@ import { useTRPC } from "@/trpc/client";
 import { useSpaceBroadcast } from "./realtime-context";
 import { useSpace } from "./space-context";
 
-// Material 3 내비게이션 바 문법(DESIGN.md §2) — 활성 탭은 아이콘 뒤 pill로
+// Material 3 내비게이션 바 문법(DESIGN.md §2) - 활성 탭은 아이콘 뒤 pill로
 // 표시한다. "홈" 대신 범위가 분명한 이름을 쓴다(Apple HIG, DESIGN.md §4).
 const TABS = [
   { href: "/home", key: "us", Icon: UsersRound },

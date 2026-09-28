@@ -41,7 +41,7 @@ export function displayName(person: { name: string | null } | null, fallback: st
   return person?.name?.trim() || fallback;
 }
 
-/** 상대 이름 — 없으면 현재 언어의 호칭("상대" / "Your person"). */
+/** 상대 이름 - 없으면 현재 언어의 호칭("상대" / "Your person"). */
 export function usePartnerName() {
   const { summary } = useSpace();
   const t = useTranslations("common");
@@ -60,5 +60,5 @@ export function useMyTimeZone() {
   return summary.me.timezone ?? DEFAULT_TIME_ZONE;
 }
 
-// 프로필 시간대가 아직 없을 때(가입 직후 첫 화면)의 기본값 — 한국어 앱의 주 사용자 기준.
+// 프로필 시간대가 아직 없을 때(가입 직후 첫 화면)의 기본값 - 한국어 앱의 주 사용자 기준.
 export const DEFAULT_TIME_ZONE = "Asia/Seoul";

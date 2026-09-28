@@ -1,7 +1,7 @@
 // 하루 한 질문(PRD §3.2) 내장 목록. 콘텐츠 운영(관리자 화면·DB 시드) 없이
 // 이 배열 순서대로 순환한다. 질문 문장은 언어마다 messages/*.json의
-// questions.<key>에 있다(PRD §3.8 — 두 사람이 같은 질문을 각자의 언어로 본다).
-// key는 DailyAnswer.questionKey로 저장되므로 **기존 항목의 key·순서를 바꾸거나 지우지 말고 끝에만 추가한다** — 순서가
+// questions.<key>에 있다(PRD §3.8 - 두 사람이 같은 질문을 각자의 언어로 본다).
+// key는 DailyAnswer.questionKey로 저장되므로 **기존 항목의 key·순서를 바꾸거나 지우지 말고 끝에만 추가한다** - 순서가
 // 바뀌면 지난 날짜의 질문이 다른 질문으로 보이게 된다.
 export const DAILY_QUESTIONS = [
   { key: "q001" },

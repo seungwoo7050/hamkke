@@ -20,7 +20,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       // DESIGN.md §9: 기본 44px(모바일 터치 타겟 최소 44px 규정을 그대로
-      // 기본 높이로 채택 — 원안 40px + "padding으로 44px 보정"을 하나로
+      // 기본 높이로 채택 - 원안 40px + "padding으로 44px 보정"을 하나로
       // 합쳤다, 2026-09-26), 큰 버튼 48px. sm/icon-sm은 리스트 안에 촘촘히
       // 들어가는 보조 액션 전용이라 44px 미만을 허용한다.
       size: {

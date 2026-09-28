@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "cn";
 
 /**
- * 연결/로딩 중 인디케이터 — 기본 스피너 대신 브랜드 모티프(서 있는 점 +
+ * 연결/로딩 중 인디케이터 - 기본 스피너 대신 브랜드 모티프(서 있는 점 +
  * 그 등에 기댄 점이 균형을 잡는 흔들림)를 쓴다(DESIGN.md §8). 화면마다
  * 다른 로딩 UI를 새로 만들지 않고 이 컴포넌트 하나만 재사용한다.
  */
@@ -16,7 +16,7 @@ export function LoadingMotif({
   compact?: boolean;
   className?: string;
 }) {
-  // 서버·클라이언트 컴포넌트 양쪽에서 쓰인다 — useTranslations는 둘 다 지원.
+  // 서버·클라이언트 컴포넌트 양쪽에서 쓰인다 - useTranslations는 둘 다 지원.
   const t = useTranslations("common");
   return (
     <div

@@ -1,4 +1,4 @@
-// 언어별 표기 부품(ARCHITECTURE.md §12) — 문구 파일(ICU)로 안 되는 것만 여기 둔다.
+// 언어별 표기 부품(ARCHITECTURE.md §12) - 문구 파일(ICU)로 안 되는 것만 여기 둔다.
 // 한국어는 기존 함수(src/lib/datetime.ts 등)를 그대로 써서 표기가 바뀌지 않고,
 // 영어는 어느 실행 환경에나 있는 en-US ICU 데이터로 만든다. 새 언어를 더할 때
 // Intl만으로 충분하면 영어 분기를 그 언어 코드로 일반화하고, 한국어처럼 따로
@@ -79,7 +79,7 @@ export function formatters(locale: Locale) {
         ...((opts.weekday ?? true) ? { weekday: "short" } : {}),
       }).format(date);
     },
-    /** 채팅 날짜 구분선 — "오늘"·"어제"·날짜 / "Today"·"Yesterday"·date */
+    /** 채팅 날짜 구분선 - "오늘"·"어제"·날짜 / "Today"·"Yesterday"·date */
     dayLabel: (date: Date, timeZone: string, now: Date) => {
       if (ko) return koDayLabel(date, timeZone, now);
       const target = todayIn(timeZone, date);
@@ -91,7 +91,7 @@ export function formatters(locale: Locale) {
     },
     /** "3시간 전" · "3 hours ago" */
     relative: (from: Date, now: Date) => (ko ? koRelative(from, now) : enRelative(from, now)),
-    /** 문장 속 부사형 — "3시간 전에" · "3 hours ago" */
+    /** 문장 속 부사형 - "3시간 전에" · "3 hours ago" */
     relativeAdverb: (from: Date, now: Date) =>
       ko ? koRelativeAdverb(from, now) : enRelative(from, now),
     /** 남은 시간 "7시간 10분" · "7h 10m". 1분 이하면 null(문구 파일의 "곧 착륙"). */
@@ -110,7 +110,7 @@ export function formatters(locale: Locale) {
         : new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" }).format(
             ymdDate(ymd),
           ),
-    /** 저장 용량 — "312.5MB"·"1GB" / "312.5 MB"·"1 GB"(1GB 미만은 MB) */
+    /** 저장 용량 - "312.5MB"·"1GB" / "312.5 MB"·"1 GB"(1GB 미만은 MB) */
     bytes: (n: number) => {
       const gb = n / 1024 ** 3;
       const [value, unit] = gb >= 1 ? [gb, "gigabyte"] : [n / 1024 ** 2, "megabyte"];
@@ -127,7 +127,7 @@ export function formatters(locale: Locale) {
         : km < 1
           ? `${Math.round(km * 1000)} m`
           : `${km.toLocaleString("en-US", { maximumFractionDigits: km >= 100 ? 0 : 1 })} km`,
-    /** 목록용 D-day — "D-18"·"오늘"·"D+3" / "in 18 days"·"Today"·"3 days ago" */
+    /** 목록용 D-day - "D-18"·"오늘"·"D+3" / "in 18 days"·"Today"·"3 days ago" */
     dday: (days: number) => {
       if (ko) return days === 0 ? "오늘" : days > 0 ? `D-${days}` : `D+${-days}`;
       if (days === 0) return "Today";
@@ -135,14 +135,14 @@ export function formatters(locale: Locale) {
       const unit = n === 1 ? "day" : "days";
       return days > 0 ? `in ${n} ${unit}` : `${n} ${unit} ago`;
     },
-    /** 크게 보여줄 D-day — "D-18" / "18 days"(영어엔 D-day 표기 관습이 없다) */
+    /** 크게 보여줄 D-day - "D-18" / "18 days"(영어엔 D-day 표기 관습이 없다) */
     ddayBig: (days: number) => {
       if (ko) return days === 0 ? "오늘" : days > 0 ? `D-${days}` : `D+${-days}`;
       if (days === 0) return "Today";
       const n = Math.abs(days);
       return `${n} ${n === 1 ? "day" : "days"}${days < 0 ? " ago" : ""}`;
     },
-    /** 문구 파일 변수로 넘길 이름·편명 — particles("지우") → {name, nameSubj, …} */
+    /** 문구 파일 변수로 넘길 이름·편명 - particles("지우") → {name, nameSubj, …} */
     particles: <P extends string = "name">(word: string, prefix?: P): Particles<P> => {
       const p = (prefix ?? "name") as P;
       const pick = (pair: Parameters<typeof josa>[1]) => (ko ? josa(word, pair) : word);

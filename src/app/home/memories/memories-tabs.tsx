@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Tabs } from "radix-ui";
 
-// 기억 탭 상단 세그먼트 — 장거리 연애의 두 시간축(Stafford & Merolla 2007):
+// 기억 탭 상단 세그먼트 - 장거리 연애의 두 시간축(Stafford & Merolla 2007):
 // 기대(다가올)와 기억(지나온). DESIGN.md §4.
 export function MemoriesTabs({
   defaultTab,

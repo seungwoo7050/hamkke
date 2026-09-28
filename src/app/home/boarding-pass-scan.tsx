@@ -12,7 +12,7 @@ const FORMATS = ["pdf417", "aztec", "qr_code"];
 
 // 브라우저 내장 BarcodeDetector(Android Chrome 등)가 탑승권 형식(PDF417)을
 // 지원하면 그걸, 아니면(데스크톱 등) 오픈소스 zxing 기반 대체 구현을 필요할 때만
-// 불러온다. 대체 구현의 wasm은 jsDelivr에서 받는다 — 바코드 이미지는 기기 밖으로
+// 불러온다. 대체 구현의 wasm은 jsDelivr에서 받는다 - 바코드 이미지는 기기 밖으로
 // 나가지 않는다.
 async function getDetector(): Promise<Detector> {
   const Native = (globalThis as unknown as { BarcodeDetector?: typeof BarcodeDetectorType })

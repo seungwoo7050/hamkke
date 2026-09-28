@@ -10,7 +10,7 @@ const SESSION_COOKIES = ["authjs.session-token", "__Secure-authjs.session-token"
 
 export type DeleteAccountState = { failed: boolean } | null;
 
-/** useActionState용. 실패하면 로그인 상태를 유지한 채 { failed: true } — 다시 시도할 수 있게. */
+/** useActionState용. 실패하면 로그인 상태를 유지한 채 { failed: true } - 다시 시도할 수 있게. */
 export async function deleteAccountAction(): Promise<DeleteAccountState> {
   const session = await auth();
   if (!session?.user) redirect("/login");

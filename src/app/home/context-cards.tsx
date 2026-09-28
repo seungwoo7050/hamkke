@@ -24,7 +24,7 @@ import { QuestionSheet, useTodayQuestion } from "./daily-question";
 import { useFlights, type FlightView } from "./flights";
 import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
 
-// 캡슐이 "새로 도착했다"고 보여줄 기간 — 그 뒤엔 기억 › 지나온에만 남는다.
+// 캡슐이 "새로 도착했다"고 보여줄 기간 - 그 뒤엔 기억 › 지나온에만 남는다.
 const CAPSULE_FRESH_MS = 24 * 60 * 60 * 1000;
 
 const CARD_CLASS =
@@ -51,7 +51,7 @@ function Card({ href, ...body }: { href: string } & React.ComponentProps<typeof 
   );
 }
 
-// "우리" 탭 상황 카드 — 지금 이 커플에게 해당하는 것만, 최대 2장
+// "우리" 탭 상황 카드 - 지금 이 커플에게 해당하는 것만, 최대 2장
 // (선택 규칙은 src/lib/context-cards.ts).
 export function ContextCards() {
   const trpc = useTRPC();
@@ -257,7 +257,7 @@ function FlightCard({
   const sentLetters = (capsules.data ?? []).filter(
     (c) => c.flightId === f.id && c.senderId === currentUserId,
   ).length;
-  // 착륙 편지는 타는 사람에게 남기는 것 — 내가 타는 비행이면 권하지 않는다.
+  // 착륙 편지는 타는 사람에게 남기는 것 - 내가 타는 비행이면 권하지 않는다.
   const letterHint = mine
     ? null
     : letters > 0

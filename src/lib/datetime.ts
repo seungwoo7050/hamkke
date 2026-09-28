@@ -1,6 +1,6 @@
 // 한국어 날짜·시각 표기를 로케일 데이터(ICU)에 의존하지 않고 직접 만든다.
 //
-// 왜: Intl의 "ko-KR" 포맷은 실행 환경의 ICU 데이터에 따라 결과가 달라진다 —
+// 왜: Intl의 "ko-KR" 포맷은 실행 환경의 ICU 데이터에 따라 결과가 달라진다 -
 // 이 프로젝트의 서버(Node)는 "AM 12:08", 브라우저는 "오전 12:08"을 내서
 // 하이드레이션이 깨졌고, 그동안은 시각 문구를 하이드레이션 이후에만 그리는
 // 식으로 피해 왔다(첫 화면에서 시각이 한 박자 늦게 채워짐). 숫자 부분은
@@ -55,7 +55,7 @@ export function todayIn(timeZone: string, now: Date): YMD {
 
 /**
  * 시각 없는 날짜 필드(기념일·카운트다운·만남 날짜). "YYYY-MM-DD" 입력이 UTC
- * 자정으로 저장되므로 UTC 기준 달력 값을 그대로 읽는다 — 로컬 시간대로 읽으면
+ * 자정으로 저장되므로 UTC 기준 달력 값을 그대로 읽는다 - 로컬 시간대로 읽으면
  * 서울보다 늦은 시간대(뉴욕 등)에서 하루 앞 날짜가 된다.
  */
 export function dateOnly(stored: Date | string): YMD {
@@ -95,7 +95,7 @@ export function formatDateTime(date: Date, timeZone: string, opts: { weekday?: b
   return `${formatYMD({ y, m, d }, { weekday: opts.weekday ?? true })} ${formatTime(date, timeZone)}`;
 }
 
-/** 채팅 날짜 구분선 — "오늘" · "어제" · "9월 29일 (화)". */
+/** 채팅 날짜 구분선 - "오늘" · "어제" · "9월 29일 (화)". */
 export function formatDayLabel(date: Date, timeZone: string, now: Date) {
   const target = todayIn(timeZone, date);
   const diff = daysBetween(target, todayIn(timeZone, now));
@@ -114,7 +114,7 @@ function inYear(date: YMD, y: number): YMD {
   return { ...date, y };
 }
 
-/** 기념일의 다음 발생일 — 매년 반복이면 오늘 이후 가장 가까운 해로 옮긴다. */
+/** 기념일의 다음 발생일 - 매년 반복이면 오늘 이후 가장 가까운 해로 옮긴다. */
 export function nextOccurrence(date: YMD, recurring: boolean, today: YMD): YMD {
   if (!recurring) return date;
   const thisYear = inYear(date, today.y);
@@ -140,7 +140,7 @@ export function fromZonedLocal(value: string, timeZone: string): Date {
   return new Date(guess);
 }
 
-/** 그 시간대에서 본 "YYYY-MM-DDTHH:mm" — fromZonedLocal의 반대(수정 폼 채우기). */
+/** 그 시간대에서 본 "YYYY-MM-DDTHH:mm" - fromZonedLocal의 반대(수정 폼 채우기). */
 export function toZonedLocal(date: Date, timeZone: string): string {
   const p = partsIn(date, timeZone);
   const pad = (n: number) => String(n).padStart(2, "0");

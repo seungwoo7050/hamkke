@@ -8,7 +8,7 @@ import { cn } from "cn";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * 달력(DESIGN.md §5 — shadcn/ui calendar와 같은 구조: DayPicker에 토큰 클래스만
+ * 달력(DESIGN.md §5 - shadcn/ui calendar와 같은 구조: DayPicker에 토큰 클래스만
  * 입힘). 브라우저 기본 날짜 입력창은 플랫폼마다 모양이 달라 토큰과 어긋났고
  * 다크 모드에서도 튀었다.
  */

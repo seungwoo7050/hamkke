@@ -18,7 +18,7 @@ async function activeDays(spaceId: string, timeZone: string) {
 }
 
 export const streakRouter = router({
-  // 하루 경계는 보는 사람의 시간대 — 브라우저가 알려 준다(서버 UTC로 자르면
+  // 하루 경계는 보는 사람의 시간대 - 브라우저가 알려 준다(서버 UTC로 자르면
   // 한국은 오전 9시에 날이 바뀐다). 기간 상한 없이 처음부터 센다.
   current: spaceProcedure
     .input(z.object({ timeZone: z.string().max(100).refine(isValidTimeZone) }))

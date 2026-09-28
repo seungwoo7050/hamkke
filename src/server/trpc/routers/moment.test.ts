@@ -177,7 +177,7 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
   });
 
   it("무료 티어는 사진 개수 한도를 넘으면 업로드 URL 발급 자체를 거부한다", async () => {
-    // 실제 R2 업로드 없이 개수만 채운다 — createUploadUrl은 count만 본다.
+    // 실제 R2 업로드 없이 개수만 채운다 - createUploadUrl은 count만 본다.
     await prisma.moment.createMany({
       data: Array.from({ length: 30 }, (_, i) => ({
         spaceId,

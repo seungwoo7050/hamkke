@@ -8,7 +8,7 @@ const createCaller = createCallerFactory(appRouter);
 // Android 홈 화면 위젯이 부르는 읽기 전용 엔드포인트(Phase 6). 위젯은 앱과 같은
 // 프로세스에서 웹뷰의 세션 쿠키(CookieManager)를 그대로 실어 보내므로 별도
 // 토큰·비밀값이 없다. tRPC 응답 형식을 네이티브에서 풀지 않도록 평평한 JSON.
-// locale은 위젯 문구 언어(PRD §3.8) — 로그인 전이면 기기 언어(Accept-Language).
+// locale은 위젯 문구 언어(PRD §3.8) - 로그인 전이면 기기 언어(Accept-Language).
 export async function GET() {
   const ctx = await createTRPCContext();
   try {

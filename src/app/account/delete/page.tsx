@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { DeleteAccountSection } from "../../home/delete-account-section";
 
 // 계정 삭제 안내(공개 페이지). Google Play는 계정을 만들 수 있는 앱에 앱 밖에서도
-// 삭제를 요청할 수 있는 웹 주소를 요구한다 — Play Console에 이 주소를 등록한다.
+// 삭제를 요청할 수 있는 웹 주소를 요구한다 - Play Console에 이 주소를 등록한다.
 // 로그인 상태면 여기서 바로 지울 수 있다(설정 시트와 같은 확인 단계).
 export default async function DeleteAccountPage() {
   const t = await getTranslations("accountPage");

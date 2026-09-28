@@ -125,7 +125,7 @@ export function ChatView({
   const [liveTouches, setLiveTouches] = useState<Touch[]>([]);
 
   // Realtime 구독 성공(SUBSCRIBED)만 기다리면 소켓이 막힌 환경에서 영영 읽음
-  // 처리가 안 된다 — 대화 탭을 연 것 자체를 "읽음"으로 본다.
+  // 처리가 안 된다 - 대화 탭을 연 것 자체를 "읽음"으로 본다.
   useEffect(() => {
     markReadMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -529,7 +529,7 @@ export function ChatView({
           placeholder={t("placeholder")}
           className="mx-1"
         />
-        {/* 입력 중이 아닐 땐 전송 버튼 자리를 터치가 차지한다 — 대화 중에도
+        {/* 입력 중이 아닐 땐 전송 버튼 자리를 터치가 차지한다 - 대화 중에도
             한 번에 "생각하고 있어요"를 보낼 수 있게(DESIGN.md §2 Kaye). */}
         {draft.trim() ? (
           <Button

@@ -5,7 +5,7 @@ import { TopBar } from "./top-bar";
 import { TouchHero } from "./touch-hero";
 import { UsScene } from "./us-scene";
 
-// "우리" 탭 — 인증·페어링 가드와 장면 첫 렌더 값(home.summary)은 layout.tsx가
+// "우리" 탭 - 인증·페어링 가드와 장면 첫 렌더 값(home.summary)은 layout.tsx가
 // 맡는다.
 export default function UsPage() {
   const t = useTranslations("common");

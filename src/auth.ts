@@ -5,7 +5,7 @@ import Resend from "next-auth/providers/resend";
 import { prisma } from "@/lib/prisma";
 import { sendMagicLinkWithinLimit } from "@/server/magic-link-limit";
 
-// 기본 Resend 발송 구현(Auth.js) — 횟수 제한을 통과한 요청만 여기로 넘긴다.
+// 기본 Resend 발송 구현(Auth.js) - 횟수 제한을 통과한 요청만 여기로 넘긴다.
 const defaultResendSend = Resend({}).sendVerificationRequest;
 
 // spaceId는 tRPC 미들웨어(src/server/trpc/init.ts)의 spaceProcedure가

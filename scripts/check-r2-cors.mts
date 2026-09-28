@@ -1,6 +1,6 @@
 /**
  * 브라우저가 R2에 직접 PUT할 수 있는지(버킷 CORS 규칙) 확인한다
- * (README 배포 체크리스트 6번 — 대시보드에서 CORS 규칙을 넣은 뒤).
+ * (README 배포 체크리스트 6번 - 대시보드에서 CORS 규칙을 넣은 뒤).
  *
  * 실행: npx tsx --conditions=react-server scripts/check-r2-cors.mts [오리진...]
  *   기본 오리진은 http://localhost:3000. 운영 도메인도 함께 확인한다:

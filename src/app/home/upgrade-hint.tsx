@@ -20,7 +20,7 @@ function message(t: T, key: UsageKey, used: number, limit: number, atLimit: bool
 }
 
 // 한도 근처 업그레이드 안내(PRD §3.5). 한도의 80%를 넘었을 때만, 그 기능을
-// 쓰는 시트 안에서 한 줄로 — 팝업·전면 업셀은 하지 않는다(Calm Technology).
+// 쓰는 시트 안에서 한 줄로 - 팝업·전면 업셀은 하지 않는다(Calm Technology).
 export function UpgradeHint({ usageKey }: { usageKey: UsageKey }) {
   const trpc = useTRPC();
   const t = useTranslations("upgrade");

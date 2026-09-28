@@ -4,8 +4,8 @@
 
 /*
  * docs/DESIGN.md 토큰 이식. 이 파일에 없는 색상/폰트/이징 곡선을 임의로
- * 추가하지 않는다 — 필요하면 DESIGN.md를 먼저 갱신한 뒤 여기에 반영한다.
- * 다크모드는 시스템 설정(prefers-color-scheme)만 따른다 — 수동 토글(.dark
+ * 추가하지 않는다 - 필요하면 DESIGN.md를 먼저 갱신한 뒤 여기에 반영한다.
+ * 다크모드는 시스템 설정(prefers-color-scheme)만 따른다 - 수동 토글(.dark
  * 클래스) 없음, DESIGN.md §3.1 원본 스니펫과 동일한 전략.
  */
 
@@ -68,15 +68,15 @@
 :root {
   /* 이 값이 없으면 브라우저 네이티브 컨트롤(날짜 선택기 팝업, 스크롤바 등)이
      시스템 다크 모드에서도 항상 밝은 배경으로 렌더링돼 나머지 다크 UI와
-     충돌한다 — light dark로 시스템 설정을 그대로 따르게 한다. */
+     충돌한다 - light dark로 시스템 설정을 그대로 따르게 한다. */
   color-scheme: light dark;
 
   /* Brand (DESIGN.md §3.1) */
-  --color-ember: #f2653a; /* Primary — CTA, 활성 상태 */
-  --color-dusk: #4b4468; /* Secondary — 밤/시차/거리 테마 */
-  --color-glow: #ffd166; /* Accent — 터치·스트릭 하이라이트 전용 */
+  --color-ember: #f2653a; /* Primary - CTA, 활성 상태 */
+  --color-dusk: #4b4468; /* Secondary - 밤/시차/거리 테마 */
+  --color-glow: #ffd166; /* Accent - 터치·스트릭 하이라이트 전용 */
 
-  /* Neutral — Tailwind zinc 스케일 고정값(v4 기본 oklch 팔레트와 미세하게
+  /* Neutral - Tailwind zinc 스케일 고정값(v4 기본 oklch 팔레트와 미세하게
      달라 DESIGN.md가 지정한 정확한 hex로 오버라이드) */
   --color-zinc-50: #fafafa;
   --color-zinc-100: #f4f4f5;
@@ -90,10 +90,10 @@
   --color-success: #4caf7d;
   --color-danger: #e5484d;
 
-  /* 글자·아이콘·선에 쓰는 dusk(DESIGN.md §3.1 dusk-ink) — 다크 모드에서 밝힌다 */
+  /* 글자·아이콘·선에 쓰는 dusk(DESIGN.md §3.1 dusk-ink) - 다크 모드에서 밝힌다 */
   --dusk-ink: var(--color-dusk);
 
-  /* Sky (DESIGN.md §3.1 하늘 토큰) — "우리" 장면 배경 전용, UI 크롬에 쓰지
+  /* Sky (DESIGN.md §3.1 하늘 토큰) - "우리" 장면 배경 전용, UI 크롬에 쓰지
      않는다. 현지 시각 기준 day 07–17시, dusk 05–07·17–20시, night 20–05시. */
   --color-sky-day: #fff4e6;
   --color-sky-dusk: #f9dccf;
@@ -108,7 +108,7 @@
   --popover-foreground: var(--color-zinc-900);
 
   --primary: var(--color-ember);
-  /* ember 배경 위 흰 텍스트는 대비 3.1:1로 WCAG AA 미달(DESIGN.md §7 경고) —
+  /* ember 배경 위 흰 텍스트는 대비 3.1:1로 WCAG AA 미달(DESIGN.md §7 경고) -
      zinc-900 텍스트로 대비 5.6:1 확보 */
   --primary-foreground: var(--color-zinc-900);
 
@@ -133,7 +133,7 @@
   --font-sans: "Pretendard", -apple-system, sans-serif;
   --font-handwritten: "Gaegu", cursive;
 
-  /* Spacing (DESIGN.md §3.3) — Tailwind 기본 spacing 스케일(1=4px)과 이미
+  /* Spacing (DESIGN.md §3.3) - Tailwind 기본 spacing 스케일(1=4px)과 이미
      일치하므로 여기 값은 raw CSS에서 참조할 때만 사용, 유틸리티는 p-4 등
      Tailwind 기본값을 그대로 쓴다 */
   --space-1: 4px;
@@ -152,7 +152,7 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* Shadow — dusk 색조가 섞인 부드러운 그림자, 순수 black 그림자 금지 */
+  /* Shadow - dusk 색조가 섞인 부드러운 그림자, 순수 black 그림자 금지 */
   --shadow-soft: 0 4px 16px rgba(75, 68, 104, 0.08);
   --shadow-elevated: 0 8px 32px rgba(75, 68, 104, 0.12);
 
@@ -201,7 +201,7 @@
   }
 }
 
-/* 시그니처 모티프(DESIGN.md §8) — 서 있는 점/기댄 점이 균형을 잡는 흔들림.
+/* 시그니처 모티프(DESIGN.md §8) - 서 있는 점/기댄 점이 균형을 잡는 흔들림.
    src/components/brand/loading-motif.tsx에서만 쓴다. */
 @keyframes motif-sway-standing {
   0%,
@@ -222,7 +222,7 @@
   }
 }
 /* 루프 주기 2.4s는 라이브 레퍼런스 아티팩트(DESIGN.md 상단 링크)의 실제
-   구현값을 그대로 따랐다 — duration-slow(320ms)는 트랜지션 전용이라 이런
+   구현값을 그대로 따랐다 - duration-slow(320ms)는 트랜지션 전용이라 이런
    루프에는 안 맞는다. */
 .motif-dot-standing {
   animation: motif-sway-standing 2.4s var(--ease-standard) infinite;
@@ -237,7 +237,7 @@
   }
 }
 
-/* 탭 전환(DESIGN.md §3.4) — Material의 최상위 목적지 전환 문법(fade through)
+/* 탭 전환(DESIGN.md §3.4) - Material의 최상위 목적지 전환 문법(fade through)
    중 들어오는 쪽만: 새 탭이 살짝 작은 상태에서 떠오르듯 나타난다. 나가는 쪽은
    App Router가 즉시 교체하므로 두지 않는다. JS 없이 서버 렌더 직후에도 보이게
    CSS 애니메이션으로 하고, 끝나면 transform이 남지 않아(fill 없음) 시트·고정
@@ -251,7 +251,7 @@
 .tab-enter {
   animation: tab-enter var(--duration-base) var(--ease-standard);
 }
-/* 하단 내비 활성 표시 — M3 내비게이션 바처럼 가운데에서 좌우로 자라난다. */
+/* 하단 내비 활성 표시 - M3 내비게이션 바처럼 가운데에서 좌우로 자라난다. */
 @keyframes nav-indicator-in {
   from {
     opacity: 0;
@@ -268,7 +268,7 @@
   }
 }
 
-/* 지도(DESIGN.md §4 지도 다크 모드) — Leaflet 기본 크롬을 토큰 톤으로. 다크
+/* 지도(DESIGN.md §4 지도 다크 모드) - Leaflet 기본 크롬을 토큰 톤으로. 다크
    전용 타일(API 키·상업 한도)이 아니라 OSM 타일에 필터를 입혀 어둡게 한다. */
 .hamkke-map.leaflet-container {
   background: var(--muted);
@@ -276,7 +276,7 @@
 }
 /* leaflet.css의 .leaflet-container .leaflet-control-attribution(클래스 둘)과 명시도가
    같으면 지도 컴포넌트와 함께 나중에 로드되는 leaflet.css가 이겨 흰 배경이 남는다
-   — 클래스 하나를 더 붙여 이 규칙이 이기게 한다. */
+   - 클래스 하나를 더 붙여 이 규칙이 이기게 한다. */
 .hamkke-map.leaflet-container .leaflet-control-attribution {
   background: color-mix(in srgb, var(--background) 75%, transparent);
   color: var(--muted-foreground);
@@ -299,7 +299,7 @@
   }
 }
 
-/* 비행 경로(src/app/home/flight-map.tsx) — SVG 속성엔 CSS 변수를 못 써서 클래스로
+/* 비행 경로(src/app/home/flight-map.tsx) - SVG 속성엔 CSS 변수를 못 써서 클래스로
    색을 준다. 다크 모드에서도 보이게 dusk-ink. */
 .hamkke-map .flight-path-flown {
   stroke: var(--dusk-ink);

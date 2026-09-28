@@ -42,7 +42,7 @@ describe("selectContextCards", () => {
     ]);
   });
 
-  it("첫날 안내는 가장 뒤 — 다른 카드가 있으면 밀려난다", () => {
+  it("첫날 안내는 가장 뒤 - 다른 카드가 있으면 밀려난다", () => {
     const setup = { needsAnniversary: true, needsMeetupDate: true };
     expect(selectContextCards({ ...none, setup }).map((c) => c.kind)).toEqual([
       "setup-meetup",

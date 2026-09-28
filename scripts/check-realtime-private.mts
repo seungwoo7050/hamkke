@@ -1,11 +1,11 @@
 /**
  * Realtime private 채널 전환이 운영에서 제대로 됐는지 한 번에 확인한다
- * (README 배포 체크리스트 — 키 가져오기·마이그레이션·env·"Allow public access" 끄기 뒤).
+ * (README 배포 체크리스트 - 키 가져오기·마이그레이션·env·"Allow public access" 끄기 뒤).
  *
  * 실행: npx tsx --conditions=react-server scripts/check-realtime-private.mts
  *   (.env의 NEXT_PUBLIC_SUPABASE_URL·PUBLISHABLE_KEY·SECRET_KEY·SUPABASE_JWT_PRIVATE_KEY 사용)
  *
- * DB의 실제 스페이스는 건드리지 않는다 — 정책은 토큰의 space_id와 채널 이름만 보므로
+ * DB의 실제 스페이스는 건드리지 않는다 - 정책은 토큰의 space_id와 채널 이름만 보므로
  * 임시 스페이스 ID로 확인한다.
  */
 import "dotenv/config";
@@ -58,7 +58,7 @@ async function main() {
     signRealtimeToken("check-b", spaceId),
   ]);
   if (!a || !b) {
-    console.error("SUPABASE_JWT_PRIVATE_KEY가 비어 있어요 — 전환 전 상태입니다.");
+    console.error("SUPABASE_JWT_PRIVATE_KEY가 비어 있어요 - 전환 전 상태입니다.");
     process.exit(1);
   }
   const [memberA, memberB] = await Promise.all([clientWith(a.token), clientWith(b.token)]);
@@ -90,7 +90,7 @@ async function main() {
   });
 
   // 3) Presence 채널(클라이언트용): 입장, typing이 상대에게 닿고, Presence에 서로 보인다.
-  // 앱(src/app/home/presence-context.tsx)처럼 presence 핸들러를 건 뒤 입장한다 — supabase-js는
+  // 앱(src/app/home/presence-context.tsx)처럼 presence 핸들러를 건 뒤 입장한다 - supabase-js는
   // 핸들러가 있을 때만 presence를 켜고, 없으면 broadcast 입장으로 권한을 확인받는다.
   const presA = memberA
     .channel(spacePresenceChannelName(spaceId), {
@@ -140,7 +140,7 @@ async function main() {
     ok: anonPrivate.startsWith("CHANNEL_ERROR"),
     detail: anonPrivate,
   });
-  // 공개 채널은 새 클라이언트로 — 앞의 거절로 소켓 상태가 섞이지 않게.
+  // 공개 채널은 새 클라이언트로 - 앞의 거절로 소켓 상태가 섞이지 않게.
   const anonFresh = await clientWith(null);
   const anonPublic = await join(anonFresh.channel(spaceChannelName(`${spaceId}-public`)));
   results.push({
@@ -152,7 +152,7 @@ async function main() {
   await Promise.all([memberA, memberB, anon, anonFresh, server].map((c) => c.removeAllChannels()));
 
   for (const r of results)
-    console.log(`${r.ok ? "✓" : "✗"} ${r.check}${r.detail ? ` — ${r.detail}` : ""}`);
+    console.log(`${r.ok ? "✓" : "✗"} ${r.check}${r.detail ? ` - ${r.detail}` : ""}`);
   const failed = results.filter((r) => !r.ok).length;
   console.log(failed ? `\n${failed}개 실패` : "\n전부 통과");
   process.exit(failed ? 1 : 0);

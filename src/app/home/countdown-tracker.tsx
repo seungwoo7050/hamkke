@@ -14,7 +14,7 @@ import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone } from "./space-context";
 
-// PRD.md §3.4 "다음 만남까지 카운트다운" — 가장 가까운 목표일 하나를 크게
+// PRD.md §3.4 "다음 만남까지 카운트다운" - 가장 가까운 목표일 하나를 크게
 // (DESIGN.md §2 M3 Expressive 크기 대비), 나머지는 작은 줄로.
 export function CountdownTracker({ openAdd = false }: { openAdd?: boolean }) {
   const trpc = useTRPC();

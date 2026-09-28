@@ -13,7 +13,7 @@ async function latestWeather(userId: string, sharing: boolean) {
 }
 
 export const weatherRouter = router({
-  // 위치공유가 켜져 있는 쪽만 날씨를 보여준다 — 날씨 자체가 위치를
+  // 위치공유가 켜져 있는 쪽만 날씨를 보여준다 - 날씨 자체가 위치를
   // 드러내는 정보라 옵트인 원칙(ARCHITECTURE.md §5)을 그대로 따른다.
   forSpace: spaceProcedure.query(async ({ ctx }) => {
     const [me, partner] = await Promise.all([

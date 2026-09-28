@@ -1,5 +1,5 @@
 /**
- * 공항 데이터 번들 생성(PRD §3.3.1 비행) — mwgg/Airports(MIT,
+ * 공항 데이터 번들 생성(PRD §3.3.1 비행) - mwgg/Airports(MIT,
  * https://github.com/mwgg/Airports)에서 IATA 코드가 있는 공항만 골라
  * [IATA, 도시, 이름, 국가, 위도, 경도, IANA 시간대]로 줄여 src/data/airports.json에
  * 쓴다. API 키·런타임 네트워크 없이 서버가 공항 좌표·시간대를 안다.

@@ -15,7 +15,7 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 const ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/ogg", "audio/mpeg"] as const;
 
 // image/voice 메시지는 content에 R2 오브젝트 키를 저장하고, 표시할 때만
-// 짧게 유효한 signed URL로 즉석 변환한다(ARCHITECTURE.md §10 — 영구 public
+// 짧게 유효한 signed URL로 즉석 변환한다(ARCHITECTURE.md §10 - 영구 public
 // URL 금지).
 async function resolveContent(message: { type: string; content: string }) {
   if (message.type === "text") return message.content;
@@ -89,7 +89,7 @@ export const chatRouter = router({
     }),
 
   // R2에 직접 업로드할 presigned PUT URL 발급. 서버는 파일 바이트를
-  // 거치지 않는다 — 클라이언트가 이 URL로 R2에 바로 PUT한다.
+  // 거치지 않는다 - 클라이언트가 이 URL로 R2에 바로 PUT한다.
   createImageUploadUrl: spaceProcedure
     .input(
       z.object({
@@ -163,7 +163,7 @@ export const chatRouter = router({
       return { messages: messages.reverse(), nextCursor };
     }),
 
-  // "대화" 탭 배지용 — 상대가 보낸 메시지 중 아직 안 읽은 개수.
+  // "대화" 탭 배지용 - 상대가 보낸 메시지 중 아직 안 읽은 개수.
   unreadCount: spaceProcedure.query(({ ctx }) =>
     prisma.message.count({
       where: { spaceId: ctx.space.id, senderId: { not: ctx.session.user.id }, readAt: null },

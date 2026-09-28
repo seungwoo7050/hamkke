@@ -5,7 +5,7 @@ import { isNativePush, onNativeForegroundMessage, requestNativePushToken } from 
 
 /**
  * 웹/네이티브 Android 어느 쪽에서 열렸는지에 따라 올바른 FCM 등록 경로로
- * 위임한다 — 호출하는 쪽(chat-view.tsx)은 플랫폼을 신경 쓰지 않는다.
+ * 위임한다 - 호출하는 쪽(chat-view.tsx)은 플랫폼을 신경 쓰지 않는다.
  */
 export async function requestAnyPushToken(): Promise<string | null> {
   return isNativePush() ? requestNativePushToken() : requestPushToken();

@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { translator } from "@/i18n/server";
 import { prisma } from "@/lib/prisma";
 
-// 요청 횟수 제한(ARCHITECTURE.md §7) — 기록은 Postgres(RateLimitHit). 2인 전용
+// 요청 횟수 제한(ARCHITECTURE.md §7) - 기록은 Postgres(RateLimitHit). 2인 전용
 // 앱이라 트래픽이 작아 Redis 없이 DB로 충분하다. 창은 "최근 windowMs 동안 max회"인
 // 슬라이딩 창이고, 한 bucket에 창을 여럿(예: 분당·하루) 걸 수 있다.
 export type Limit = { max: number; windowMs: number };
@@ -66,7 +66,7 @@ export async function consume(checks: readonly Check[], now = new Date()) {
 }
 
 /**
- * tRPC 절차용 — 한도 안이면 기록하고 통과, 넘으면 남은 시간을 담은
+ * tRPC 절차용 - 한도 안이면 기록하고 통과, 넘으면 남은 시간을 담은
  * TOO_MANY_REQUESTS를 요청자 언어로 던진다.
  */
 export async function consumeOrThrow(checks: readonly Check[], locale?: string | null) {
