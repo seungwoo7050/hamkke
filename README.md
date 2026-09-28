@@ -104,7 +104,7 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
      넣은 뒤 `npx tsx --conditions=react-server scripts/check-r2-cors.mts http://localhost:3000 https://<도메인>`이 "전부 통과"인지 확인한다. 이미지·오디오를 보여 주는 GET은 `<img>`·`<audio>`가 CORS 없이 읽으므로 넣지 않는다.
 7. Google Play Console → 앱 콘텐츠 → 데이터 보안의 계정 삭제 URL에 `https://<도메인>/account/delete`를 등록한다(앱 밖에서도 삭제를 요청할 수 있어야 한다는 Play 요건).
 8. **Realtime private 채널 전환**(ARCHITECTURE §4) — 이 순서대로(중간에 멈춰도 실시간 기능은 계속 동작한다):
-   1. 운영 DB에 마이그레이션(2번)으로 `realtime_space_policies` 정책이 들어갔는지 확인한다.
+   1. 운영 DB에 마이그레이션(2번)으로 `realtime_topic_policies` 정책(받기는 두 채널, 보내기는 `:presence` 채널만)이 들어갔는지 확인한다.
    2. `npx tsx scripts/generate-supabase-jwt-key.mts`로 키를 만들고, Supabase → Project Settings → JWT Keys에서 출력된 JWK를 **standby 키로 가져온 뒤 Rotate로 current**로 바꾼다(Supabase Auth는 쓰지 않아 영향 없음).
    3. 배포 환경변수 `SUPABASE_JWT_PRIVATE_KEY`에 같은 JWK 한 줄을 넣고 다시 배포한다 — 이때부터 앱이 private 채널을 쓴다.
    4. Supabase → Realtime → Settings에서 **Allow public access를 끈다**.
