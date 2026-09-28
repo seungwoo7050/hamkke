@@ -2,14 +2,14 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { ensureRealtimeAuth, getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
 
 type Handler = (payload: unknown) => void;
 
+// 메인 채널은 서버만 보낸다(src/lib/supabase/broadcast.ts) — 화면은 받기만 한다. 클라이언트가
+// 보내는 타이핑 신호는 Presence 채널(presence-context)로 간다.
 type SpaceRealtime = {
-  /** 이 Space 채널로 브로드캐스트한다(예: 타이핑 신호). */
-  send: (event: string, payload: unknown) => void;
   /** 이벤트 핸들러를 등록하고 해제 함수를 돌려준다. */
   listen: (event: string, handler: Handler) => () => void;
   /** 채널 구독이 성립했는지 — 재연결될 때마다 false→true로 바뀐다. */
@@ -39,25 +39,29 @@ export function SpaceRealtimeProvider({
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    const channel = supabase
-      .channel(spaceChannelName(spaceId), { config: { private: privateChannel } })
-      .on("broadcast", { event: "*" }, (msg) => {
-        handlers.current.get(msg.event)?.forEach((handler) => handler(msg.payload));
-      })
-      .subscribe((status) => setConnected(status === "SUBSCRIBED"));
-    channelRef.current = channel;
+    let channel: RealtimeChannel | null = null;
+    let cancelled = false;
+    // 토큰을 먼저 넣고 구독한다(private 채널의 첫 입장이 공개 키로 거절되지 않게).
+    void ensureRealtimeAuth().then(() => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(spaceChannelName(spaceId), { config: { private: privateChannel } })
+        .on("broadcast", { event: "*" }, (msg) => {
+          handlers.current.get(msg.event)?.forEach((handler) => handler(msg.payload));
+        })
+        .subscribe((status) => setConnected(status === "SUBSCRIBED"));
+      channelRef.current = channel;
+    });
 
     return () => {
+      cancelled = true;
       channelRef.current = null;
       setConnected(false);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [spaceId, privateChannel]);
 
   const [value] = useState<Omit<SpaceRealtime, "connected">>(() => ({
-    send: (event, payload) => {
-      void channelRef.current?.send({ type: "broadcast", event, payload });
-    },
     listen: (event, handler) => {
       const set = handlers.current.get(event) ?? new Set<Handler>();
       set.add(handler);
