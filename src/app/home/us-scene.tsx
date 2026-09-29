@@ -132,30 +132,79 @@ function FlightSide({
         <span>{flight.from.city}</span>
         <span>{flight.to.city}</span>
       </span>
-      <span
-        className="relative mt-1 h-4"
-        role="progressbar"
-        aria-label={t("routeLabel", { from: flight.from.city, to: flight.to.city })}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(progress * 100)}
-      >
-        <span className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-current opacity-30" />
-        <span
-          className="absolute top-1/2 left-0 border-t-2 border-current"
-          style={{ width: `${progress * 100}%` }}
-        />
-        <Plane
-          aria-hidden
-          className="absolute top-0 size-4 rotate-45"
-          style={{ left: `calc(${progress * 100}% - 8px)` }}
-        />
-      </span>
+      <FlightTrail
+        progress={progress}
+        label={t("routeLabel", { from: flight.from.city, to: flight.to.city })}
+      />
       <span className="text-sm">
         {remaining ? t("remaining", { time: remaining }) : t("landingSoon")}
       </span>
       {estimated && <span className="text-xs opacity-70">{t("scheduled")}</span>}
     </div>
+  );
+}
+
+// 비행 궤적 - 출발에서 도착까지 둥근 호(컨셉아트의 점선 비행 궤적). 지나온
+// 길은 점으로 남고, 비행기는 호의 그 지점에서 진행 방향을 바라본다. 상자 비율을
+// viewBox와 같게 고정해 비행기(HTML 아이콘)를 백분율 좌표로 그대로 올린다.
+const TRAIL = { w: 200, h: 30, p0: [6, 24], c: [100, -4], p1: [194, 24] } as const;
+
+function trailAt(t: number) {
+  const { p0, c, p1 } = TRAIL;
+  const lerp = (a: readonly number[], b: readonly number[]) => [
+    a[0] + (b[0] - a[0]) * t,
+    a[1] + (b[1] - a[1]) * t,
+  ];
+  const q0 = lerp(p0, c);
+  const q1 = lerp(c, p1);
+  const pt = [q0[0] + (q1[0] - q0[0]) * t, q0[1] + (q1[1] - q0[1]) * t];
+  const angle = (Math.atan2(q1[1] - q0[1], q1[0] - q0[0]) * 180) / Math.PI;
+  return { q0, pt, angle };
+}
+
+function FlightTrail({ progress, label }: { progress: number; label: string }) {
+  const { p0, c, p1, w, h } = TRAIL;
+  const { q0, pt, angle } = trailAt(progress);
+  return (
+    <span
+      className="relative mt-1 block"
+      style={{ aspectRatio: `${w} / ${h}` }}
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(progress * 100)}
+    >
+      <svg viewBox={`0 0 ${w} ${h}`} className="absolute inset-0 size-full" aria-hidden>
+        <path
+          d={`M${p0} Q${c} ${p1}`}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity={0.3}
+          strokeWidth={1.5}
+          strokeDasharray="5 5"
+        />
+        <path
+          d={`M${p0} Q${q0} ${pt}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeDasharray="0 7"
+        />
+        <circle cx={p1[0]} cy={p1[1]} r={3} fill="currentColor" fillOpacity={0.5} />
+      </svg>
+      {/* lucide Plane은 오른쪽 위(-45도)를 향한다 - 진행 방향 각도에 45도를 더한다. */}
+      <Plane
+        aria-hidden
+        className="absolute size-4 -translate-x-1/2 -translate-y-1/2"
+        style={{
+          left: `${(pt[0] / w) * 100}%`,
+          top: `${(pt[1] / h) * 100}%`,
+          rotate: `${angle + 45}deg`,
+        }}
+      />
+    </span>
   );
 }
 
