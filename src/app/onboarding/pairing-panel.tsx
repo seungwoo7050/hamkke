@@ -10,8 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
+import { ConnectedMoment } from "./connected-moment";
 
 type PairingStatus = inferRouterOutputs<AppRouter>["pairing"]["getStatus"];
+
+// 연결된 순간(ConnectedMoment)을 보여 준 뒤 홈으로 가기까지 - 실이 다 이어지고
+// 문구가 읽힐 만큼. 움직임 줄이기 설정이면 결과만 잠깐 보여 준다.
+const CONNECTED_HOLD_MS = 2200;
+const CONNECTED_HOLD_REDUCED_MS = 1200;
 
 export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }) {
   const trpc = useTRPC();
@@ -21,6 +27,7 @@ export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }
   const [mode, setMode] = useState<"choose" | "redeem">("choose");
   const [code, setCode] = useState("");
   const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemed, setRedeemed] = useState(false);
 
   const statusQuery = useQuery({
     ...trpc.pairing.getStatus.queryOptions(),
@@ -39,21 +46,28 @@ export function PairingPanel({ initialStatus }: { initialStatus: PairingStatus }
 
   const redeemInviteCode = useMutation(
     trpc.pairing.redeemInviteCode.mutationOptions({
-      onSuccess: () => router.push("/home"),
+      onSuccess: () => setRedeemed(true),
       onError: (error) => setRedeemError(error.message),
     }),
   );
 
   const status = statusQuery.data;
 
-  useEffect(() => {
-    if (status.status === "active") {
-      router.replace("/home");
-    }
-  }, [status.status, router]);
+  // 코드를 넣은 쪽은 mutation 성공으로, 코드를 만든 쪽은 폴링으로 연결을 안다.
+  const connected = redeemed || status.status === "active";
 
-  if (status.status === "active") {
-    return null;
+  useEffect(() => {
+    if (!connected) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = setTimeout(
+      () => router.replace("/home"),
+      reduced ? CONNECTED_HOLD_REDUCED_MS : CONNECTED_HOLD_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [connected, router]);
+
+  if (connected) {
+    return <ConnectedMoment />;
   }
 
   if (status.status === "pending") {

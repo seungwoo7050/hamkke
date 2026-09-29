@@ -268,6 +268,48 @@
   }
 }
 
+/* 연결된 순간(src/app/onboarding/connected-moment.tsx) - 나란히 앉은 그림이
+   떠오르고, 실이 하트를 그리며 이어진 뒤 손글씨 문구가 나온다. 한 번만 재생하고
+   끝 상태를 유지한다(both). 길이는 장면 하나를 읽을 만큼 - 루프 모티프처럼
+   duration 토큰(트랜지션용)보다 길다. */
+@keyframes connected-scene-in {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+@keyframes connected-thread-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes connected-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.connected-scene {
+  animation: connected-scene-in 900ms var(--ease-standard) 200ms both;
+}
+.connected-thread {
+  stroke-dasharray: 1;
+  animation: connected-thread-draw 1100ms var(--ease-standard) 300ms both;
+}
+.connected-caption {
+  animation: connected-caption-in var(--duration-slow) var(--ease-standard) 1200ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .connected-scene,
+  .connected-thread,
+  .connected-caption {
+    animation: none;
+  }
+}
+
 /* 지도(DESIGN.md §4 지도 다크 모드) - Leaflet 기본 크롬을 토큰 톤으로. 다크
    전용 타일(API 키·상업 한도)이 아니라 OSM 타일에 필터를 입혀 어둡게 한다. */
 .hamkke-map.leaflet-container {
