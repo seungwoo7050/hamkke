@@ -4,16 +4,15 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Calendar,
   CalendarHeart,
   ChevronRight,
   Gift,
-  Mail,
   MessageCircleQuestion,
   PlaneLanding,
   PlaneTakeoff,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { SpotArt } from "@/components/brand/spot-art";
 import { useFormat } from "@/i18n/use-format";
 import { dateOnly, daysBetween, nextOccurrence, todayIn } from "@/lib/datetime";
 import { bestTimes, pickFlight } from "@/lib/flight";
@@ -33,7 +32,10 @@ const CARD_CLASS =
 function CardBody({ icon, title, sub }: { icon: React.ReactNode; title: string; sub: string }) {
   return (
     <>
-      <span className="text-dusk-ink shrink-0">{icon}</span>
+      {/* 아이콘(24px)과 스팟 그림(40px)이 섞여도 제목이 같은 선에서 시작하게 40px 상자에 둔다. */}
+      <span className="text-dusk-ink flex size-10 shrink-0 items-center justify-center">
+        {icon}
+      </span>
       <span className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-base font-semibold">{title}</span>
         <span className="text-muted-foreground block truncate text-sm">{sub}</span>
@@ -158,7 +160,7 @@ export function ContextCards() {
           <Card
             key={`a-${card.title}`}
             href="/home/memories"
-            icon={<Gift className="size-6" />}
+            icon={<SpotArt spot="together" />}
             title={t("anniversaryTitle", { title: card.title })}
             sub={t("anniversarySub", { name: partnerName })}
           />
@@ -168,7 +170,7 @@ export function ContextCards() {
           <Card
             key="capsule"
             href="/home/memories?tab=past"
-            icon={<Mail className="size-6" />}
+            icon={<SpotArt spot="letter" />}
             title={t(landingArrived ? "landingLetterTitle" : "capsuleTitle", names)}
             sub={card.count > 1 ? t("capsuleMany", { count: card.count }) : t("capsuleOne")}
           />
@@ -178,7 +180,7 @@ export function ContextCards() {
           <Card
             key="countdown"
             href="/home/memories"
-            icon={<Calendar className="size-6" />}
+            icon={<SpotArt spot="soon" />}
             title={t("countdownTitle", { title: card.title, dday: fmt.ddayBig(card.days) })}
             sub={t("countdownSub")}
           />
@@ -286,7 +288,7 @@ function FlightCard({
     return (
       <Card
         href="/home/memories?tab=past"
-        icon={<PlaneLanding className="size-6" />}
+        icon={<SpotArt spot="apart" />}
         title={t(mine ? "arrivedMine" : "arrivedPartner", { ...names, city: f.to.city })}
         sub={[
           t(estimated ? "arrivedScheduled" : "arrivedActual", {
