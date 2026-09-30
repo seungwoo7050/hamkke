@@ -3,6 +3,7 @@
 import { Moon, Plane } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "cn";
+import { SceneIllustration } from "@/components/brand/scene-illustration";
 import { Wordmark } from "@/components/brand/wordmark";
 import { useFormat } from "@/i18n/use-format";
 import { bestTimes, flightProgress, greatCirclePoint, pickFlight } from "@/lib/flight";
@@ -219,16 +220,27 @@ function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolea
       <LocationSheet>
         <button
           type="button"
-          className="bg-sky-dusk flex w-full flex-col items-start gap-1 rounded-xl px-5 pt-5 pb-6 text-left"
+          className="bg-sky-dusk relative flex min-h-56 w-full flex-col items-start justify-end gap-1 overflow-hidden rounded-xl px-5 pt-5 pb-6 text-left"
         >
-          <Wordmark className="size-20" />
-          <span className="text-dusk-ink mt-2 text-sm font-medium">
+          {/* 곧 안게 될 두 사람 - 그림 배경이 sky-dusk와 거의 같은 단색이라, 왼쪽과 위
+              가장자리만 녹여 카드와 이음매 없이 잇는다. */}
+          <div
+            className="absolute right-0 bottom-0 w-36"
+            style={{
+              maskImage:
+                "linear-gradient(to right, transparent, #000 12%), linear-gradient(to bottom, transparent, #000 10%)",
+              maskComposite: "intersect",
+            }}
+          >
+            <SceneIllustration scene="meet" sizes="9rem" />
+          </div>
+          <span className="text-dusk-ink relative text-sm font-medium">
             {approaching ? t("approaching") : t("near")}
           </span>
-          <span className="text-foreground text-3xl font-bold tracking-tight">
+          <span className="text-foreground relative text-3xl font-bold tracking-tight">
             {t("meetingSoon")}
           </span>
-          <span className="text-foreground text-5xl font-bold tracking-tight">
+          <span className="text-foreground relative text-5xl font-bold tracking-tight">
             {fmt.distance(km)}
           </span>
         </button>
