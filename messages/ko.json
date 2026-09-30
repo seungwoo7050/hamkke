@@ -36,7 +36,8 @@
     "connect": "연결하기",
     "creating": "생성 중...",
     "createCode": "초대코드 만들기",
-    "enterCode": "받은 코드 입력하기"
+    "enterCode": "받은 코드 입력하기",
+    "connected": "이어졌어요."
   },
   "nav": {
     "label": "주요 화면",

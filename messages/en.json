@@ -36,7 +36,8 @@
     "connect": "Connect",
     "creating": "Creating…",
     "createCode": "Create an invite code",
-    "enterCode": "I have a code"
+    "enterCode": "I have a code",
+    "connected": "You're connected."
   },
   "nav": {
     "label": "Main",

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
-import { Wordmark } from "@/components/brand/wordmark";
+import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getTranslations } from "next-intl/server";
@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <main className="flex flex-1 flex-col justify-center gap-8 px-6 py-16">
-      <Wordmark className="mx-auto" />
+      <Logo className="text-xl" />
       {deleted === "1" && (
         <p role="status" className="bg-muted text-foreground rounded-lg px-4 py-3 text-sm">
           {t("deleted")}

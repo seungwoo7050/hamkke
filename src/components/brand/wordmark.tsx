@@ -8,13 +8,13 @@ import { MARK } from "./mark-geometry";
  * 틈을 만든다 - 배경색을 따로 알 필요가 없어 어떤 면 위에서도 같게 보인다.
  * 온보딩·빈 상태·장면에서 항상 이 하나만 재사용한다(§8).
  */
-export function Wordmark({ className }: { className?: string }) {
+export function Wordmark({ className, tight }: { className?: string; tight?: boolean }) {
   const maskId = useId();
   const { h, k, stroke, gap } = MARK;
 
   return (
     <svg
-      viewBox={MARK.viewBox}
+      viewBox={tight ? MARK.tightViewBox : MARK.viewBox}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
