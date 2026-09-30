@@ -5,7 +5,8 @@ import { cn } from "cn";
  * 장면 일러스트(DESIGN.md §8) - 브랜드 에셋 한 벌(2026-10-04)의 그림만 쓴다.
  * 주황(ember)과 인디고(dusk) 두 사람, 둘을 잇는 붉은 실과 하트, 옅은 노을빛
  * 하늘. 감정적 순간(첫 화면, 연결, 빈 상태, 곧 만나요)에만 놓고 UI 크롬에는 쓰지
- * 않는다. 밤 그림이 있으면 다크 모드에서 <picture>로 바꿔 내보내 한쪽만
+ * 않는다. 작은 그림의 밤 버전은 인디고 인물만 dusk-ink 쪽으로 밝혀 다크 카드에서
+ * 묻히지 않게 했다. 밤 그림이 있으면 다크 모드에서 <picture>로 바꿔 내보내 한쪽만
  * 내려받는다. 원본은 docs/design-research/2026-10-04-brand-assets/.
  */
 type Art = { day: string; night?: string; width: number; height: number };
@@ -15,6 +16,11 @@ const SCENES = {
   apart: { day: "apart", width: 522, height: 377 },
   leaning: { day: "leaning-day", night: "leaning-night", width: 520, height: 620 },
   meet: { day: "meet", width: 363, height: 299 },
+  // 상황 카드의 작은 그림(40px 칸) - 감정적 순간의 카드에만.
+  anniversary: { day: "anniversary", width: 80, height: 69 },
+  letter: { day: "letter", width: 121, height: 87 },
+  soon: { day: "soon-day", night: "soon-night", width: 116, height: 66 },
+  arrived: { day: "arrived-day", night: "arrived-night", width: 66, height: 86 },
 } satisfies Record<string, Art>;
 
 export type Scene = keyof typeof SCENES;
