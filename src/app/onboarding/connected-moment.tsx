@@ -9,8 +9,9 @@ export const THREAD_PATH =
 
 /**
  * 연결이 끝난 순간(DESIGN.md §8) - 떨어져 있던 두 사람 그림 위로 나란히 앉은
- * 그림이 떠오르고, 그 아래 실이 하트를 그리며 이어진다. 상태(연결됨)를 전하는
- * 한 번짜리 모션이라 끝나면 부모가 /home으로 보낸다. 움직임 줄이기 설정이면
+ * 그림이 떠오르고, 그 아래 실이 하트를 그리며 이어진다. 두 그림의 비율이 달라
+ * 위 그림은 배경색 위에 놓아 아래 그림을 가린다. 상태(연결됨)를 전하는 한 번짜리
+ * 모션이라 끝나면 부모가 /home으로 보낸다. 움직임 줄이기 설정이면
  * 애니메이션 없이 결과만 보여 준다(globals.css).
  */
 export function ConnectedMoment() {
@@ -22,7 +23,7 @@ export function ConnectedMoment() {
     >
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl">
         <SceneIllustration scene="apart" sizes="(min-width: 30rem) 28rem, 100vw" />
-        <div className="connected-scene absolute inset-0 flex items-center">
+        <div className="connected-scene bg-background absolute inset-0 flex items-center">
           <SceneIllustration scene="together" sizes="(min-width: 30rem) 28rem, 100vw" />
         </div>
       </div>

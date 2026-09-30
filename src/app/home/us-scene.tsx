@@ -222,17 +222,17 @@ function MeetingSoonScene({ km, approaching }: { km: number; approaching: boolea
           type="button"
           className="bg-sky-dusk relative flex min-h-56 w-full flex-col items-start justify-end gap-1 overflow-hidden rounded-xl px-5 pt-5 pb-6 text-left"
         >
-          {/* 곧 안게 될 두 사람 - 그림 배경이 sky-dusk와 거의 같은 단색이라, 왼쪽과 위
-              가장자리만 녹여 카드와 이음매 없이 잇는다. */}
+          {/* 곧 나란히 앉을 두 사람 - 그림에 노을 하늘이 따로 있어서 왼쪽과 위를 넓게
+              녹여 카드 배경 속으로 스며들게 한다(액자처럼 떠 보이지 않게). */}
           <div
-            className="absolute right-0 bottom-0 w-36"
+            className="absolute right-0 bottom-0 w-40"
             style={{
               maskImage:
-                "linear-gradient(to right, transparent, #000 12%), linear-gradient(to bottom, transparent, #000 10%)",
+                "linear-gradient(to right, transparent, #000 45%), linear-gradient(to bottom, transparent, #000 40%)",
               maskComposite: "intersect",
             }}
           >
-            <SceneIllustration scene="meet" sizes="9rem" />
+            <SceneIllustration scene="meet" sizes="10rem" />
           </div>
           <span className="text-dusk-ink relative text-sm font-medium">
             {approaching ? t("approaching") : t("near")}

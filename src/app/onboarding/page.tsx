@@ -19,7 +19,7 @@ export default async function OnboardingPage() {
 
   return (
     <main className="flex flex-1 flex-col justify-center gap-8 px-6 py-16">
-      {/* 아직 이어지지 않은 실 - 상대가 코드를 넣으면 이어진다. */}
+      {/* 떨어져 있어도 휴대폰 너머로 실이 이어진 두 사람 - 연결하면 나란히 앉는다. */}
       <div className="w-full max-w-md overflow-hidden rounded-3xl">
         <SceneIllustration scene="apart" sizes="(min-width: 30rem) 28rem, 100vw" priority />
       </div>

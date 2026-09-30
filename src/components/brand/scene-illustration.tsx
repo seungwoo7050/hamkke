@@ -2,17 +2,20 @@ import { getImageProps } from "next/image";
 import { cn } from "cn";
 
 /**
- * 장면 일러스트(DESIGN.md §8) - 두 사람(주황 = 곧게 선 H, 인디고 = 기댄 K)이
- * 붉은 실로 이어진 한 벌의 그림만 쓴다. 감정적 순간(첫 화면, 연결, 빈 상태,
- * 곧 만나요)에만 놓고 UI 크롬에는 쓰지 않는다. 밤 그림이 있으면 다크 모드에서
- * <picture>로 바꿔 내보내 한쪽만 내려받는다. 원본은 docs/design-research/2026-10-03-*.
+ * 장면 일러스트(DESIGN.md §8) - 브랜드 에셋 한 벌(2026-10-04)의 그림만 쓴다.
+ * 주황(ember)과 인디고(dusk) 두 사람, 둘을 잇는 붉은 실과 하트, 옅은 노을빛
+ * 하늘. 감정적 순간(첫 화면, 연결, 빈 상태, 곧 만나요)에만 놓고 UI 크롬에는 쓰지
+ * 않는다. 밤 그림이 있으면 다크 모드에서 <picture>로 바꿔 내보내 한쪽만
+ * 내려받는다. 원본은 docs/design-research/2026-10-04-brand-assets/.
  */
+type Art = { day: string; night?: string; width: number; height: number };
+
 const SCENES = {
-  together: { day: "together-day", night: "together-night", width: 1000, height: 750 },
-  apart: { day: "apart-day", night: "apart-night", width: 1200, height: 630 },
+  together: { day: "together", width: 676, height: 316 },
+  apart: { day: "apart", width: 522, height: 377 },
   leaning: { day: "leaning-day", night: "leaning-night", width: 520, height: 620 },
-  meet: { day: "meet-day", night: "meet-night", width: 520, height: 640 },
-} as const;
+  meet: { day: "meet", width: 363, height: 299 },
+} satisfies Record<string, Art>;
 
 export type Scene = keyof typeof SCENES;
 
@@ -27,7 +30,7 @@ export function SceneIllustration({
   priority?: boolean;
   className?: string;
 }) {
-  const { day, night, width, height } = SCENES[scene];
+  const { day, night, width, height }: Art = SCENES[scene];
   const common = { alt: "", width, height, sizes, priority };
   const {
     props: { srcSet: daySrcSet, alt, ...rest },
