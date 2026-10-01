@@ -241,17 +241,19 @@
     "submit": "Schedule it"
   },
   "moments": {
-    "title": "Photos",
-    "addTitle": "Add a photo",
+    "title": "Photos & videos",
+    "addTitle": "Add a photo or video",
     "empty": "Today's sky, what you had for lunch. The small moments are the best ones",
     "altDefault": "Photo of the day",
-    "delete": "Delete photo",
-    "imageTypes": "You can upload JPG, PNG, WebP or GIF images",
-    "uploadFailed": "Couldn't upload the photo",
+    "videoLabel": "Video",
+    "delete": "Delete",
+    "mediaTypes": "You can upload JPG, PNG, WebP or GIF photos, or MP4, MOV or WebM videos",
+    "uploadFailed": "Couldn't upload it",
     "imageTooLarge": "Photos can be up to {mb} MB",
+    "videoTooLarge": "Videos can be up to {mb} MB, about a minute",
     "captionPlaceholder": "Add a caption (optional)",
     "uploading": "Uploading…",
-    "choose": "Choose a photo"
+    "choose": "Choose a photo or video"
   },
   "meetups": {
     "title": "Places we've been",
@@ -339,7 +341,7 @@
     "manage": "Manage",
     "upgrade": "Premium",
     "usage": {
-      "moments": "Photos",
+      "moments": "Photos & videos",
       "activeCapsules": "Scheduled letters",
       "meetupPins": "Places",
       "storage": "Storage"
@@ -350,7 +352,7 @@
     "pinsNear": "The free plan shows your latest {limit} places ({used}/{limit})",
     "atLimit": "You've hit the free plan's {noun} limit ({limit})",
     "near": "You're close to the free plan's {noun} limit ({used}/{limit})",
-    "nounMoments": "photo",
+    "nounMoments": "photos & videos",
     "nounCapsules": "scheduled letter",
     "unlimited": "Go unlimited with Premium"
   },
@@ -421,7 +423,7 @@
     "storageLimitPremiumPhotos": "You've used all {gb} GB of storage. Deleting photos in Memories frees up space.",
     "rateLimitedSeconds": "You're going a little fast. Try again in {seconds, plural, one {# second} other {# seconds}}.",
     "rateLimitedMinutes": "That's a lot of requests, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
-    "momentLimit": "The free plan holds up to {limit} photos. Go Premium for unlimited.",
+    "momentLimit": "The free plan holds up to {limit} photos and videos. Go Premium for unlimited.",
     "capsuleLimit": "The free plan holds up to {limit} scheduled letters. Go Premium for unlimited.",
     "capsuleOneWhen": "Pick just one time for it to open",
     "capsuleFuture": "The delivery time has to be in the future",

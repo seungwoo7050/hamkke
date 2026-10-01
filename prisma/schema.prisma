@@ -247,15 +247,23 @@ model CalendarEvent {
 // "오늘의 사진" 피드(PRD.md §3.4). mediaUrl은 PRD 명명 그대로 두지만 실제
 // 값은 Message의 image 타입과 동일하게 R2 오브젝트 키다 - 응답 시점에만
 // presigned GET URL로 변환한다(ARCHITECTURE.md §10, 영구 public URL 금지).
+// 기억에 올린 파일의 종류. 업로드를 신고한 형식이 아니라 R2에 실제로 올라간
+// Content-Type으로 정한다(moment.create).
+enum MediaKind {
+  image
+  video
+}
+
 model Moment {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   spaceId    String
   uploaderId String
   mediaUrl   String
+  mediaKind  MediaKind @default(image)
   // R2 파일 크기(바이트) - 스페이스 저장 용량 상한 계산용.
   mediaSize  Int?
   caption    String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   space    Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   uploader User  @relation(fields: [uploaderId], references: [id])

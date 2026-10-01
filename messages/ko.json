@@ -241,17 +241,19 @@
     "submit": "예약 보내기"
   },
   "moments": {
-    "title": "사진",
-    "addTitle": "사진 올리기",
+    "title": "사진·영상",
+    "addTitle": "사진·영상 올리기",
     "empty": "오늘 본 하늘, 먹은 것. 사소한 장면일수록 좋아요",
     "altDefault": "오늘의 사진",
-    "delete": "사진 삭제",
-    "imageTypes": "jpg, png, webp, gif 이미지만 올릴 수 있어요",
-    "uploadFailed": "사진 업로드에 실패했어요",
+    "videoLabel": "영상",
+    "delete": "삭제",
+    "mediaTypes": "jpg, png, webp, gif 사진이나 mp4, mov, webm 영상만 올릴 수 있어요",
+    "uploadFailed": "업로드에 실패했어요",
     "imageTooLarge": "{mb}MB 이하 사진만 올릴 수 있어요",
+    "videoTooLarge": "{mb}MB 이하 영상만 올릴 수 있어요. 1분 남짓까지예요",
     "captionPlaceholder": "한 줄 남기기(선택)",
     "uploading": "올리는 중...",
-    "choose": "사진 고르기"
+    "choose": "사진·영상 고르기"
   },
   "meetups": {
     "title": "함께한 곳",
@@ -339,7 +341,7 @@
     "manage": "구독 관리",
     "upgrade": "프리미엄",
     "usage": {
-      "moments": "사진",
+      "moments": "사진·영상",
       "activeCapsules": "예약 캡슐",
       "meetupPins": "만남 지도",
       "storage": "저장 공간"
@@ -350,7 +352,7 @@
     "pinsNear": "무료 플랜에선 최근 {limit}곳까지 보여요 ({used}/{limit})",
     "atLimit": "무료 플랜의 {noun} 한도({limit})에 닿았어요",
     "near": "무료 플랜의 {noun} 한도가 가까워요 ({used}/{limit})",
-    "nounMoments": "사진",
+    "nounMoments": "사진·영상",
     "nounCapsules": "예약 캡슐",
     "unlimited": "프리미엄은 무제한"
   },
@@ -421,7 +423,7 @@
     "storageLimitPremiumPhotos": "저장 공간({gb}GB)을 다 썼어요. 기억 탭의 사진을 지우면 공간이 생겨요.",
     "rateLimitedSeconds": "너무 빨리 보내고 있어요. {seconds}초 뒤에 다시 시도해 주세요.",
     "rateLimitedMinutes": "요청이 너무 많아서 잠시 막아뒀어요. {minutes}분 뒤에 다시 시도해 주세요.",
-    "momentLimit": "무료 티어는 사진을 {limit}장까지만 저장할 수 있어요. 프리미엄으로 무제한 저장해보세요.",
+    "momentLimit": "무료 티어는 사진·영상을 {limit}개까지만 저장할 수 있어요. 프리미엄으로 무제한 저장해보세요.",
     "capsuleLimit": "무료 티어는 예약 중인 캡슐을 {limit}개까지만 가질 수 있어요. 프리미엄으로 무제한 예약해보세요.",
     "capsuleOneWhen": "여는 때를 하나만 골라주세요",
     "capsuleFuture": "배달 시각은 미래여야 해요",

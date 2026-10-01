@@ -43,7 +43,11 @@ export async function verifyUpload(
   if (!head || !expected.allowedTypes.includes(head.contentType)) {
     throw new TRPCError({ code: "BAD_REQUEST", message: t("errors.uploadNotFound") });
   }
-  return { size: head.size, finalKey: key.slice(PENDING_PREFIX.length) };
+  return {
+    size: head.size,
+    contentType: head.contentType,
+    finalKey: key.slice(PENDING_PREFIX.length),
+  };
 }
 
 /**

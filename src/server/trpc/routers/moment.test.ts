@@ -94,6 +94,42 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     await deleteR2Object(key);
   });
 
+  it("영상도 올려 등록하면 실제로 올라간 형식으로 영상(video)이 된다", async () => {
+    const caller = await callerFor(userAId);
+    const bytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
+    const { uploadUrl, key } = await caller.moment.createUploadUrl({
+      contentType: "video/mp4",
+      size: bytes.length,
+    });
+    const res = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "video/mp4" },
+      body: bytes,
+    });
+    expect(res.ok).toBe(true);
+
+    const moment = await caller.moment.create({ key });
+    expect(moment.mediaKind).toBe("video");
+    const listed = (await caller.moment.list({})).moments.find((m) => m.id === moment.id)!;
+    expect(listed.mediaKind).toBe("video");
+
+    await deleteR2Object(key);
+  });
+
+  it("크기 상한은 종류마다 다르다(사진 10MB, 영상 100MB)", async () => {
+    const caller = await callerFor(userAId);
+    const mb = 1024 * 1024;
+    await expect(
+      caller.moment.createUploadUrl({ contentType: "image/jpeg", size: 11 * mb }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller.moment.createUploadUrl({ contentType: "video/mp4", size: 50 * mb }),
+    ).resolves.toMatchObject({ key: expect.stringMatching(/^pending\/moments\//) });
+    await expect(
+      caller.moment.createUploadUrl({ contentType: "video/quicktime", size: 101 * mb }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
   it("cursor 페이지네이션이 동작한다", async () => {
     const caller = await callerFor(userAId);
     const keys: string[] = [];
