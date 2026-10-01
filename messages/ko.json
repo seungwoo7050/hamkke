@@ -293,6 +293,13 @@
     "cancel": "그만두기",
     "failed": "삭제하지 못했어요. 잠시 뒤 다시 시도해 주세요."
   },
+  "legal": {
+    "missing": "출시 전 입력",
+    "others": "다른 문서",
+    "privacy": "개인정보처리방침",
+    "terms": "이용약관",
+    "location": "위치기반서비스 이용약관"
+  },
   "accountPage": {
     "title": "Hamkke 계정 삭제",
     "intro": "Hamkke(함께) 계정과 데이터를 지우는 방법이에요. 삭제는 바로 처리되고 되돌릴 수 없어요.",

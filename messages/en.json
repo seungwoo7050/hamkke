@@ -293,6 +293,13 @@
     "cancel": "Keep my account",
     "failed": "Couldn't delete your account. Please try again in a bit."
   },
+  "legal": {
+    "missing": "To be added before launch",
+    "others": "Other documents",
+    "privacy": "Privacy policy",
+    "terms": "Terms of service",
+    "location": "Location-based service terms"
+  },
   "accountPage": {
     "title": "Delete your Hamkke account",
     "intro": "Here's how to delete your Hamkke account and data. Deletion happens right away and can't be undone.",
