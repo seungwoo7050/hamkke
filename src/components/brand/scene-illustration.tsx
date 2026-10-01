@@ -14,8 +14,8 @@ type Art = { day: string; night?: string; width: number; height: number };
 const SCENES = {
   together: { day: "together", width: 676, height: 316 },
   apart: { day: "apart", width: 522, height: 377 },
-  leaning: { day: "leaning-day", night: "leaning-night", width: 520, height: 620 },
   meet: { day: "meet", width: 363, height: 299 },
+  globe: { day: "globe", width: 152, height: 93 },
   // 상황 카드의 작은 그림(40px 칸) - 감정적 순간의 카드에만.
   anniversary: { day: "anniversary", width: 80, height: 69 },
   letter: { day: "letter", width: 121, height: 87 },
