@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { createDownloadUrl, createUploadUrl, promoteUpload } from "@/lib/r2";
-import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { IMAGE_TYPES, MAX_UPLOAD_BYTES, VIDEO_TYPES } from "@/lib/upload-limits";
 import { consumeOrThrow } from "@/server/rate-limit";
 import { chatMessageCheck, uploadUrlCheck } from "@/server/request-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
@@ -11,10 +11,19 @@ import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 const ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/ogg", "audio/mpeg"] as const;
 
-// image/voice 메시지는 content에 R2 오브젝트 키를 저장하고, 표시할 때만
+type MediaType = "image" | "voice" | "video";
+
+// 메시지 종류마다 받는 형식과 푸시 문구. 등록할 때 R2에 실제로 올라간 형식이 이 목록에
+// 있어야 한다 - 사진 주소를 받아 영상을 올리는 식으로 종류를 속일 수 없다.
+const MEDIA: Record<MediaType, { types: readonly string[]; push: `push.${MediaType}` }> = {
+  image: { types: IMAGE_TYPES, push: "push.image" },
+  voice: { types: ALLOWED_AUDIO_TYPES, push: "push.voice" },
+  video: { types: VIDEO_TYPES, push: "push.video" },
+};
+
+// image/voice/video 메시지는 content에 R2 오브젝트 키를 저장하고, 표시할 때만
 // 짧게 유효한 signed URL로 즉석 변환한다(ARCHITECTURE.md §10 - 영구 public
 // URL 금지).
 async function resolveContent(message: { type: string; content: string }) {
@@ -28,13 +37,13 @@ type SpaceCtx = {
   locale: TRPCContext["locale"];
 };
 
-async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "voice", key: string) {
+async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: MediaType, key: string) {
   // 확인·옮기기·행 생성은 잠금 아래에서, 브로드캐스트·푸시는 잠금 밖에서.
   const message = await withUploadRegistrationLock(ctx.space.id, async (tx) => {
     const { size, finalKey } = await verifyUpload(key, {
       folder: "messages",
       spaceId: ctx.space.id,
-      allowedTypes: type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES,
+      allowedTypes: MEDIA[type].types,
       locale: ctx.locale,
     });
     await assertStorageAvailable(ctx.space.id, size, ctx.locale, tx);
@@ -57,7 +66,7 @@ async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: "image" | "vo
   // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
   await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
     title: "Hamkke",
-    body: t(type === "image" ? "push.image" : "push.voice"),
+    body: t(MEDIA[type].push),
   })).catch(() => {});
 
   return { ...message, content };
@@ -93,7 +102,7 @@ export const chatRouter = router({
   createImageUploadUrl: spaceProcedure
     .input(
       z.object({
-        contentType: z.enum(ALLOWED_IMAGE_TYPES),
+        contentType: z.enum(IMAGE_TYPES),
         size: z.number().int().positive().max(MAX_UPLOAD_BYTES.image),
       }),
     )
@@ -127,6 +136,26 @@ export const chatRouter = router({
   sendVoice: spaceProcedure
     .input(z.object({ key: z.string().min(1) }))
     .mutation(({ ctx, input }) => createAndBroadcastMediaMessage(ctx, "voice", input.key)),
+
+  // 영상도 사진과 같은 경로(임시 키 → 등록 때 확인 후 이동). 크기 상한만 다르다.
+  createVideoUploadUrl: spaceProcedure
+    .input(
+      z.object({
+        contentType: z.enum(VIDEO_TYPES),
+        size: z.number().int().positive().max(MAX_UPLOAD_BYTES.video),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertStorageAvailable(ctx.space.id, input.size, ctx.locale);
+      await consumeOrThrow(uploadUrlCheck(ctx.session.user.id), ctx.locale);
+      const key = newUploadKey("messages", ctx.space.id);
+      const uploadUrl = await createUploadUrl(key, input.contentType, input.size);
+      return { uploadUrl, key };
+    }),
+
+  sendVideo: spaceProcedure
+    .input(z.object({ key: z.string().min(1) }))
+    .mutation(({ ctx, input }) => createAndBroadcastMediaMessage(ctx, "video", input.key)),
 
   list: spaceProcedure
     .input(

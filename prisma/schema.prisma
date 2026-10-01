@@ -124,6 +124,7 @@ enum MessageType {
   text
   image
   voice
+  video
 }
 
 model Message {
@@ -131,9 +132,9 @@ model Message {
   spaceId   String
   senderId  String
   type      MessageType @default(text)
-  // text 타입은 본문, image/voice 타입은 R2에 업로드된 미디어의 signed URL 경로.
+  // text 타입은 본문, image/voice/video 타입은 R2에 업로드된 미디어의 오브젝트 키.
   content   String
-  // image/voice의 R2 파일 크기(바이트) - 스페이스 저장 용량 상한 계산용. text는 null.
+  // image/voice/video의 R2 파일 크기(바이트) - 스페이스 저장 용량 상한 계산용. text는 null.
   mediaSize Int?
   createdAt DateTime    @default(now())
   // 상대방이 읽은 시각. 2인 전용 Space라 수신자가 항상 1명이라 단일 필드로 충분.

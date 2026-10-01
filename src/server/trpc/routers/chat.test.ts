@@ -231,6 +231,52 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     await deleteR2Object(key);
   });
 
+  it("영상 업로드 URL로 실제 R2에 업로드하고, sendVideo/list가 접근 가능한 signed URL을 돌려준다", async () => {
+    const caller = await callerFor(userAId);
+
+    const fakeVideoBytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
+    const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
+      contentType: "video/mp4",
+      size: fakeVideoBytes.length,
+    });
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "video/mp4" },
+      body: fakeVideoBytes,
+    });
+    expect(uploadRes.ok).toBe(true);
+
+    const message = await caller.chat.sendVideo({ key });
+    expect(message.type).toBe("video");
+    expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+    const downloadRes = await fetch(message.content);
+    expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeVideoBytes);
+
+    const { messages } = await caller.chat.list({});
+    expect(messages.find((m) => m.id === message.id)?.type).toBe("video");
+
+    await deleteR2Object(key);
+  });
+
+  it("영상으로 올린 파일을 사진 메시지로 등록할 수 없다(실제 형식으로 종류를 본다)", async () => {
+    const caller = await callerFor(userAId);
+    const bytes = new Uint8Array([1, 2, 3]);
+    const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
+      contentType: "video/mp4",
+      size: bytes.length,
+    });
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "video/mp4" },
+      body: bytes,
+    });
+
+    await expect(caller.chat.sendImage({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
+
+    await deleteR2Object(key);
+  });
+
   it("크기 상한을 넘는 업로드 주소는 발급하지 않는다", async () => {
     const caller = await callerFor(userAId);
     await expect(
@@ -238,6 +284,9 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(
       caller.chat.createVoiceUploadUrl({ contentType: "audio/webm", size: 5 * 1024 * 1024 + 1 }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller.chat.createVideoUploadUrl({ contentType: "video/mp4", size: 100 * 1024 * 1024 + 1 }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
