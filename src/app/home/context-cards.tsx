@@ -12,7 +12,7 @@ import {
   PlaneTakeoff,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { SpotArt } from "@/components/brand/spot-art";
+import { SceneIllustration, type Scene } from "@/components/brand/scene-illustration";
 import { useFormat } from "@/i18n/use-format";
 import { dateOnly, daysBetween, nextOccurrence, todayIn } from "@/lib/datetime";
 import { bestTimes, pickFlight } from "@/lib/flight";
@@ -43,6 +43,11 @@ function CardBody({ icon, title, sub }: { icon: React.ReactNode; title: string; 
       <ChevronRight className="text-muted-foreground size-5 shrink-0" />
     </>
   );
+}
+
+// 스팟 그림(DESIGN.md §8) - 40px 칸 안에 비율을 지켜 넣는다.
+function SpotArt({ scene }: { scene: Scene }) {
+  return <SceneIllustration scene={scene} sizes="40px" className="size-10 object-contain" />;
 }
 
 function Card({ href, ...body }: { href: string } & React.ComponentProps<typeof CardBody>) {
@@ -160,7 +165,7 @@ export function ContextCards() {
           <Card
             key={`a-${card.title}`}
             href="/home/memories"
-            icon={<SpotArt spot="together" />}
+            icon={<SpotArt scene="anniversary" />}
             title={t("anniversaryTitle", { title: card.title })}
             sub={t("anniversarySub", { name: partnerName })}
           />
@@ -170,7 +175,7 @@ export function ContextCards() {
           <Card
             key="capsule"
             href="/home/memories?tab=past"
-            icon={<SpotArt spot="letter" />}
+            icon={<SpotArt scene="letter" />}
             title={t(landingArrived ? "landingLetterTitle" : "capsuleTitle", names)}
             sub={card.count > 1 ? t("capsuleMany", { count: card.count }) : t("capsuleOne")}
           />
@@ -180,7 +185,7 @@ export function ContextCards() {
           <Card
             key="countdown"
             href="/home/memories"
-            icon={<SpotArt spot="soon" />}
+            icon={<SpotArt scene="soon" />}
             title={t("countdownTitle", { title: card.title, dday: fmt.ddayBig(card.days) })}
             sub={t("countdownSub")}
           />
@@ -288,7 +293,7 @@ function FlightCard({
     return (
       <Card
         href="/home/memories?tab=past"
-        icon={<SpotArt spot="apart" />}
+        icon={<SpotArt scene="arrived" />}
         title={t(mine ? "arrivedMine" : "arrivedPartner", { ...names, city: f.to.city })}
         sub={[
           t(estimated ? "arrivedScheduled" : "arrivedActual", {

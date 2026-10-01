@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
+import { LatinWordmark } from "@/components/brand/latin-wordmark";
 import { SceneIllustration } from "@/components/brand/scene-illustration";
 import { Button } from "@/components/ui/button";
 import { getCurrentPairingStatus } from "@/server/pairing/current-status";
@@ -38,7 +39,10 @@ export default async function Home() {
             />
           </svg>
         </p>
-        <h1 className="text-foreground text-3xl font-semibold tracking-tight">Hamkke</h1>
+        <h1 className="text-dusk-ink">
+          <LatinWordmark className="h-9" />
+          <span className="sr-only">Hamkke</span>
+        </h1>
         <p className="text-muted-foreground max-w-sm">{t("description")}</p>
       </div>
       <Button asChild className="w-fit">

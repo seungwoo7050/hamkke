@@ -113,7 +113,7 @@ export function LocationSheet({ children }: { children: React.ReactNode }) {
             <LocationMap me={me} partner={partnerPoint} />
           </div>
         ) : (
-          <EmptyState caption={t("empty")} className="py-8" />
+          <EmptyState art="location" caption={t("empty")} className="py-8" />
         )}
         {!sharing && !flying && (
           // 첫날엔 여기가 막다른 곳이었다 - 설명만 하고 켜는 곳(설정 시트)은 따로

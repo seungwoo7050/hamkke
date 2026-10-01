@@ -384,7 +384,7 @@ export function ChatView({
     <div className="flex min-h-0 flex-1 flex-col">
       <ChatHeader />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-1 pb-4">
-        {timeline.length === 0 && <EmptyState caption={t("empty")} className="flex-1" />}
+        {timeline.length === 0 && <EmptyState art="chat" caption={t("empty")} className="flex-1" />}
         {olderCursor && (
           <Button
             variant="ghost"
