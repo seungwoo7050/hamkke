@@ -1,6 +1,6 @@
 // 실제 Stripe API(테스트 모드)에 왕복한다.
 import { randomUUID } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { createCallerFactory } from "../init";
@@ -25,6 +25,8 @@ describe("billing 라우터 (통합)", () => {
   const createdCustomerIds: string[] = [];
 
   beforeEach(async () => {
+    // 결제 흐름 테스트는 유료 플랜을 파는 상태가 기준이다(닫힌 상태는 따로 본다).
+    vi.stubEnv("PREMIUM_OPEN", "1");
     const a = await prisma.user.create({
       data: { email: `test-billing-a-${randomUUID()}@example.com` },
     });
@@ -42,6 +44,7 @@ describe("billing 라우터 (통합)", () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllEnvs();
     await prisma.rateLimitHit.deleteMany({ where: { subject: userAId } });
     await Promise.all(createdCustomerIds.map((id) => stripe.customers.del(id)));
     createdCustomerIds.length = 0;
@@ -154,6 +157,18 @@ describe("billing 라우터 (통합)", () => {
     } finally {
       await prisma.user.delete({ where: { id: outsider.id } });
     }
+  });
+
+  it("유료 플랜이 닫혀 있으면 결제를 시작할 수 없고, Stripe에 아무것도 만들지 않는다", async () => {
+    vi.stubEnv("PREMIUM_OPEN", "");
+    const caller = await callerFor(userAId);
+    await expect(caller.billing.createCheckoutSession()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
+    expect(space.stripeCustomerId).toBeNull();
+    // 열려 있다고 알려 주는 값도 닫힘을 가리킨다(화면은 이 값으로 버튼을 숨긴다).
+    expect((await caller.billing.usage()).open).toBe(false);
   });
 
   it("결제·구독 관리 화면은 합쳐서 1시간에 10번까지만 연다", async () => {

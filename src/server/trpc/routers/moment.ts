@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { type Db, FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
+import { type Db, FREE_TIER_LIMITS, isPremiumOpen, isPremiumSpace } from "@/lib/plan";
 import { createDownloadUrl, createUploadUrl, deleteUpload, promoteUpload } from "@/lib/r2";
 import { IMAGE_TYPES, MAX_UPLOAD_BYTES, VIDEO_TYPES, mediaKindOf } from "@/lib/upload-limits";
 import { consumeOrThrow } from "@/server/rate-limit";
@@ -25,7 +25,12 @@ async function assertMomentQuota(
   if (count >= FREE_TIER_LIMITS.moments) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: translator(locale)("errors.momentLimit", { limit: FREE_TIER_LIMITS.moments }),
+      message: translator(locale)(
+        isPremiumOpen() ? "errors.momentLimit" : "errors.momentLimitSoon",
+        {
+          limit: FREE_TIER_LIMITS.moments,
+        },
+      ),
     });
   }
 }

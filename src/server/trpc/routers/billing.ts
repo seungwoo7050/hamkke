@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import {
   countPendingCapsules,
   FREE_TIER_LIMITS,
+  isPremiumOpen,
   isPremiumSpace,
   STORAGE_LIMIT_BYTES,
 } from "@/lib/plan";
@@ -34,7 +35,8 @@ export const billingRouter = router({
       used: storageUsed,
       limit: premium ? STORAGE_LIMIT_BYTES.premium : STORAGE_LIMIT_BYTES.free,
     };
-    if (premium) return { premium: true as const, items: [], storage };
+    const open = isPremiumOpen();
+    if (premium) return { premium: true as const, open, items: [], storage };
 
     const [moments, activeCapsules, meetupPins] = await Promise.all([
       prisma.moment.count({ where: { spaceId } }),
@@ -44,6 +46,7 @@ export const billingRouter = router({
 
     return {
       premium: false as const,
+      open,
       storage,
       items: [
         { key: "moments" as const, label: "사진", used: moments, limit: FREE_TIER_LIMITS.moments },
@@ -67,6 +70,13 @@ export const billingRouter = router({
   // 스페이스당 Customer 하나, 열린 Checkout 세션 하나만 쓴다 - 같은 세션은 한
   // 번만 결제할 수 있다. 스페이스 단위 잠금으로 확인과 생성을 직렬화한다.
   createCheckoutSession: spaceProcedure.mutation(async ({ ctx }) => {
+    // 유료 플랜이 닫혀 있으면 화면에 버튼이 없어도 API로 결제를 시작할 수 없게.
+    if (!isPremiumOpen()) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: translator(ctx.locale)("errors.premiumNotOpen"),
+      });
+    }
     await consumeOrThrow(billingSessionCheck(ctx.session.user.id), ctx.locale);
     const spaceId = ctx.space.id;
     return prisma.$transaction(

@@ -18,8 +18,11 @@ export default defineConfig({
     trace: "retain-on-failure",
     ...devices["Pixel 7"],
   },
+  // 구독 시나리오(core-flow)는 유료 플랜이 열려 있어야 한다. 이미 떠 있는 서버를 쓰면
+  // 이 env는 닿지 않으니 그 서버를 PREMIUM_OPEN=1로 띄운다(.env.example).
   webServer: {
     command: "npm run dev",
+    env: { ...process.env, PREMIUM_OPEN: "1" } as Record<string, string>,
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000,

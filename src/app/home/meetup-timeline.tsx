@@ -29,6 +29,9 @@ export function MeetupTimeline() {
   );
   const pins = listQuery.data?.pins ?? [];
   const hidden = listQuery.data?.hidden ?? 0;
+  // 숨긴 곳이 있을 때만 요금제를 본다 - 유료 플랜이 닫혀 있으면 "곧 열릴 프리미엄"으로.
+  const usage = useQuery({ ...trpc.billing.usage.queryOptions(), enabled: hidden > 0 });
+  const premiumOpen = usage.data?.open ?? true;
 
   return (
     <Section
@@ -69,7 +72,7 @@ export function MeetupTimeline() {
           </div>
           {hidden > 0 && (
             <p className="text-muted-foreground mt-2 text-sm">
-              {t("hiddenOlder", { count: hidden })}
+              {t(premiumOpen ? "hiddenOlder" : "hiddenOlderSoon", { count: hidden })}
             </p>
           )}
         </>

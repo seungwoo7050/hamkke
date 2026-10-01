@@ -38,6 +38,9 @@ export function BillingSection() {
   );
 
   const premium = subscription?.status === "active";
+  // 유료 플랜이 닫혀 있으면(src/lib/plan.ts isPremiumOpen) 결제 버튼 대신 곧 열린다고만.
+  // 사용량을 받기 전에는 버튼을 내지 않는다 - 닫혀 있을 때 잠깐 보였다 사라지지 않게.
+  const open = usage?.open === true;
 
   return (
     <div className="py-3">
@@ -61,7 +64,7 @@ export function BillingSection() {
           >
             {t("manage")}
           </Button>
-        ) : (
+        ) : open ? (
           <Button
             type="button"
             size="sm"
@@ -70,7 +73,9 @@ export function BillingSection() {
           >
             {t("upgrade")}
           </Button>
-        )}
+        ) : usage ? (
+          <span className="text-muted-foreground text-sm">{t("soon")}</span>
+        ) : null}
       </div>
       {usage && (
         // 한도에 부딪힌 뒤 토스트로 알던 걸 미리 보이게(PRD §3.5). 한도 근처면

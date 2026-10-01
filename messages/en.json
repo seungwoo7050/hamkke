@@ -269,6 +269,7 @@
     "dateLabel": "The day",
     "saveHere": "Save this spot",
     "hiddenOlder": "{count, plural, one {# older place is} other {# older places are}} still kept. They'll show again with Premium",
+    "hiddenOlderSoon": "{count, plural, one {# older place is} other {# older places are}} still kept. They'll show again with Premium, coming soon",
     "savedHidden": "Saved. The free plan only shows your latest places, so this one isn't in the list"
   },
   "settings": {
@@ -341,6 +342,7 @@
     "free": "Free plan",
     "premiumSub": "Premium is on, for both of you",
     "freeSub": "Premium unlocks everything, for both of you",
+    "soon": "Coming soon",
     "manage": "Manage",
     "upgrade": "Premium",
     "usage": {
@@ -357,7 +359,8 @@
     "near": "You're close to the free plan's {noun} limit ({used}/{limit})",
     "nounMoments": "photos & videos",
     "nounCapsules": "scheduled letter",
-    "unlimited": "Go unlimited with Premium"
+    "unlimited": "Go unlimited with Premium",
+    "soon": "Premium is coming soon"
   },
   "flights": {
     "title": "Flights",
@@ -428,6 +431,11 @@
     "rateLimitedMinutes": "That's a lot of requests, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "momentLimit": "The free plan holds up to {limit} photos and videos. Go Premium for unlimited.",
     "capsuleLimit": "The free plan holds up to {limit} scheduled letters. Go Premium for unlimited.",
+    "momentLimitSoon": "The free plan holds up to {limit} photos and videos. Premium, with room for more, is coming soon.",
+    "capsuleLimitSoon": "The free plan holds up to {limit} scheduled letters. Premium, with room for more, is coming soon.",
+    "storageLimitFreeSoon": "You've used all {gb} GB of storage. Premium, with more space, is coming soon.",
+    "storageLimitFreePhotosSoon": "You've used all {gb} GB of storage. Deleting photos and videos in Memories frees up space.",
+    "premiumNotOpen": "Premium isn't available yet. It's coming soon.",
     "capsuleOneWhen": "Pick just one time for it to open",
     "capsuleFuture": "The delivery time has to be in the future",
     "flightNotFound": "Couldn't find that flight",

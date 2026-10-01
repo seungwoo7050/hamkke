@@ -269,6 +269,7 @@
     "dateLabel": "만난 날",
     "saveHere": "지금 있는 곳으로 기록",
     "hiddenOlder": "더 오래된 {count}곳도 남아 있어요. 프리미엄에서 다시 보여요",
+    "hiddenOlderSoon": "더 오래된 {count}곳도 남아 있어요. 곧 열릴 프리미엄에서 다시 보여요",
     "savedHidden": "기록했어요. 무료 플랜에선 최근 기록만 보여서 지금은 목록에 없어요"
   },
   "settings": {
@@ -341,6 +342,7 @@
     "free": "무료 플랜",
     "premiumSub": "두 사람 모두 프리미엄 혜택을 받고 있어요",
     "freeSub": "프리미엄이면 사진·캡슐·지도에 한도가 없어요",
+    "soon": "곧 열려요",
     "manage": "구독 관리",
     "upgrade": "프리미엄",
     "usage": {
@@ -357,7 +359,8 @@
     "near": "무료 플랜의 {noun} 한도가 가까워요 ({used}/{limit})",
     "nounMoments": "사진·영상",
     "nounCapsules": "예약 캡슐",
-    "unlimited": "프리미엄은 무제한"
+    "unlimited": "프리미엄은 무제한",
+    "soon": "프리미엄은 곧 열려요"
   },
   "flights": {
     "title": "비행",
@@ -428,6 +431,11 @@
     "rateLimitedMinutes": "요청이 너무 많아서 잠시 막아뒀어요. {minutes}분 뒤에 다시 시도해 주세요.",
     "momentLimit": "무료 티어는 사진·영상을 {limit}개까지만 저장할 수 있어요. 프리미엄으로 무제한 저장해보세요.",
     "capsuleLimit": "무료 티어는 예약 중인 캡슐을 {limit}개까지만 가질 수 있어요. 프리미엄으로 무제한 예약해보세요.",
+    "momentLimitSoon": "무료 플랜은 사진·영상을 {limit}개까지 저장할 수 있어요. 더 저장할 수 있는 프리미엄은 곧 열려요.",
+    "capsuleLimitSoon": "무료 플랜은 예약 중인 캡슐을 {limit}개까지 가질 수 있어요. 더 예약할 수 있는 프리미엄은 곧 열려요.",
+    "storageLimitFreeSoon": "저장 공간({gb}GB)을 다 썼어요. 더 넓은 프리미엄은 곧 열려요.",
+    "storageLimitFreePhotosSoon": "저장 공간({gb}GB)을 다 썼어요. 기억 탭의 사진·영상을 지우면 공간이 생겨요.",
+    "premiumNotOpen": "프리미엄은 아직 준비 중이에요. 곧 열려요.",
     "capsuleOneWhen": "여는 때를 하나만 골라주세요",
     "capsuleFuture": "배달 시각은 미래여야 해요",
     "flightNotFound": "항공편을 찾지 못했어요",

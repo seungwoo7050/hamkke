@@ -1,7 +1,7 @@
 // 실제 R2에 왕복한다.
 import { randomUUID } from "node:crypto";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { headUpload } from "@/lib/r2";
 import { createCallerFactory } from "../init";
@@ -228,6 +228,28 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
+  });
+
+  it("유료 플랜이 닫혀 있으면 한도 안내가 프리미엄을 권하지 않고 곧 열린다고 말한다", async () => {
+    await prisma.moment.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({
+        spaceId,
+        uploaderId: userAId,
+        mediaUrl: `moments/${spaceId}/fake-${i}`,
+      })),
+    });
+    const caller = await callerFor(userAId);
+    const tryUpload = () =>
+      caller.moment.createUploadUrl({ contentType: "image/png", size: 1 }).catch((e: Error) => e);
+
+    vi.stubEnv("PREMIUM_OPEN", "");
+    const closed = (await tryUpload()) as Error;
+    expect(closed.message).toContain("곧 열려요");
+    expect(closed.message).not.toContain("프리미엄으로");
+
+    vi.stubEnv("PREMIUM_OPEN", "1");
+    expect(((await tryUpload()) as Error).message).toContain("프리미엄으로");
+    vi.unstubAllEnvs();
   });
 
   it("프리미엄이면 한도를 넘어도 업로드 URL을 발급받는다", async () => {

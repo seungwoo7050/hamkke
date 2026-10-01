@@ -40,14 +40,19 @@ export function UpgradeHint({ usageKey }: { usageKey: UsageKey }) {
   return (
     <p className="text-muted-foreground text-sm">
       {message(t, usageKey, item.used, item.limit, isAtLimit(item))}.{" "}
-      <button
-        type="button"
-        className="text-primary font-semibold underline-offset-4 hover:underline"
-        disabled={checkout.isPending}
-        onClick={() => checkout.mutate()}
-      >
-        {t("unlimited")}
-      </button>
+      {/* 유료 플랜이 닫혀 있으면 결제로 보내지 않고 곧 열린다고만 말한다. */}
+      {!data?.open ? (
+        t("soon")
+      ) : (
+        <button
+          type="button"
+          className="text-primary font-semibold underline-offset-4 hover:underline"
+          disabled={checkout.isPending}
+          onClick={() => checkout.mutate()}
+        >
+          {t("unlimited")}
+        </button>
+      )}
     </p>
   );
 }
