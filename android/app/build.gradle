@@ -2,6 +2,19 @@ apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
+// 릴리스 서명(Play 업로드 키). 키스토어와 비밀번호는 저장소에 넣지 않는다 - android/
+// keystore.properties(.gitignore)에 아래 네 값을 두면 release 빌드가 그 키로 서명한다.
+// 파일이 없으면 서명 없이 빌드된다(개발·CI). 만드는 법은 README "Android 릴리스 빌드".
+//   storeFile=/절대/경로/hamkke-upload.jks
+//   storePassword=...
+//   keyAlias=upload
+//   keyPassword=...
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "com.hamkke.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -21,8 +34,21 @@ android {
     buildFeatures {
         compose true
     }
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
