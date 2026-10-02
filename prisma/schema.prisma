@@ -79,6 +79,8 @@ model User {
   sentTouches     Touch[]
   pushTokens      PushToken[]
   locationPings   LocationPing[]
+  provisionsOut   LocationProvision[] @relation("ProvisionSubject")
+  provisionsIn    LocationProvision[] @relation("ProvisionRecipient")
   geofences       Geofence[]
   createdEvents   CalendarEvent[]
   uploadedMoments Moment[]
@@ -194,6 +196,34 @@ model LocationPing {
 // 이 지점 반경 안에 들어오면 상대에게 도착 알림이 간다. isInside는 마지막
 // 확인 시점 상태를 저장해 "안→밖→안" 재진입 때만 다시 알리고 반경 안에
 // 머무는 동안 중복 알림을 보내지 않기 위한 것.
+// 위치정보 이용·제공 사실 확인자료(위치정보법 §16②: 자동 기록, 6개월 이상 보관).
+// 내 위치(또는 위치에서 나온 거리·날씨·도착)가 상대에게 간 사실을 남긴다. 위치는 15초
+// 간격으로도 갈 수 있어 한 건마다 한 행이면 너무 많아, (주인, 받은 사람, 종류, 한 시간)
+// 단위로 묶어 처음·마지막 시각과 횟수를 둔다. 공유를 끄면(동의 철회) 지운다.
+enum LocationProvisionKind {
+  live // 실시간 위치(location.send의 브로드캐스트)
+  latest // 화면을 열 때 받은 최근 위치(location.partnerStatus)
+  derived // 위치로 계산한 거리·현지 날씨(home.summary, weather.forSpace)
+  arrival // 등록한 장소 도착 알림
+}
+
+model LocationProvision {
+  id          String                @id @default(cuid())
+  subjectId   String
+  recipientId String
+  kind        LocationProvisionKind
+  hourStart   DateTime
+  firstAt     DateTime
+  lastAt      DateTime
+  count       Int                   @default(1)
+
+  subject   User @relation("ProvisionSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  recipient User @relation("ProvisionRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, recipientId, kind, hourStart])
+  @@index([subjectId, hourStart])
+}
+
 model Geofence {
   id        String   @id @default(cuid())
   spaceId   String

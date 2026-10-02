@@ -218,4 +218,40 @@ describe("location 라우터 (통합)", () => {
 
     expect(await prisma.locationPing.findUnique({ where: { id: old.id } })).toBeNull();
   });
+
+  describe("위치 제공 사실 확인자료(위치정보법 §16②)", () => {
+    const provisions = () =>
+      prisma.locationProvision.findMany({
+        where: { subjectId: userAId },
+        orderBy: { kind: "asc" },
+      });
+
+    it("내 위치가 상대에게 가면(실시간·최근 위치) 받은 사람과 종류가 기록된다", async () => {
+      const callerA = await callerFor(userAId);
+      await callerA.location.setSharing({ enabled: true, consent: true });
+      await callerA.location.send({ lat: 37.5, lng: 127 });
+      await (await callerFor(userBId)).location.partnerStatus();
+
+      const rows = await provisions();
+      expect(rows.map((r) => [r.kind, r.recipientId, r.count])).toEqual([
+        ["live", userBId, 1],
+        ["latest", userBId, 1],
+      ]);
+    });
+
+    it("상대가 공유를 꺼 위치를 받지 못하면 기록하지 않는다", async () => {
+      await (await callerFor(userBId)).location.partnerStatus();
+      expect(await provisions()).toEqual([]);
+    });
+
+    it("공유를 끄면(동의 철회) 확인자료도 지운다", async () => {
+      const callerA = await callerFor(userAId);
+      await callerA.location.setSharing({ enabled: true, consent: true });
+      await callerA.location.send({ lat: 37.5, lng: 127 });
+      expect(await provisions()).toHaveLength(1);
+
+      await callerA.location.setSharing({ enabled: false });
+      expect(await provisions()).toEqual([]);
+    });
+  });
 });

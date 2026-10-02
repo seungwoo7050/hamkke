@@ -2,6 +2,7 @@ import { distanceKm } from "@/lib/geo";
 import { prisma } from "@/lib/prisma";
 import { validTimeZoneOrNull } from "@/lib/timezone";
 import { fetchWeather } from "@/lib/weather";
+import { recordLocationProvision } from "@/server/location-provision";
 import { router, spaceProcedure } from "../init";
 import { serializeFlight, type FlightView } from "./flight";
 
@@ -63,12 +64,18 @@ export const homeRouter = router({
       weatherAt(partnerPing),
     ]);
 
+    // 상대 위치로 계산한 거리·현지 날씨가 나에게 가면 상대 위치의 제공이다(위치정보법 §16②).
+    const distance = myPing && partnerPing ? distanceKm(myPing, partnerPing) : null;
+    if (partner && (distance !== null || partnerWeather)) {
+      await recordLocationProvision(partner.id, myId, "derived");
+    }
+
     return {
       me: { ...me, timezone: validTimeZoneOrNull(me.timezone), weather: myWeather },
       partner: partner
         ? { ...partner, timezone: validTimeZoneOrNull(partner.timezone), weather: partnerWeather }
         : null,
-      distanceKm: myPing && partnerPing ? distanceKm(myPing, partnerPing) : null,
+      distanceKm: distance,
       lastTouchReceivedAt: lastTouch?.createdAt ?? null,
       unreadCount,
       flights: flights

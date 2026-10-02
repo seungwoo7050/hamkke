@@ -9,6 +9,7 @@ import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 import { translator } from "@/i18n/server";
 import { consume } from "@/server/rate-limit";
+import { deleteLocationProvisions, recordLocationProvision } from "@/server/location-provision";
 import { LOCATION_PING_RETENTION_MS, locationSendCheck } from "@/server/request-limits";
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
@@ -19,6 +20,7 @@ type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["sessi
 async function checkGeofenceArrivals(
   ctx: SpaceCtx,
   position: { lat: number; lng: number; accuracy?: number },
+  partnerId: string | null,
 ) {
   const fences = await prisma.geofence.findMany({ where: { userId: ctx.session.user.id } });
 
@@ -34,6 +36,7 @@ async function checkGeofenceArrivals(
     });
     if (count === 0 || !isInside) continue;
 
+    if (partnerId) await recordLocationProvision(ctx.session.user.id, partnerId, "arrival");
     await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
       title: "Hamkke",
       body: t("push.geofence", { label: fence.label }),
@@ -69,6 +72,7 @@ export const locationRouter = router({
       // 마지막 한 주의 기록이 영영 남는다.
       if (!input.enabled) {
         await prisma.locationPing.deleteMany({ where: { userId: ctx.session.user.id } });
+        await deleteLocationProvisions(ctx.session.user.id);
       }
 
       await broadcastToSpace(ctx.space.id, "location-sharing", {
@@ -136,8 +140,14 @@ export const locationRouter = router({
       });
 
       await broadcastToSpace(ctx.space.id, "location", ping);
+      // 브로드캐스트는 같은 스페이스의 상대에게 간다 - 제공 사실을 남긴다(위치정보법 §16②).
+      const partner = await prisma.user.findFirst({
+        where: { spaceId: ctx.space.id, id: { not: userId } },
+        select: { id: true },
+      });
+      if (partner) await recordLocationProvision(userId, partner.id, "live");
 
-      await checkGeofenceArrivals(ctx, input);
+      await checkGeofenceArrivals(ctx, input, partner?.id ?? null);
 
       return ping;
     }),
@@ -157,6 +167,8 @@ export const locationRouter = router({
           orderBy: { capturedAt: "desc" },
         })
       : null;
+
+    if (location) await recordLocationProvision(partner.id, ctx.session.user.id, "latest");
 
     return { sharing: partner.locationSharingEnabled, location };
   }),

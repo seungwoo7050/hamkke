@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { fetchWeather } from "@/lib/weather";
+import { recordLocationProvision } from "@/server/location-provision";
 import { router, spaceProcedure } from "../init";
 
 async function latestWeather(userId: string, sharing: boolean) {
@@ -31,6 +32,11 @@ export const weatherRouter = router({
       latestWeather(ctx.session.user.id, me.locationSharingEnabled),
       partner ? latestWeather(partner.id, partner.locationSharingEnabled) : null,
     ]);
+
+    // 상대 위치로 찾은 현지 날씨도 상대 위치의 제공이다(위치정보법 §16②).
+    if (partner && partnerWeather) {
+      await recordLocationProvision(partner.id, ctx.session.user.id, "derived");
+    }
 
     return { me: myWeather, partner: partnerWeather };
   }),
