@@ -332,7 +332,15 @@
     "shareNote": "Only {name} can see it, and you can turn it off anytime in settings",
     "geoFailed": "Couldn't get your location. Check location permissions.",
     "unsupported": "This browser doesn't support location sharing",
-    "toggleFailed": "Couldn't change location sharing"
+    "toggleFailed": "Couldn't change location sharing",
+    "consentTitle": "Before you share your location",
+    "consentShare": "{name} will see your latest location and the distance between you. When you arrive at a place you saved, {name} gets an alert.",
+    "consentCollect": "Your location is only sent while the app is open. We delete it after 7 days, and right away when you turn sharing off.",
+    "consentNotice": "Every 30 days, we'll tell you how often {name} was shown your location.",
+    "consentAgree": "I agree to the location-based service terms",
+    "consentTerms": "Read the terms",
+    "consentConfirm": "Agree and turn on",
+    "consentCancel": "Cancel"
   },
   "geofence": {
     "title": "Arrival alerts",
@@ -443,6 +451,7 @@
     "storageLimitFreeSoon": "You've used all {gb} GB of storage. Premium, with more space, is coming soon.",
     "storageLimitFreePhotosSoon": "You've used all {gb} GB of storage. Deleting photos and videos in Memories frees up space.",
     "premiumNotOpen": "Premium isn't available yet. It's coming soon.",
+    "locationConsentRequired": "To share your location, agree to the location-based service terms.",
     "capsuleOneWhen": "Pick just one time for it to open",
     "capsuleFuture": "The delivery time has to be in the future",
     "flightNotFound": "Couldn't find that flight",

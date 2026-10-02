@@ -332,7 +332,15 @@
     "shareNote": "{name}에게만 보이고, 설정에서 언제든 끌 수 있어요",
     "geoFailed": "위치를 가져오지 못했어요. 위치 권한을 확인해주세요",
     "unsupported": "이 브라우저는 위치공유를 지원하지 않아요",
-    "toggleFailed": "위치공유 설정에 실패했어요"
+    "toggleFailed": "위치공유 설정에 실패했어요",
+    "consentTitle": "위치를 나누기 전에",
+    "consentShare": "{name}에게 내 최근 위치와 둘 사이 거리가 보여요. 등록한 장소에 도착하면 {name}에게 알림이 가요.",
+    "consentCollect": "앱을 열어 둔 동안에만 위치를 보내요. 받은 위치는 7일 뒤 지우고, 공유를 끄면 바로 지워요.",
+    "consentNotice": "{name}에게 위치를 보여 준 내역은 30일마다 모아서 알려 드려요.",
+    "consentAgree": "위치기반서비스 이용약관에 동의해요",
+    "consentTerms": "약관 보기",
+    "consentConfirm": "동의하고 켜기",
+    "consentCancel": "취소"
   },
   "geofence": {
     "title": "도착 알림 장소",
@@ -443,6 +451,7 @@
     "storageLimitFreeSoon": "저장 공간({gb}GB)을 다 썼어요. 더 넓은 프리미엄은 곧 열려요.",
     "storageLimitFreePhotosSoon": "저장 공간({gb}GB)을 다 썼어요. 기억 탭의 사진·영상을 지우면 공간이 생겨요.",
     "premiumNotOpen": "프리미엄은 아직 준비 중이에요. 곧 열려요.",
+    "locationConsentRequired": "위치를 나누려면 위치기반서비스 이용약관에 동의해야 해요.",
     "capsuleOneWhen": "여는 때를 하나만 골라주세요",
     "capsuleFuture": "배달 시각은 미래여야 해요",
     "flightNotFound": "항공편을 찾지 못했어요",

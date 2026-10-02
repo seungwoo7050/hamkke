@@ -58,7 +58,10 @@ model User {
 
   // 옵트인 위치공유(docs/ARCHITECTURE.md §5) - 기본 꺼짐, 사용자가 명시적으로
   // 켜야 하고 언제든 끌 수 있어야 한다.
-  locationSharingEnabled Boolean @default(false)
+  locationSharingEnabled Boolean   @default(false)
+  // 위치기반서비스 이용약관 동의 시각(위치정보법 §19①②, 30일 모아 통보 동의 포함).
+  // 공유를 켤 때 기록하고, 끄면(동의 철회) 지운다 - 켜져 있으면 늘 값이 있다.
+  locationConsentAt      DateTime?
   /// 화면·알림 언어(PRD §3.8) - "ko" | "en". 비어 있으면 기기 언어 → 한국어.
   /// 사람마다 따로라 두 사람의 언어가 다를 수 있다.
   locale                 String?

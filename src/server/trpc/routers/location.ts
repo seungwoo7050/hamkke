@@ -44,12 +44,25 @@ async function checkGeofenceArrivals(
 export const locationRouter = router({
   // 위치공유는 반드시 사용자가 명시적으로 켜야 한다(ARCHITECTURE.md §5).
   // 꺼짐 상태도 상대에게 알려야 지도에서 "위치공유 꺼짐"을 표시할 수 있다.
+  //
+  // 켜려면 위치기반서비스 이용약관 동의가 있어야 한다(위치정보법 §19①②: 제공받는 자·
+  // 목적 고지와 동의, §19④: 30일 모아 통보 동의). 끄는 것은 동의 철회로 보고 동의
+  // 기록과 위치 기록을 지운다 - 다시 켤 때는 동의를 새로 받는다(src/legal/location.*).
   setSharing: spaceProcedure
-    .input(z.object({ enabled: z.boolean() }))
+    .input(z.object({ enabled: z.boolean(), consent: z.boolean().optional() }))
     .mutation(async ({ ctx, input }) => {
+      if (input.enabled && input.consent !== true) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: translator(ctx.locale)("errors.locationConsentRequired"),
+        });
+      }
       await prisma.user.update({
         where: { id: ctx.session.user.id },
-        data: { locationSharingEnabled: input.enabled },
+        data: {
+          locationSharingEnabled: input.enabled,
+          locationConsentAt: input.enabled ? new Date() : null,
+        },
       });
       // 끄면 지금까지의 위치 기록을 지운다. 기록은 공유가 켜져 있을 때만 읽히고(장면·
       // 날씨·상대 화면), 꺼진 동안엔 저장이 없어 아래 7일 정리도 돌지 않으므로, 남겨 두면

@@ -70,7 +70,7 @@ describe("location 라우터 (통합)", () => {
   it("setSharing으로 켠 뒤에만 위치를 보낼 수 있고 DB에 기록된다", async () => {
     const caller = await callerFor(userAId);
 
-    const { enabled } = await caller.location.setSharing({ enabled: true });
+    const { enabled } = await caller.location.setSharing({ enabled: true, consent: true });
     expect(enabled).toBe(true);
     expect(await caller.location.mySharing()).toBe(true);
 
@@ -89,7 +89,7 @@ describe("location 라우터 (통합)", () => {
     const offlineStatus = await callerB.location.partnerStatus();
     expect(offlineStatus).toEqual({ sharing: false, location: null });
 
-    await callerA.location.setSharing({ enabled: true });
+    await callerA.location.setSharing({ enabled: true, consent: true });
     await callerA.location.send({ lat: 35.1796, lng: 129.0756 });
 
     const onlineStatus = await callerB.location.partnerStatus();
@@ -99,7 +99,7 @@ describe("location 라우터 (통합)", () => {
 
   it("지오펜스를 벗어났다가 다시 반경에 들어오면 isInside가 true로 바뀐다", async () => {
     const caller = await callerFor(userAId);
-    await caller.location.setSharing({ enabled: true });
+    await caller.location.setSharing({ enabled: true, consent: true });
 
     // "현재 위치로 등록" - 만든 사람은 이미 그 안에 있다.
     const fence = await caller.geofence.create({
@@ -130,7 +130,9 @@ describe("location 라우터 (통합)", () => {
     });
     try {
       const caller = await callerFor(outsider.id);
-      await expect(caller.location.setSharing({ enabled: true })).rejects.toMatchObject({
+      await expect(
+        caller.location.setSharing({ enabled: true, consent: true }),
+      ).rejects.toMatchObject({
         code: "FORBIDDEN",
       });
     } finally {
@@ -140,7 +142,7 @@ describe("location 라우터 (통합)", () => {
 
   it("10초 안에 다시 보내면 저장·지오펜스 확인 없이 마지막 위치를 돌려준다", async () => {
     const caller = await callerFor(userAId);
-    await caller.location.setSharing({ enabled: true });
+    await caller.location.setSharing({ enabled: true, consent: true });
     const fence = await caller.geofence.create({
       label: "집",
       lat: 37.5665,
@@ -160,7 +162,7 @@ describe("location 라우터 (통합)", () => {
 
   it("7일 지난 위치 기록은 새로 저장할 때 지워진다", async () => {
     const caller = await callerFor(userAId);
-    await caller.location.setSharing({ enabled: true });
+    await caller.location.setSharing({ enabled: true, consent: true });
     const old = await prisma.locationPing.create({
       data: { userId: userAId, lat: 1, lng: 1, capturedAt: new Date(Date.now() - 8 * 86_400_000) },
     });
@@ -178,7 +180,7 @@ describe("location 라우터 (통합)", () => {
   // 기록은 7일이 지나도 남는다.
   it("위치공유를 끄면 내 위치 기록을 지운다", async () => {
     const caller = await callerFor(userAId);
-    await caller.location.setSharing({ enabled: true });
+    await caller.location.setSharing({ enabled: true, consent: true });
     await caller.location.send({ lat: 37.5, lng: 127 });
 
     await caller.location.setSharing({ enabled: false });
@@ -186,12 +188,31 @@ describe("location 라우터 (통합)", () => {
     expect(await prisma.locationPing.count({ where: { userId: userAId } })).toBe(0);
   });
 
+  it("약관 동의 없이는 켤 수 없고, 켜면 동의 시각을 남기며, 끄면 동의도 지운다", async () => {
+    const caller = await callerFor(userAId);
+    await expect(caller.location.setSharing({ enabled: true })).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+    });
+    await expect(
+      caller.location.setSharing({ enabled: true, consent: false }),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    const consentOf = async () =>
+      (await prisma.user.findUniqueOrThrow({ where: { id: userAId } })).locationConsentAt;
+    expect(await consentOf()).toBeNull();
+
+    await caller.location.setSharing({ enabled: true, consent: true });
+    expect(await consentOf()).toBeInstanceOf(Date);
+
+    await caller.location.setSharing({ enabled: false });
+    expect(await consentOf()).toBeNull();
+  });
+
   it("저장할 때 상대의 7일 지난 기록도 지운다", async () => {
     const old = await prisma.locationPing.create({
       data: { userId: userBId, lat: 1, lng: 1, capturedAt: new Date(Date.now() - 8 * 86_400_000) },
     });
     const caller = await callerFor(userAId);
-    await caller.location.setSharing({ enabled: true });
+    await caller.location.setSharing({ enabled: true, consent: true });
 
     await caller.location.send({ lat: 37.5, lng: 127 });
 
