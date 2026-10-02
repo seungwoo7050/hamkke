@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { LogOut, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -13,6 +14,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Switch } from "@/components/ui/switch";
+import { LEGAL_SLUGS } from "@/legal/slugs";
 import { useTRPC } from "@/trpc/client";
 import { signOutAction } from "./actions";
 import { BillingSection } from "./billing-section";
@@ -29,6 +31,7 @@ import { displayName, usePartnerName, useSpace } from "./space-context";
 export function SettingsSheet() {
   const { summary } = useSpace();
   const { sharing, toggleSharing, togglePending } = useLocationSharing();
+  const tl = useTranslations("legal");
   const trpc = useTRPC();
   // 위치 제공 내역(위치정보법 §19) - 30일마다 알림으로도 보내지만 언제든 여기서 본다.
   const provided = useQuery({ ...trpc.location.providedRecently.queryOptions(), enabled: sharing });
@@ -83,6 +86,21 @@ export function SettingsSheet() {
             <div className="pb-2">
               <DeleteAccountSection partnerName={summary.partner ? partnerName : undefined} />
             </div>
+            {/* 정책 문서는 시트 맨 아래 조용한 링크로(설정성 정보, DESIGN.md §4). */}
+            <nav
+              aria-label={tl("others")}
+              className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 pt-3 pb-2 text-xs"
+            >
+              {LEGAL_SLUGS.map((slug) => (
+                <Link
+                  key={slug}
+                  href={`/legal/${slug}`}
+                  className="underline-offset-4 hover:underline"
+                >
+                  {tl(slug)}
+                </Link>
+              ))}
+            </nav>
           </div>
         </div>
       </DrawerContent>

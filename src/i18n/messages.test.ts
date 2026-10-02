@@ -36,7 +36,11 @@ describe.each(LOCALES)("문구 파일 %s", (locale) => {
     });
     for (const [key, value] of entries) {
       // 변수 자리엔 아무 값이나 넣어 문법만 본다.
-      const args = Object.fromEntries([...value.matchAll(/\{(\w+)/g)].map(([, name]) => [name, 1]));
+      // 서식 태그(<terms>…</terms>)는 그 조각을 그대로 돌려주는 함수로 채운다.
+      const args = Object.fromEntries([
+        ...[...value.matchAll(/\{(\w+)/g)].map(([, name]) => [name, 1]),
+        ...[...value.matchAll(/<(\w+)>/g)].map(([, tag]) => [tag, (c: unknown) => c]),
+      ]);
       (t as unknown as (k: string, a: object) => string)(key, args);
     }
     expect(errors.filter((e) => !e.includes("MISSING"))).toEqual([]);

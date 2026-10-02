@@ -22,6 +22,7 @@
     "or": "or",
     "emailPlaceholder": "Email address",
     "emailSubmit": "Email me a sign-in link",
+    "agree": "By signing in, you agree to the <terms>Terms of service</terms> and <privacy>Privacy policy</privacy>.",
     "rateLimited": "You've asked for a lot of sign-in links, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "deleted": "Your account and your shared space have been deleted. Thanks for being here."
   },
