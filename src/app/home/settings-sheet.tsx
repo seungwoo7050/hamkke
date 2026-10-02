@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { LogOut, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Switch } from "@/components/ui/switch";
+import { useTRPC } from "@/trpc/client";
 import { signOutAction } from "./actions";
 import { BillingSection } from "./billing-section";
 import { DeleteAccountSection } from "./delete-account-section";
@@ -27,6 +29,9 @@ import { displayName, usePartnerName, useSpace } from "./space-context";
 export function SettingsSheet() {
   const { summary } = useSpace();
   const { sharing, toggleSharing, togglePending } = useLocationSharing();
+  const trpc = useTRPC();
+  // 위치 제공 내역(위치정보법 §19) - 30일마다 알림으로도 보내지만 언제든 여기서 본다.
+  const provided = useQuery({ ...trpc.location.providedRecently.queryOptions(), enabled: sharing });
   const t = useTranslations("settings");
   const tc = useTranslations("common");
   const myName = displayName(summary.me, tc("me"));
@@ -55,6 +60,11 @@ export function SettingsSheet() {
                 <p className="text-muted-foreground text-sm">
                   {t("locationSharingSub", { name: partnerName })}
                 </p>
+                {sharing && provided.data ? (
+                  <p className="text-muted-foreground text-xs">
+                    {t("locationProvided", { name: partnerName, count: provided.data })}
+                  </p>
+                ) : null}
               </div>
               <Switch
                 checked={sharing}

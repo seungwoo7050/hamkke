@@ -9,7 +9,12 @@ import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 import { translator } from "@/i18n/server";
 import { consume } from "@/server/rate-limit";
-import { deleteLocationProvisions, recordLocationProvision } from "@/server/location-provision";
+import {
+  deleteLocationProvisions,
+  LOCATION_NOTICE_PERIOD_MS,
+  provisionSummary,
+  recordLocationProvision,
+} from "@/server/location-provision";
 import { LOCATION_PING_RETENTION_MS, locationSendCheck } from "@/server/request-limits";
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
@@ -82,6 +87,14 @@ export const locationRouter = router({
 
       return { enabled: input.enabled };
     }),
+
+  // 최근 30일 동안 내 위치가 상대에게 간 횟수 - 설정 시트에서 늘 볼 수 있게(30일마다
+  // 모아 보내는 알림과 같은 내역, src/server/location-provision.ts).
+  providedRecently: spaceProcedure.query(async ({ ctx }) => {
+    const since = new Date(Date.now() - LOCATION_NOTICE_PERIOD_MS);
+    const rows = await provisionSummary(ctx.session.user.id, since);
+    return rows.reduce((sum, r) => sum + r.count, 0);
+  }),
 
   mySharing: spaceProcedure.query(async ({ ctx }) => {
     const me = await prisma.user.findUniqueOrThrow({
