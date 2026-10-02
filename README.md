@@ -80,6 +80,31 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 
 앱은 `capacitor.config.ts`의 `server.url`을 웹뷰로 연다(에뮬레이터 개발 기본값 `http://10.0.2.2:3000`). 홈 화면 위젯은 같은 주소의 `/api/widget`을 웹뷰 세션 쿠키로 부르므로 별도 토큰이 없다. iOS는 비용 문제로 보류 중이다.
 
+### Android 릴리스 빌드(Play 업로드)
+
+업로드 키는 한 번 만들어 저장소 밖에 보관한다. 잃어버리면 같은 앱으로 업데이트를 올릴 수 없으니(Play 앱 서명을 쓰면 업로드 키 재설정을 요청할 수는 있다) 키 파일과 비밀번호를 함께 백업한다.
+
+```bash
+keytool -genkeypair -v -keystore ~/keys/hamkke-upload.jks -alias upload \
+  -keyalg RSA -keysize 2048 -validity 10000      # 이름·비밀번호를 묻는다
+```
+
+`android/keystore.properties`(gitignore)에 경로와 비밀번호를 적으면 release 빌드가 그 키로 서명한다. 파일이 없으면 서명 없이 빌드된다.
+
+```properties
+storeFile=/Users/<me>/keys/hamkke-upload.jks
+storePassword=<키스토어 비밀번호>
+keyAlias=upload
+keyPassword=<키 비밀번호>
+```
+
+```bash
+npx cap sync android
+cd android && ./gradlew bundleRelease         # app/build/outputs/bundle/release/app-release.aab
+```
+
+올리기 전에 `capacitor.config.ts`의 `server.url`이 운영 도메인(https)이고 `cleartext`가 꺼져 있는지 확인한다(배포 체크리스트 5번). 새로 올릴 때마다 `android/app/build.gradle`의 `versionCode`를 1씩 올린다.
+
 ## 배포 체크리스트
 
 1. Vercel에 배포하고 `.env.example`의 값을 환경변수로 넣는다. `APP_URL`은 운영 도메인(`https://<도메인>`)으로 반드시 넣는다 - 비우면 결제 후 돌아올 주소를 요청의 `Host` 헤더로 만든다.
