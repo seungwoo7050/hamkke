@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useFormat } from "@/i18n/use-format";
 import { isNearLimit } from "@/lib/plan-usage";
 import { useTRPC } from "@/trpc/client";
-import { useStartCheckout } from "./use-start-checkout";
+import { useCanCheckoutHere, useStartCheckout } from "./use-start-checkout";
 
 // 구독 시작은 Checkout, 해지/결제수단 변경은 Customer Portal로 위임한다
 // (ARCHITECTURE.md §6 - 자체 UI로 결제 로직을 구현하지 않는다). 설정성
@@ -20,6 +20,7 @@ export function BillingSection() {
   const { data: subscription } = useQuery(trpc.billing.status.queryOptions());
   const { data: usage } = useQuery(trpc.billing.usage.queryOptions());
   const checkout = useStartCheckout();
+  const canCheckout = useCanCheckoutHere();
   const portalMutation = useMutation(
     trpc.billing.createPortalSession.mutationOptions({
       onSuccess: ({ url }) => {
@@ -57,7 +58,7 @@ export function BillingSection() {
           >
             {t("manage")}
           </Button>
-        ) : open ? (
+        ) : open && canCheckout ? (
           <Button
             type="button"
             size="sm"
@@ -66,7 +67,7 @@ export function BillingSection() {
           >
             {t("upgrade")}
           </Button>
-        ) : usage ? (
+        ) : !open && usage ? (
           <span className="text-muted-foreground text-sm">{t("soon")}</span>
         ) : null}
       </div>

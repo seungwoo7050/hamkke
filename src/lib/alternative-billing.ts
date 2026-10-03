@@ -14,6 +14,12 @@ export function isPlayApp() {
   return Capacitor.getPlatform() === "android";
 }
 
+/** 이 Play 앱 사용자가 대체 결제로 살 수 있는지(한국 사용자). 웹은 늘 true. */
+export async function canCheckoutHere() {
+  if (!isPlayApp()) return true;
+  return (await AlternativeBilling.isAvailable()).available;
+}
+
 export type AppCheckout =
   | { kind: "token"; externalTransactionToken: string }
   | { kind: "unavailable" }

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { isAtLimit, isNearLimit } from "@/lib/plan-usage";
 import { useTRPC } from "@/trpc/client";
-import { useStartCheckout } from "./use-start-checkout";
+import { useCanCheckoutHere, useStartCheckout } from "./use-start-checkout";
 
 type UsageKey = "moments" | "activeCapsules" | "meetupPins";
 
@@ -27,6 +27,7 @@ export function UpgradeHint({ usageKey }: { usageKey: UsageKey }) {
   // 시트를 열 때마다 새로 센다(방금 올린 사진이 반영되게).
   const { data } = useQuery({ ...trpc.billing.usage.queryOptions(), refetchOnMount: "always" });
   const checkout = useStartCheckout();
+  const canCheckout = useCanCheckoutHere();
 
   const item = data && !data.premium ? data.items.find((i) => i.key === usageKey) : undefined;
   if (!item || !isNearLimit(item)) return null;
@@ -34,10 +35,11 @@ export function UpgradeHint({ usageKey }: { usageKey: UsageKey }) {
   return (
     <p className="text-muted-foreground text-sm">
       {message(t, usageKey, item.used, item.limit, isAtLimit(item))}.{" "}
-      {/* 유료 플랜이 닫혀 있으면 결제로 보내지 않고 곧 열린다고만 말한다. */}
+      {/* 유료 플랜이 닫혀 있으면 곧 열린다고만, 이 앱에서 살 수 없는 사용자에게는
+          한도만 말하고 권유하지 않는다(use-start-checkout.ts). */}
       {!data?.open ? (
         t("soon")
-      ) : (
+      ) : !canCheckout ? null : (
         <button
           type="button"
           className="text-primary font-semibold underline-offset-4 hover:underline"
