@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
+import { reportPaidInvoice, reportRefund } from "@/server/play-reporting";
 
 /**
  * 한 스페이스에 활성 구독이 둘 생겼을 때(Checkout 쪽 방지를 뚫고 들어온 경우의
@@ -132,6 +133,11 @@ export async function POST(request: Request) {
     const current = await stripe.subscriptions.retrieve(event.data.object.id);
     await syncSubscription(current);
   }
+
+  // Play 앱에서 시작한 구독의 결제·환불은 Play 개발자 API에 보고한다(한국 대체 결제).
+  // 웹에서 시작한 구독은 그 안에서 걸러진다. 실패는 500 → Stripe가 다시 보낸다.
+  if (event.type === "invoice.paid") await reportPaidInvoice(event.data.object);
+  if (event.type === "charge.refunded") await reportRefund(event.data.object);
 
   return NextResponse.json({ received: true });
 }

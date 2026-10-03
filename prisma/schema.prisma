@@ -456,3 +456,20 @@ model RateLimitHit {
   @@index([bucket, subject, createdAt])
   @@index([bucket, createdAt])
 }
+
+// Play 앱에서 시작한 구독의 청구서를 Play 개발자 API에 보고한 기록(한국 대체 결제,
+// src/server/play-reporting.ts). id는 Stripe 청구서 ID이자 Play에 넘긴
+// externalTransactionId - 같은 청구서를 두 번 보고하지 않고, 갱신 청구서는 첫 거래 ID
+// (initialTransactionId)로 묶어 보고한다. 개인정보 없이 결제 기록만 남는다(세무 보관).
+model PlayExternalTransaction {
+  id                   String   @id
+  stripeSubscriptionId String
+  initialTransactionId String
+  currency             String
+  totalAmount          Int
+  preTaxAmount         Int
+  reportedAt           DateTime @default(now())
+  refundedAmount       Int      @default(0)
+
+  @@index([stripeSubscriptionId])
+}
