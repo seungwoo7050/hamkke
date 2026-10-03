@@ -54,7 +54,7 @@
 | 만남 지도 | 20곳 | 제한 없음 |
 | 저장 공간 | 1GB  | 20GB      |
 
-**지금은 유료 플랜을 닫아 두었다.** 결제는 다 만들어 두었지만 환경변수 `PREMIUM_OPEN=1`일 때만 결제 버튼이 보인다. 닫혀 있는 동안 무료 한도는 그대로이고 "프리미엄은 곧 열려요"라고 안내한다. 열 때 할 일은 아래 배포 체크리스트 10번.
+**지금은 유료 플랜을 닫아 두었다.** 결제는 다 만들어 두었지만 환경변수 `PREMIUM_OPEN=1`일 때만 결제 버튼이 보인다. 닫혀 있는 동안 무료 한도는 그대로이고 "프리미엄은 곧 열려요"라고 안내한다. 열 때 할 일은 [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md) 8절.
 
 결제는 웹에서 Stripe로 받는다. Android 앱에서는 Google Play **한국 대체 결제**(대체 결제 전용)를 쓴다 - 앱이 Play의 안내를 보여 주고 거래 토큰을 받은 뒤 같은 Stripe 결제로 가고, 서버가 결제·갱신·환불을 Play에 보고한다. 대체 결제를 쓸 수 없는 앱 사용자에게는 결제 진입을 아예 두지 않는다(앱 밖 결제로 안내하면 안 되므로).
 
@@ -130,74 +130,19 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 
 ### Android 릴리스 빌드(Play 업로드)
 
-업로드 키는 한 번 만들어 저장소 밖에 보관한다. 잃어버리면 같은 앱으로 업데이트를 올릴 수 없으니(Play 앱 서명을 쓰면 업로드 키 재설정을 요청할 수는 있다) 키 파일과 비밀번호를 함께 백업한다.
-
-```bash
-keytool -genkeypair -v -keystore ~/keys/hamkke-upload.jks -alias upload \
-  -keyalg RSA -keysize 2048 -validity 10000      # 이름·비밀번호를 묻는다
-```
-
-`android/keystore.properties`(gitignore)에 경로와 비밀번호를 적으면 release 빌드가 그 키로 서명한다. 파일이 없으면 서명 없이 빌드된다.
-
-```properties
-storeFile=/Users/<me>/keys/hamkke-upload.jks
-storePassword=<키스토어 비밀번호>
-keyAlias=upload
-keyPassword=<키 비밀번호>
-```
+`android/keystore.properties`(gitignore)에 업로드 키의 경로와 비밀번호(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`)가 있으면 release 빌드가 그 키로 서명하고, 없으면 서명 없이 빌드된다. 키를 만들고 보관하는 법은 운영 문서에 있다.
 
 ```bash
 npx cap sync android
 cd android && ./gradlew bundleRelease         # app/build/outputs/bundle/release/app-release.aab
 ```
 
-올리기 전에 `capacitor.config.ts`의 `server.url`이 운영 도메인(https)이고 `cleartext`가 꺼져 있는지 확인한다(배포 체크리스트 5번). 새로 올릴 때마다 `android/app/build.gradle`의 `versionCode`를 1씩 올린다.
+## 배포
 
-## 배포 체크리스트
+배포와 운영(Vercel·Supabase·R2·Stripe 대시보드 설정, 스토어 등록, 유료 플랜 열기)은 사람이 따라 하는 절차라 `docs` 브랜치의 [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md)에 있다. 코드와 관련해 기억할 것은 두 가지다.
 
-사람이 할 일을 출시·운영·유료 플랜 열기 순서로 모은 체크리스트는 [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md)에 있다. 여기는 배포 자체의 절차다.
-
-1. Vercel에 배포하고 `.env.example`의 값을 환경변수로 넣는다. `APP_URL`은 운영 도메인(`https://<도메인>`)으로 반드시 넣는다 - 비우면 결제 후 돌아올 주소를 요청의 `Host` 헤더로 만든다.
-2. 운영 DB에 마이그레이션: `DATABASE_URL=<운영 direct 연결> npx prisma migrate deploy`(Supabase는 포트 5432 direct 연결만 쓴다 - `.env.example` 주석 참고).
-   - **코드보다 먼저** 적용한다. 출시 준비에서 추가한 마이그레이션은 `moment_media_kind`, `message_type_video`, `location_consent`, `location_provision`, `location_notice`, `play_external_transaction` 6개다. `location_consent`는 동의 없이 켜져 있던 위치 공유를 끄고 저장된 위치 기록(`LocationPing`)을 지운다 - 위치정보법상 동의를 새로 받기 위해서다.
-   - 유료 플랜은 `PREMIUM_OPEN`을 비워 둔 채(닫힘) 출시한다. 열 때는 아래 10번을 먼저 끝내고 `PREMIUM_OPEN=1`로 다시 배포한다.
-   - Supabase 대시보드 → Project Settings → Data API는 **꺼 둔다**. 앱은 Data API를 쓰지 않고(데이터는 서버의 Prisma만), 켜 두면 공개 키로 `public` 스키마의 테이블에 닿을 수 있다. 마이그레이션 `lock_down_public_tables`가 모든 앱 테이블에 RLS를 켜고 anon·authenticated 권한을 회수해 이중으로 막는다.
-3. Stripe 대시보드 → Webhooks에 `https://<도메인>/api/webhooks/stripe`(`customer.subscription.*`, `invoice.paid`, `charge.refunded`)를 등록하고 `STRIPE_WEBHOOK_SECRET`을 교체한다. 뒤의 두 이벤트는 Play 앱 결제를 Google Play에 보고하는 데 쓴다(한국 대체 결제, `.env.example`의 `GOOGLE_PLAY_*`).
-4. Google OAuth 리디렉션 URI와 Resend 발신 도메인을 운영 도메인으로 바꾼다.
-5. `capacitor.config.ts`의 `server.url`을 운영 도메인(https)으로 바꾸고 `cleartext`를 끈 뒤 Android를 다시 빌드한다.
-6. Cloudflare 대시보드 → R2 → 버킷 → Settings에서 두 가지를 넣는다(앱의 R2 키는 버킷 설정 권한이 없어 코드로 넣지 않는다).
-   - Object lifecycle rules에 **접두사 `pending/`, 업로드 1일 뒤 삭제** 규칙을 추가한다. 업로드 주소만 받고 등록하지 않은 파일이 여기서 지워진다.
-   - **CORS Policy**를 추가한다. 사진·음성은 브라우저가 R2로 직접 PUT하므로, 이 규칙이 없으면 preflight가 403으로 막혀 첨부가 전부 "전송에 실패했어요"로 끝난다(Node에서 PUT하는 테스트는 CORS를 거치지 않아 통과한다). Android 앱도 `server.url`의 운영 도메인에서 열리므로 같은 오리진이다.
-     ```json
-     [
-       {
-         "AllowedOrigins": ["http://localhost:3000", "https://<도메인>"],
-         "AllowedMethods": ["PUT"],
-         "AllowedHeaders": ["content-type"],
-         "MaxAgeSeconds": 3600
-       }
-     ]
-     ```
-     넣은 뒤 `npx tsx --conditions=react-server scripts/check-r2-cors.mts http://localhost:3000 https://<도메인>`이 "전부 통과"인지 확인한다. 이미지·오디오를 보여 주는 GET은 `<img>`·`<audio>`가 CORS 없이 읽으므로 넣지 않는다.
-7. Google Play Console → 앱 콘텐츠 → 데이터 보안의 계정 삭제 URL에 `https://<도메인>/account/delete`를, 개인정보처리방침 URL에 `https://<도메인>/legal/privacy`를 등록한다(앱 밖에서도 삭제를 요청할 수 있어야 한다는 Play 요건). 정책 문서의 운영자 정보는 `src/lib/operator.ts`에 넣는다 - 비어 있으면 문서에 "출시 전 입력"으로 보인다. 위치기반서비스사업 신고(위치정보법, 소상공인은 사업 시작 뒤 1개월 안)도 이때 한다.
-8. **Realtime private 채널 전환**(ARCHITECTURE §4) - 이 순서대로(중간에 멈춰도 실시간 기능은 계속 동작한다):
-   1. 운영 DB에 마이그레이션(2번)으로 `realtime_topic_policies` 정책(받기는 두 채널, 보내기는 `:presence` 채널만)이 들어갔는지 확인한다.
-   2. `npx tsx scripts/generate-supabase-jwt-key.mts`로 키를 만들고, Supabase → Project Settings → JWT Keys에서 출력된 JWK를 **standby 키로 가져온 뒤 Rotate로 current**로 바꾼다(Supabase Auth는 쓰지 않아 영향 없음).
-   3. 배포 환경변수 `SUPABASE_JWT_PRIVATE_KEY`에 같은 JWK 한 줄을 넣고 다시 배포한다 - 이때부터 앱이 private 채널을 쓴다.
-   4. Supabase → Realtime → Settings에서 **Allow public access를 끈다**.
-   5. `npx tsx --conditions=react-server scripts/check-realtime-private.mts`가 "전부 통과"인지 확인한다.
-   6. 같은 화면에서 Realtime 초당 이벤트 한도를 확인하고, 프로젝트 spend cap을 켜 둔다.
-9. **청구 알림·지출 상한** - 앱의 요청 횟수 제한·저장 용량 상한(ARCHITECTURE §7)이 1차 방어이고, 이건 코드 밖에서 새는 것까지 묶는 2차 방어다(2026-09-30 각 서비스 문서로 확인).
-   - **Vercel**: 구독 결제가 있는 앱은 상업 이용이라 **Hobby 플랜으로는 운영할 수 없다**(Pro 이상). Settings → Billing → Spend Management를 켜고 On-Demand Budget을 정한 뒤 **Pause Production Deployments**를 켠다 - 금액만 정하면 알림만 오고 사용은 멈추지 않는다. 확인이 몇 분 간격이라 넘은 뒤에도 몇 분은 과금되니 예산을 여유 있게 낮게 잡는다. 멈추면 프로젝트마다 직접 다시 켜야 한다.
-   - **Supabase**: Pro 플랜의 **Spend Cap을 켠 채로** 둔다 - 켜 두면 할당량을 넘은 항목은 다음 결제 주기까지 막히고 초과 요금이 없다. Compute·디스크·커스텀 도메인 같은 애드온은 Spend Cap에 포함되지 않으니 켜기 전에 확인한다. Realtime 초당 이벤트 한도는 8번에서 확인.
-   - **Cloudflare(R2)**: Billing → Budget alerts로 계정 전체 금액 알림을 걸고, Notifications에 R2 사용량(저장량·요청 수) 알림을 추가한다. 무료 범위는 저장 10GB·Class A 요청 월 100만 회 - 그 10% 정도에 첫 알림을 두면 이상 징후를 일찍 본다.
-   - **Resend**: 무료 플랜은 하루 100통·월 3,000통이고 넘으면 발송이 멈춘다(= 로그인 메일이 안 나감). 유료 플랜은 초과분이 과금되며 월 할당량의 5배에서 멈춘다. 앱은 이메일당 15분 3회·IP당 1시간 10회로 막지만(ARCHITECTURE §7), 대시보드의 사용량 알림도 켜 둔다.
-   - **Stripe**: Radar 요금제를 확인한다 - 카드 테스팅(훔친 카드를 빠르게 시험하는 결제) 방지와 사기 알림은 가장 낮은 Lite에도 있고, Standard 이상은 검사한 결제마다 수수료가 붙으며 직접 규칙을 쓰려면 Plus가 필요하다. 구독은 갱신 결제를 몇 번까지 검사할지 대시보드에서 줄여 수수료를 아낄 수 있다. 분쟁(chargeback)은 건당 수수료가 붙으니 분쟁 알림 이메일을 켠다. 앱은 결제 화면 생성을 사용자당 1시간 10회로 막는다.
-10. **유료 플랜을 열 때**(출시에는 필요 없음 - 닫힌 동안은 무료 한도만 있고 "곧 열려요"로 안내한다)
-    - **날씨(Open-Meteo)**: 무료 API는 비상업 용도만 허용하고, 약관이 "구독이나 광고가 있는 앱"을 상업 용도로 명시한다 - 유료 플랜을 열기 전에 유료 API 플랜에 가입하고, API 키와 전용 주소를 `src/lib/weather.ts`의 호출에 붙인다.
-    - **지도 타일(tile.openstreetmap.org)**: 라이선스가 아니라 차단 위험이다 - 사용 정책상 상업 서비스는 "언제든 예고 없이 접근이 막힐 수 있다". 막히면 지도 3곳(위치·만남 지도·비행 경로)이 비니, 그때(또는 미리) 상용 타일 제공자(MapTiler·Stadia Maps 등)나 R2에 올린 Protomaps로 바꾼다. 바꾸는 코드는 `TileLayer`의 URL과 출처 문구뿐이다.
-    - **Play 대체 결제**: Play Console에서 한국 대체 결제(alternative billing only) 프로그램에 등록하고, 서비스 계정에 앱 권한을 준 뒤 `GOOGLE_PLAY_*`를 넣는다. 라이선스 테스터로 앱 결제 → Play 보고까지 한 번 확인한다.
-    - Stripe에 원화(KRW) 가격을 만들어 `STRIPE_PREMIUM_PRICE_ID`를 바꾸고 `PREMIUM_OPEN=1`로 다시 배포한다.
+- **마이그레이션을 코드보다 먼저** 운영 DB에 적용한다: `DATABASE_URL=<운영 direct 연결> npx prisma migrate deploy`(Supabase는 포트 5432 direct 연결만 쓴다 - `.env.example` 주석).
+- 운영에서는 `APP_URL`을 반드시 넣는다. 유료 플랜은 `PREMIUM_OPEN=1`일 때만 열린다.
 
 ## 폴더
 
@@ -230,5 +175,5 @@ printf '%s\n' .docs/ .devlog/ CLAUDE.md docs devlog >> .git/info/exclude
 - [`docs/ARCHITECTURE.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/ARCHITECTURE.md) - 스택·실시간·결제·보안 설계
 - [`docs/DESIGN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/DESIGN.md) - 디자인 철학 앵커와 토큰(임의 변경 금지)
 - [`docs/WORKFLOW.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/WORKFLOW.md) · [`docs/COMMIT_PLAN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/COMMIT_PLAN.md) - 커밋 규칙과 진행 기록
-- [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md) - 운영자(사람)가 직접 해야 할 일 체크리스트
+- [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md) - 배포·운영 절차와 운영자(사람)가 직접 해야 할 일
 - [`CLAUDE.md`](https://github.com/woopinbell/hamkke/blob/docs/CLAUDE.md) - 현재 상태와 고정 결정
