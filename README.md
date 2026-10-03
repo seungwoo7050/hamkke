@@ -110,7 +110,7 @@ cd android && ./gradlew bundleRelease         # app/build/outputs/bundle/release
 1. Vercel에 배포하고 `.env.example`의 값을 환경변수로 넣는다. `APP_URL`은 운영 도메인(`https://<도메인>`)으로 반드시 넣는다 - 비우면 결제 후 돌아올 주소를 요청의 `Host` 헤더로 만든다.
 2. 운영 DB에 마이그레이션: `DATABASE_URL=<운영 direct 연결> npx prisma migrate deploy`(Supabase는 포트 5432 direct 연결만 쓴다 - `.env.example` 주석 참고).
    - Supabase 대시보드 → Project Settings → Data API는 **꺼 둔다**. 앱은 Data API를 쓰지 않고(데이터는 서버의 Prisma만), 켜 두면 공개 키로 `public` 스키마의 테이블에 닿을 수 있다. 마이그레이션 `lock_down_public_tables`가 모든 앱 테이블에 RLS를 켜고 anon·authenticated 권한을 회수해 이중으로 막는다.
-3. Stripe 대시보드 → Webhooks에 `https://<도메인>/api/webhooks/stripe`(`customer.subscription.*`)를 등록하고 `STRIPE_WEBHOOK_SECRET`을 교체한다.
+3. Stripe 대시보드 → Webhooks에 `https://<도메인>/api/webhooks/stripe`(`customer.subscription.*`, `invoice.paid`, `charge.refunded`)를 등록하고 `STRIPE_WEBHOOK_SECRET`을 교체한다. 뒤의 두 이벤트는 Play 앱 결제를 Google Play에 보고하는 데 쓴다(한국 대체 결제, `.env.example`의 `GOOGLE_PLAY_*`).
 4. Google OAuth 리디렉션 URI와 Resend 발신 도메인을 운영 도메인으로 바꾼다.
 5. `capacitor.config.ts`의 `server.url`을 운영 도메인(https)으로 바꾸고 `cleartext`를 끈 뒤 Android를 다시 빌드한다.
 6. Cloudflare 대시보드 → R2 → 버킷 → Settings에서 두 가지를 넣는다(앱의 R2 키는 버킷 설정 권한이 없어 코드로 넣지 않는다).
