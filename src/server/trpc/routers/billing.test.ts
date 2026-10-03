@@ -100,6 +100,25 @@ describe("billing 라우터 (통합)", () => {
     expect(again.url).toBe(first.url);
   });
 
+  it("Play 앱의 거래 토큰은 세션 metadata에 실리고, 다른 거래의 열린 세션은 만료시킨다", async () => {
+    const caller = await callerFor(userAId);
+    const sessionOf = (url: string) =>
+      stripe.checkout.sessions.retrieve(new URL(url).pathname.split("/").pop()!.split("#")[0]);
+
+    const web = await caller.billing.createCheckoutSession();
+    const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
+    createdCustomerIds.push(space.stripeCustomerId!);
+
+    const app = await caller.billing.createCheckoutSession({ externalTransactionToken: "tok-1" });
+    expect(app.url).not.toBe(web.url);
+    expect((await sessionOf(app.url)).metadata).toMatchObject({ spaceId, playToken: "tok-1" });
+    expect((await sessionOf(web.url)).status).toBe("expired");
+
+    // 같은 거래(같은 토큰)로 다시 열면 그 세션을 그대로 쓴다.
+    const again = await caller.billing.createCheckoutSession({ externalTransactionToken: "tok-1" });
+    expect(again.url).toBe(app.url);
+  });
+
   it("이미 활성 구독이 있으면 새 Checkout Session을 만들 수 없다", async () => {
     await prisma.subscription.create({
       data: {

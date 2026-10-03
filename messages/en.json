@@ -354,6 +354,7 @@
   },
   "billing": {
     "checkoutFailed": "Couldn't open the checkout page",
+    "appUnavailable": "Premium can't be purchased in this app",
     "portalFailed": "Couldn't open subscription settings",
     "premium": "Hamkke Premium",
     "free": "Free plan",

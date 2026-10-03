@@ -354,6 +354,7 @@
   },
   "billing": {
     "checkoutFailed": "결제 페이지로 이동하지 못했어요",
+    "appUnavailable": "이 앱에서는 프리미엄을 구매할 수 없어요",
     "portalFailed": "구독 관리 페이지로 이동하지 못했어요",
     "premium": "Hamkke Premium",
     "free": "무료 플랜",
