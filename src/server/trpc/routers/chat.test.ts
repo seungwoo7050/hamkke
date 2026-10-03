@@ -3,7 +3,7 @@
 // 검증했으므로 여기서는 send가 에러 없이 끝나는지와 DB/조회 로직만 확인한다.
 import { randomUUID } from "node:crypto";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { createCallerFactory } from "../init";
 import { appRouter } from "./_app";
@@ -231,6 +231,52 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     await deleteR2Object(key);
   });
 
+  it("영상 업로드 URL로 실제 R2에 업로드하고, sendVideo/list가 접근 가능한 signed URL을 돌려준다", async () => {
+    const caller = await callerFor(userAId);
+
+    const fakeVideoBytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
+    const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
+      contentType: "video/mp4",
+      size: fakeVideoBytes.length,
+    });
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "video/mp4" },
+      body: fakeVideoBytes,
+    });
+    expect(uploadRes.ok).toBe(true);
+
+    const message = await caller.chat.sendVideo({ key });
+    expect(message.type).toBe("video");
+    expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+    const downloadRes = await fetch(message.content);
+    expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeVideoBytes);
+
+    const { messages } = await caller.chat.list({});
+    expect(messages.find((m) => m.id === message.id)?.type).toBe("video");
+
+    await deleteR2Object(key);
+  });
+
+  it("영상으로 올린 파일을 사진 메시지로 등록할 수 없다(실제 형식으로 종류를 본다)", async () => {
+    const caller = await callerFor(userAId);
+    const bytes = new Uint8Array([1, 2, 3]);
+    const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
+      contentType: "video/mp4",
+      size: bytes.length,
+    });
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "video/mp4" },
+      body: bytes,
+    });
+
+    await expect(caller.chat.sendImage({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
+
+    await deleteR2Object(key);
+  });
+
   it("크기 상한을 넘는 업로드 주소는 발급하지 않는다", async () => {
     const caller = await callerFor(userAId);
     await expect(
@@ -238,6 +284,9 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(
       caller.chat.createVoiceUploadUrl({ contentType: "audio/webm", size: 5 * 1024 * 1024 + 1 }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller.chat.createVideoUploadUrl({ contentType: "video/mp4", size: 100 * 1024 * 1024 + 1 }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -331,7 +380,13 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
       });
     }
 
+    // 아래 안내 문구 테스트는 유료 플랜을 파는 상태가 기준이다(닫힌 상태는 따로 본다).
+    beforeEach(() => {
+      vi.stubEnv("PREMIUM_OPEN", "1");
+    });
+
     afterEach(async () => {
+      vi.unstubAllEnvs();
       await prisma.moment.deleteMany({ where: { spaceId } });
       await prisma.subscription.deleteMany({ where: { spaceId } });
     });
@@ -431,6 +486,18 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
       await fillWithChat(GB - 10);
       await fillStorage(8);
       expect(await refusal()).toMatch(/사진을 지/);
+      await prisma.message.deleteMany({ where: { spaceId } });
+    });
+
+    it("유료 플랜이 닫혀 있으면 프리미엄으로 늘리라고 하지 않고, 지울 수 있는 길만 안내한다", async () => {
+      vi.stubEnv("PREMIUM_OPEN", "");
+      await fillWithChat(GB - 2);
+      const chatOnly = await refusal();
+      expect(chatOnly).not.toContain("프리미엄으로");
+      expect(chatOnly).toContain("곧 열려요");
+
+      await fillStorage(1);
+      expect(await refusal()).toMatch(/사진·영상을 지우면/);
       await prisma.message.deleteMany({ where: { spaceId } });
     });
 

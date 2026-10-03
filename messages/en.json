@@ -22,6 +22,7 @@
     "or": "or",
     "emailPlaceholder": "Email address",
     "emailSubmit": "Email me a sign-in link",
+    "agree": "By signing in, you agree to the <terms>Terms of service</terms> and <privacy>Privacy policy</privacy>.",
     "rateLimited": "You've asked for a lot of sign-in links, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "deleted": "Your account and your shared space have been deleted. Thanks for being here."
   },
@@ -152,9 +153,12 @@
     "notYet": "Hasn't answered yet"
   },
   "chat": {
-    "imageTypes": "You can send JPG, PNG, WebP or GIF images",
+    "imageTypes": "You can send JPG, PNG, WebP or GIF photos, or MP4, MOV or WebM videos",
     "imageFailed": "Couldn't send the photo",
     "imageTooLarge": "Photos can be up to {mb} MB",
+    "videoTooLarge": "Videos can be up to {mb} MB, about a minute",
+    "videoFailed": "Couldn't send the video",
+    "videoLabel": "Shared video",
     "voiceTooLarge": "That voice message is too long. Try sending it in shorter parts",
     "voiceMaxReached": "Recording stopped at {minutes} minutes and was sent",
     "voiceFailed": "Couldn't send the voice message",
@@ -167,7 +171,7 @@
     "photoAlt": "Shared photo",
     "read": "Read",
     "typing": "{name} is typing…",
-    "sendPhoto": "Send a photo",
+    "sendPhoto": "Send a photo or video",
     "stopRecording": "Stop and send",
     "recordVoice": "Record a voice message",
     "placeholder": "Message",
@@ -241,17 +245,19 @@
     "submit": "Schedule it"
   },
   "moments": {
-    "title": "Photos",
-    "addTitle": "Add a photo",
+    "title": "Photos & videos",
+    "addTitle": "Add a photo or video",
     "empty": "Today's sky, what you had for lunch. The small moments are the best ones",
     "altDefault": "Photo of the day",
-    "delete": "Delete photo",
-    "imageTypes": "You can upload JPG, PNG, WebP or GIF images",
-    "uploadFailed": "Couldn't upload the photo",
+    "videoLabel": "Video",
+    "delete": "Delete",
+    "mediaTypes": "You can upload JPG, PNG, WebP or GIF photos, or MP4, MOV or WebM videos",
+    "uploadFailed": "Couldn't upload it",
     "imageTooLarge": "Photos can be up to {mb} MB",
+    "videoTooLarge": "Videos can be up to {mb} MB, about a minute",
     "captionPlaceholder": "Add a caption (optional)",
     "uploading": "Uploading…",
-    "choose": "Choose a photo"
+    "choose": "Choose a photo or video"
   },
   "meetups": {
     "title": "Places we've been",
@@ -264,12 +270,14 @@
     "dateLabel": "The day",
     "saveHere": "Save this spot",
     "hiddenOlder": "{count, plural, one {# older place is} other {# older places are}} still kept. They'll show again with Premium",
+    "hiddenOlderSoon": "{count, plural, one {# older place is} other {# older places are}} still kept. They'll show again with Premium, coming soon",
     "savedHidden": "Saved. The free plan only shows your latest places, so this one isn't in the list"
   },
   "settings": {
     "open": "Open settings",
     "together": "Together with {name}",
     "locationSharing": "Location sharing",
+    "locationProvided": "Shown to {name} {count, plural, one {# time} other {# times}} in the last 30 days",
     "locationSharingSub": "{name} can see your distance and weather",
     "signOut": "Sign out",
     "language": "Language",
@@ -286,6 +294,13 @@
     "deleting": "Deleting…",
     "cancel": "Keep my account",
     "failed": "Couldn't delete your account. Please try again in a bit."
+  },
+  "legal": {
+    "missing": "To be added before launch",
+    "others": "Other documents",
+    "privacy": "Privacy policy",
+    "terms": "Terms of service",
+    "location": "Location-based service terms"
   },
   "accountPage": {
     "title": "Delete your Hamkke account",
@@ -319,7 +334,15 @@
     "shareNote": "Only {name} can see it, and you can turn it off anytime in settings",
     "geoFailed": "Couldn't get your location. Check location permissions.",
     "unsupported": "This browser doesn't support location sharing",
-    "toggleFailed": "Couldn't change location sharing"
+    "toggleFailed": "Couldn't change location sharing",
+    "consentTitle": "Before you share your location",
+    "consentShare": "{name} will see your latest location and the distance between you. When you arrive at a place you saved, {name} gets an alert.",
+    "consentCollect": "Your location is only sent while the app is open. We delete it after 7 days, and right away when you turn sharing off.",
+    "consentNotice": "Every 30 days, we'll tell you how often {name} was shown your location.",
+    "consentAgree": "I agree to the location-based service terms",
+    "consentTerms": "Read the terms",
+    "consentConfirm": "Agree and turn on",
+    "consentCancel": "Cancel"
   },
   "geofence": {
     "title": "Arrival alerts",
@@ -331,15 +354,17 @@
   },
   "billing": {
     "checkoutFailed": "Couldn't open the checkout page",
+    "appUnavailable": "Premium can't be purchased in this app",
     "portalFailed": "Couldn't open subscription settings",
     "premium": "Hamkke Premium",
     "free": "Free plan",
     "premiumSub": "Premium is on, for both of you",
     "freeSub": "Premium unlocks everything, for both of you",
+    "soon": "Coming soon",
     "manage": "Manage",
     "upgrade": "Premium",
     "usage": {
-      "moments": "Photos",
+      "moments": "Photos & videos",
       "activeCapsules": "Scheduled letters",
       "meetupPins": "Places",
       "storage": "Storage"
@@ -350,9 +375,10 @@
     "pinsNear": "The free plan shows your latest {limit} places ({used}/{limit})",
     "atLimit": "You've hit the free plan's {noun} limit ({limit})",
     "near": "You're close to the free plan's {noun} limit ({used}/{limit})",
-    "nounMoments": "photo",
+    "nounMoments": "photos & videos",
     "nounCapsules": "scheduled letter",
-    "unlimited": "Go unlimited with Premium"
+    "unlimited": "Go unlimited with Premium",
+    "soon": "Premium is coming soon"
   },
   "flights": {
     "title": "Flights",
@@ -421,8 +447,14 @@
     "storageLimitPremiumPhotos": "You've used all {gb} GB of storage. Deleting photos in Memories frees up space.",
     "rateLimitedSeconds": "You're going a little fast. Try again in {seconds, plural, one {# second} other {# seconds}}.",
     "rateLimitedMinutes": "That's a lot of requests, so we've paused this for a bit. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
-    "momentLimit": "The free plan holds up to {limit} photos. Go Premium for unlimited.",
+    "momentLimit": "The free plan holds up to {limit} photos and videos. Go Premium for unlimited.",
     "capsuleLimit": "The free plan holds up to {limit} scheduled letters. Go Premium for unlimited.",
+    "momentLimitSoon": "The free plan holds up to {limit} photos and videos. Premium, with room for more, is coming soon.",
+    "capsuleLimitSoon": "The free plan holds up to {limit} scheduled letters. Premium, with room for more, is coming soon.",
+    "storageLimitFreeSoon": "You've used all {gb} GB of storage. Premium, with more space, is coming soon.",
+    "storageLimitFreePhotosSoon": "You've used all {gb} GB of storage. Deleting photos and videos in Memories frees up space.",
+    "premiumNotOpen": "Premium isn't available yet. It's coming soon.",
+    "locationConsentRequired": "To share your location, agree to the location-based service terms.",
     "capsuleOneWhen": "Pick just one time for it to open",
     "capsuleFuture": "The delivery time has to be in the future",
     "flightNotFound": "Couldn't find that flight",
@@ -441,6 +473,8 @@
     "touch": "Your person is thinking of you",
     "image": "Sent a photo",
     "voice": "Sent a voice message",
+    "video": "Sent a video",
+    "locationNotice": "In the last {days} days, {name} was shown your location {count, plural, one {# time} other {# times}}, for distance, weather and arrival alerts.",
     "geofence": "Your person just got to \"{label}\"",
     "questionAnswered": "{name} answered today's question",
     "partnerFallback": "Your person",

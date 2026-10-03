@@ -1,7 +1,7 @@
 import "server-only";
 import { TRPCError } from "@trpc/server";
 import { translator } from "@/i18n/server";
-import { type Db, isPremiumSpace, STORAGE_LIMIT_BYTES } from "@/lib/plan";
+import { type Db, isPremiumOpen, isPremiumSpace, STORAGE_LIMIT_BYTES } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 
 const GB = 1024 * 1024 * 1024;
@@ -35,15 +35,13 @@ export async function assertStorageAvailable(
 
   // 안내는 실제로 할 수 있는 일만 말한다. 지울 수 있는 것은 기억 탭의 사진뿐이고
   // 대화로 주고받은 사진·음성은 지울 수 없어서, 사진이 없으면 "사진을 지우라"는
-  // 따를 수 없는 안내가 된다.
+  // 따를 수 없는 안내가 된다. 유료 플랜이 닫혀 있으면 프리미엄을 권하지 않는다.
   const t = translator(locale);
   const args = { gb: limit / GB, premiumGb: STORAGE_LIMIT_BYTES.premium / GB };
   const key = premium
     ? photos > 0
       ? "storageLimitPremiumPhotos"
       : "storageLimitPremium"
-    : photos > 0
-      ? "storageLimitFreePhotos"
-      : "storageLimitFree";
+    : (`${photos > 0 ? "storageLimitFreePhotos" : "storageLimitFree"}${isPremiumOpen() ? "" : "Soon"}` as const);
   throw new TRPCError({ code: "FORBIDDEN", message: t(`errors.${key}`, args) });
 }

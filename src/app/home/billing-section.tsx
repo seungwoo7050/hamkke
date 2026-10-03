@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useFormat } from "@/i18n/use-format";
 import { isNearLimit } from "@/lib/plan-usage";
 import { useTRPC } from "@/trpc/client";
+import { useCanCheckoutHere, useStartCheckout } from "./use-start-checkout";
 
 // 구독 시작은 Checkout, 해지/결제수단 변경은 Customer Portal로 위임한다
 // (ARCHITECTURE.md §6 - 자체 UI로 결제 로직을 구현하지 않는다). 설정성
@@ -18,15 +19,8 @@ export function BillingSection() {
   const fmt = useFormat();
   const { data: subscription } = useQuery(trpc.billing.status.queryOptions());
   const { data: usage } = useQuery(trpc.billing.usage.queryOptions());
-  const checkoutMutation = useMutation(
-    trpc.billing.createCheckoutSession.mutationOptions({
-      onSuccess: ({ url }) => {
-        window.location.assign(url);
-      },
-      onError: (err) =>
-        toast.error(err.data?.code === "TOO_MANY_REQUESTS" ? err.message : t("checkoutFailed")),
-    }),
-  );
+  const checkout = useStartCheckout();
+  const canCheckout = useCanCheckoutHere();
   const portalMutation = useMutation(
     trpc.billing.createPortalSession.mutationOptions({
       onSuccess: ({ url }) => {
@@ -38,6 +32,9 @@ export function BillingSection() {
   );
 
   const premium = subscription?.status === "active";
+  // 유료 플랜이 닫혀 있으면(src/lib/plan.ts isPremiumOpen) 결제 버튼 대신 곧 열린다고만.
+  // 사용량을 받기 전에는 버튼을 내지 않는다 - 닫혀 있을 때 잠깐 보였다 사라지지 않게.
+  const open = usage?.open === true;
 
   return (
     <div className="py-3">
@@ -61,16 +58,18 @@ export function BillingSection() {
           >
             {t("manage")}
           </Button>
-        ) : (
+        ) : open && canCheckout ? (
           <Button
             type="button"
             size="sm"
-            onClick={() => checkoutMutation.mutate()}
-            disabled={checkoutMutation.isPending}
+            onClick={() => void checkout.start()}
+            disabled={checkout.pending}
           >
             {t("upgrade")}
           </Button>
-        )}
+        ) : !open && usage ? (
+          <span className="text-muted-foreground text-sm">{t("soon")}</span>
+        ) : null}
       </div>
       {usage && (
         // 한도에 부딪힌 뒤 토스트로 알던 걸 미리 보이게(PRD §3.5). 한도 근처면

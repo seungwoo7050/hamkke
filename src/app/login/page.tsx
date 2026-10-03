@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
@@ -70,6 +71,21 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           {t("emailSubmit")}
         </Button>
       </form>
+
+      <p className="text-muted-foreground text-xs break-keep">
+        {t.rich("agree", {
+          terms: (chunks) => <LegalLink href="/legal/terms">{chunks}</LegalLink>,
+          privacy: (chunks) => <LegalLink href="/legal/privacy">{chunks}</LegalLink>,
+        })}
+      </p>
     </main>
+  );
+}
+
+function LegalLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="text-foreground underline underline-offset-4">
+      {children}
+    </Link>
   );
 }

@@ -38,6 +38,10 @@ async function turnOnLocationSharing(page: Page) {
   await page.getByRole("button", { name: "설정 열기" }).click();
   const sharing = page.getByRole("dialog").getByRole("switch").first();
   await sharing.click();
+  // 켜기 전에 위치기반서비스 약관 동의 시트를 거친다(위치정보법 §19).
+  const consent = page.getByRole("dialog", { name: "위치를 나누기 전에" });
+  await consent.getByRole("checkbox").click();
+  await consent.getByRole("button", { name: "동의하고 켜기" }).click();
   await expect(sharing).toBeChecked();
   await page.keyboard.press("Escape");
 }

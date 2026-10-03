@@ -17,9 +17,14 @@ import { groupPositions } from "@/lib/chat-grouping";
 import { daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import {
+  IMAGE_TYPES,
+  type ImageType,
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_MB,
   MAX_VOICE_SECONDS,
+  mediaKindOf,
+  VIDEO_TYPES,
+  type VideoType,
   VOICE_BITS_PER_SECOND,
 } from "@/lib/upload-limits";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -40,8 +45,6 @@ const EMPTY_CHAT_TOUCH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const TYPING_THROTTLE_MS = 2000;
 const TYPING_CLEAR_MS = 3000;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
-type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
 const ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/ogg", "audio/mpeg"] as const;
 type AllowedAudioType = (typeof ALLOWED_AUDIO_TYPES)[number];
 // 브라우저마다 지원하는 녹음 포맷이 달라 우선순위대로 확인한다(Chrome은 webm,
@@ -238,39 +241,60 @@ export function ChatView({
       onSuccess: (message) => setMessages((prev) => mergeById(prev, [message])),
     }),
   );
+  const createVideoUploadUrlMutation = useMutation(
+    trpc.chat.createVideoUploadUrl.mutationOptions(),
+  );
+  const sendVideoMutation = useMutation(
+    trpc.chat.sendVideo.mutationOptions({
+      onSuccess: (message) => setMessages((prev) => mergeById(prev, [message])),
+    }),
+  );
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  // 사진과 영상은 같은 버튼으로 고른다. 형식으로 종류를 가르고, 종류마다 크기 상한과
+  // 업로드 주소·등록 API가 다르다.
+  async function handleMediaSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
 
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type as AllowedImageType)) {
+    const kind = mediaKindOf(file.type);
+    if (!kind) {
       toast.error(t("imageTypes"));
       return;
     }
 
-    if (file.size > MAX_UPLOAD_BYTES.image) {
-      toast.error(t("imageTooLarge", { mb: MAX_UPLOAD_MB.image }));
+    if (file.size > MAX_UPLOAD_BYTES[kind]) {
+      toast.error(
+        t(kind === "video" ? "videoTooLarge" : "imageTooLarge", { mb: MAX_UPLOAD_MB[kind] }),
+      );
       return;
     }
 
     setUploadingImage(true);
     try {
-      const { uploadUrl, key } = await createImageUploadUrlMutation.mutateAsync({
-        contentType: file.type as AllowedImageType,
-        size: file.size,
-      });
+      const { uploadUrl, key } =
+        kind === "video"
+          ? await createVideoUploadUrlMutation.mutateAsync({
+              contentType: file.type as VideoType,
+              size: file.size,
+            })
+          : await createImageUploadUrlMutation.mutateAsync({
+              contentType: file.type as ImageType,
+              size: file.size,
+            });
       const res = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
         body: file,
       });
       if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
-      await sendImageMutation.mutateAsync({ key });
+      if (kind === "video") await sendVideoMutation.mutateAsync({ key });
+      else await sendImageMutation.mutateAsync({ key });
     } catch (err) {
       // 저장 공간 한도 같은 서버 안내는 그대로, 업로드 자체의 실패는 사람이 읽을 문구로.
-      toast.error(err instanceof TRPCClientError ? err.message : t("imageFailed"));
+      const failed = kind === "video" ? t("videoFailed") : t("imageFailed");
+      toast.error(err instanceof TRPCClientError ? err.message : failed);
     } finally {
       setUploadingImage(false);
     }
@@ -458,6 +482,16 @@ export function ChatView({
                       unoptimized
                       className={cn("h-60 w-60 rounded-lg object-cover", corners)}
                     />
+                  ) : message.type === "video" ? (
+                    // 첫 프레임만 받아 두고(preload=metadata) 누르면 말풍선 안에서 재생한다.
+                    <video
+                      src={message.content}
+                      aria-label={t("videoLabel")}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className={cn("h-60 w-60 rounded-lg bg-zinc-900 object-cover", corners)}
+                    />
                   ) : message.type === "voice" ? (
                     <VoiceMessage src={message.content} mine={isMine} className={corners} />
                   ) : (
@@ -497,9 +531,9 @@ export function ChatView({
         <input
           ref={fileInputRef}
           type="file"
-          accept={ALLOWED_IMAGE_TYPES.join(",")}
+          accept={[...IMAGE_TYPES, ...VIDEO_TYPES].join(",")}
           className="hidden"
-          onChange={handleImageSelect}
+          onChange={handleMediaSelect}
         />
         <Button
           type="button"

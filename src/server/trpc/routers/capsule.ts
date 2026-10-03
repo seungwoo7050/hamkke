@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { bestTimes } from "@/lib/flight";
-import { countPendingCapsules, FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
+import { countPendingCapsules, FREE_TIER_LIMITS, isPremiumOpen, isPremiumSpace } from "@/lib/plan";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
@@ -73,7 +73,9 @@ export const capsuleRouter = router({
       if (pendingCount >= FREE_TIER_LIMITS.activeCapsules) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: t("errors.capsuleLimit", { limit: FREE_TIER_LIMITS.activeCapsules }),
+          message: t(isPremiumOpen() ? "errors.capsuleLimit" : "errors.capsuleLimitSoon", {
+            limit: FREE_TIER_LIMITS.activeCapsules,
+          }),
         });
       }
     }

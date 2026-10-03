@@ -20,7 +20,10 @@ describe("가짜 언어", () => {
     });
     const walk = (obj: unknown, prefix = ""): void => {
       if (typeof obj === "string") {
-        const args = Object.fromEntries([...obj.matchAll(/\{(\w+)/g)].map(([, n]) => [n, 1]));
+        const args = Object.fromEntries([
+          ...[...obj.matchAll(/\{(\w+)/g)].map(([, n]) => [n, 1]),
+          ...[...obj.matchAll(/<(\w+)>/g)].map(([, tag]) => [tag, (c: unknown) => c]),
+        ]);
         (t as unknown as (k: string, a: object) => string)(prefix, args);
         return;
       }

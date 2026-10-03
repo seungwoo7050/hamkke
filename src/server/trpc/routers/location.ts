@@ -9,6 +9,12 @@ import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
 import { translator } from "@/i18n/server";
 import { consume } from "@/server/rate-limit";
+import {
+  deleteLocationProvisions,
+  LOCATION_NOTICE_PERIOD_MS,
+  provisionSummary,
+  recordLocationProvision,
+} from "@/server/location-provision";
 import { LOCATION_PING_RETENTION_MS, locationSendCheck } from "@/server/request-limits";
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
@@ -19,6 +25,7 @@ type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["sessi
 async function checkGeofenceArrivals(
   ctx: SpaceCtx,
   position: { lat: number; lng: number; accuracy?: number },
+  partnerId: string | null,
 ) {
   const fences = await prisma.geofence.findMany({ where: { userId: ctx.session.user.id } });
 
@@ -34,6 +41,7 @@ async function checkGeofenceArrivals(
     });
     if (count === 0 || !isInside) continue;
 
+    if (partnerId) await recordLocationProvision(ctx.session.user.id, partnerId, "arrival");
     await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
       title: "Hamkke",
       body: t("push.geofence", { label: fence.label }),
@@ -44,18 +52,32 @@ async function checkGeofenceArrivals(
 export const locationRouter = router({
   // 위치공유는 반드시 사용자가 명시적으로 켜야 한다(ARCHITECTURE.md §5).
   // 꺼짐 상태도 상대에게 알려야 지도에서 "위치공유 꺼짐"을 표시할 수 있다.
+  //
+  // 켜려면 위치기반서비스 이용약관 동의가 있어야 한다(위치정보법 §19①②: 제공받는 자·
+  // 목적 고지와 동의, §19④: 30일 모아 통보 동의). 끄는 것은 동의 철회로 보고 동의
+  // 기록과 위치 기록을 지운다 - 다시 켤 때는 동의를 새로 받는다(src/legal/location.*).
   setSharing: spaceProcedure
-    .input(z.object({ enabled: z.boolean() }))
+    .input(z.object({ enabled: z.boolean(), consent: z.boolean().optional() }))
     .mutation(async ({ ctx, input }) => {
+      if (input.enabled && input.consent !== true) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: translator(ctx.locale)("errors.locationConsentRequired"),
+        });
+      }
       await prisma.user.update({
         where: { id: ctx.session.user.id },
-        data: { locationSharingEnabled: input.enabled },
+        data: {
+          locationSharingEnabled: input.enabled,
+          locationConsentAt: input.enabled ? new Date() : null,
+        },
       });
       // 끄면 지금까지의 위치 기록을 지운다. 기록은 공유가 켜져 있을 때만 읽히고(장면·
       // 날씨·상대 화면), 꺼진 동안엔 저장이 없어 아래 7일 정리도 돌지 않으므로, 남겨 두면
       // 마지막 한 주의 기록이 영영 남는다.
       if (!input.enabled) {
         await prisma.locationPing.deleteMany({ where: { userId: ctx.session.user.id } });
+        await deleteLocationProvisions(ctx.session.user.id);
       }
 
       await broadcastToSpace(ctx.space.id, "location-sharing", {
@@ -65,6 +87,14 @@ export const locationRouter = router({
 
       return { enabled: input.enabled };
     }),
+
+  // 최근 30일 동안 내 위치가 상대에게 간 횟수 - 설정 시트에서 늘 볼 수 있게(30일마다
+  // 모아 보내는 알림과 같은 내역, src/server/location-provision.ts).
+  providedRecently: spaceProcedure.query(async ({ ctx }) => {
+    const since = new Date(Date.now() - LOCATION_NOTICE_PERIOD_MS);
+    const rows = await provisionSummary(ctx.session.user.id, since);
+    return rows.reduce((sum, r) => sum + r.count, 0);
+  }),
 
   mySharing: spaceProcedure.query(async ({ ctx }) => {
     const me = await prisma.user.findUniqueOrThrow({
@@ -123,8 +153,14 @@ export const locationRouter = router({
       });
 
       await broadcastToSpace(ctx.space.id, "location", ping);
+      // 브로드캐스트는 같은 스페이스의 상대에게 간다 - 제공 사실을 남긴다(위치정보법 §16②).
+      const partner = await prisma.user.findFirst({
+        where: { spaceId: ctx.space.id, id: { not: userId } },
+        select: { id: true },
+      });
+      if (partner) await recordLocationProvision(userId, partner.id, "live");
 
-      await checkGeofenceArrivals(ctx, input);
+      await checkGeofenceArrivals(ctx, input, partner?.id ?? null);
 
       return ping;
     }),
@@ -144,6 +180,8 @@ export const locationRouter = router({
           orderBy: { capturedAt: "desc" },
         })
       : null;
+
+    if (location) await recordLocationProvision(partner.id, ctx.session.user.id, "latest");
 
     return { sharing: partner.locationSharingEnabled, location };
   }),

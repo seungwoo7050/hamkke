@@ -13,6 +13,7 @@ import {
 } from "@/lib/location-native";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
+import { LocationConsentSheet } from "./location-consent-sheet";
 import { useSpaceBroadcast } from "./realtime-context";
 import { useSpace } from "./space-context";
 
@@ -68,6 +69,7 @@ export function LocationProvider({
     initialPartnerStatus?.location ?? null,
   );
   const lastSentAt = useRef(0);
+  const [consentOpen, setConsentOpen] = useState(false);
 
   const setSharingMutation = useMutation(trpc.location.setSharing.mutationOptions());
   const sendMutation = useMutation(trpc.location.send.mutationOptions());
@@ -128,16 +130,31 @@ export function LocationProvider({
     },
   );
 
+  // 켜기는 동의 시트를 거친다. 끄면 동의도 철회되므로(location.setSharing) 켤 때마다 묻는다.
   async function toggleSharing() {
     const next = !sharing;
     if (next && !isNativeLocation() && !("geolocation" in navigator)) {
       toast.error(t("unsupported"));
       return;
     }
+    if (next) {
+      setConsentOpen(true);
+      return;
+    }
     try {
-      await setSharingMutation.mutateAsync({ enabled: next });
-      setSharing(next);
-      if (!next) setMe(null);
+      await setSharingMutation.mutateAsync({ enabled: false });
+      setSharing(false);
+      setMe(null);
+    } catch {
+      toast.error(t("toggleFailed"));
+    }
+  }
+
+  async function agreeAndShare() {
+    try {
+      await setSharingMutation.mutateAsync({ enabled: true, consent: true });
+      setConsentOpen(false);
+      setSharing(true);
     } catch {
       toast.error(t("toggleFailed"));
     }
@@ -155,6 +172,12 @@ export function LocationProvider({
       }}
     >
       {children}
+      <LocationConsentSheet
+        open={consentOpen}
+        pending={setSharingMutation.isPending}
+        onOpenChange={setConsentOpen}
+        onAgree={() => void agreeAndShare()}
+      />
     </LocationContext.Provider>
   );
 }

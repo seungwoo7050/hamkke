@@ -49,20 +49,23 @@ const MAP: Record<string, string> = {
   Z: "Ž",
 };
 
-/** ICU 바깥 글자만 바꾸고, 약 40% 길게 늘린다. */
+/** ICU 변수와 서식 태그(<terms>…</terms>의 태그 이름) 바깥 글자만 바꾸고, 약 40% 길게 늘린다. */
 export function pseudoString(message: string): string {
   let out = "";
   let depth = 0;
+  let inTag = false;
   let letters = 0;
   for (const ch of message) {
     if (ch === "{") depth++;
-    if (depth === 0) {
+    if (ch === "<") inTag = true;
+    if (depth === 0 && !inTag) {
       out += MAP[ch] ?? ch;
       if (/[a-z]/i.test(ch)) letters++;
     } else {
       out += ch;
     }
     if (ch === "}") depth--;
+    if (ch === ">") inTag = false;
   }
   return `[${out}${"~".repeat(Math.ceil(letters * 0.4))}]`;
 }

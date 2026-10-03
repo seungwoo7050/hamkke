@@ -1,7 +1,7 @@
 // 실제 R2에 왕복한다.
 import { randomUUID } from "node:crypto";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { headUpload } from "@/lib/r2";
 import { createCallerFactory } from "../init";
@@ -92,6 +92,42 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     expect(listed.mediaUrl).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
 
     await deleteR2Object(key);
+  });
+
+  it("영상도 올려 등록하면 실제로 올라간 형식으로 영상(video)이 된다", async () => {
+    const caller = await callerFor(userAId);
+    const bytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
+    const { uploadUrl, key } = await caller.moment.createUploadUrl({
+      contentType: "video/mp4",
+      size: bytes.length,
+    });
+    const res = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "video/mp4" },
+      body: bytes,
+    });
+    expect(res.ok).toBe(true);
+
+    const moment = await caller.moment.create({ key });
+    expect(moment.mediaKind).toBe("video");
+    const listed = (await caller.moment.list({})).moments.find((m) => m.id === moment.id)!;
+    expect(listed.mediaKind).toBe("video");
+
+    await deleteR2Object(key);
+  });
+
+  it("크기 상한은 종류마다 다르다(사진 10MB, 영상 100MB)", async () => {
+    const caller = await callerFor(userAId);
+    const mb = 1024 * 1024;
+    await expect(
+      caller.moment.createUploadUrl({ contentType: "image/jpeg", size: 11 * mb }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      caller.moment.createUploadUrl({ contentType: "video/mp4", size: 50 * mb }),
+    ).resolves.toMatchObject({ key: expect.stringMatching(/^pending\/moments\//) });
+    await expect(
+      caller.moment.createUploadUrl({ contentType: "video/quicktime", size: 101 * mb }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("cursor 페이지네이션이 동작한다", async () => {
@@ -192,6 +228,28 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
+  });
+
+  it("유료 플랜이 닫혀 있으면 한도 안내가 프리미엄을 권하지 않고 곧 열린다고 말한다", async () => {
+    await prisma.moment.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({
+        spaceId,
+        uploaderId: userAId,
+        mediaUrl: `moments/${spaceId}/fake-${i}`,
+      })),
+    });
+    const caller = await callerFor(userAId);
+    const tryUpload = () =>
+      caller.moment.createUploadUrl({ contentType: "image/png", size: 1 }).catch((e: Error) => e);
+
+    vi.stubEnv("PREMIUM_OPEN", "");
+    const closed = (await tryUpload()) as Error;
+    expect(closed.message).toContain("곧 열려요");
+    expect(closed.message).not.toContain("프리미엄으로");
+
+    vi.stubEnv("PREMIUM_OPEN", "1");
+    expect(((await tryUpload()) as Error).message).toContain("프리미엄으로");
+    vi.unstubAllEnvs();
   });
 
   it("프리미엄이면 한도를 넘어도 업로드 URL을 발급받는다", async () => {

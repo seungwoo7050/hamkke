@@ -10,23 +10,29 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTRPC } from "@/trpc/client";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limits";
+import {
+  IMAGE_TYPES,
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_MB,
+  type ImageType,
+  type VideoType,
+  VIDEO_TYPES,
+  mediaKindOf,
+} from "@/lib/upload-limits";
 import { EmptyRow, LoadingRow, LoadMore, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 import { usePartnerName, useSpace } from "./space-context";
 
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
-type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
-
 type Moment = {
   id: string;
   mediaUrl: string;
+  mediaKind: "image" | "video";
   caption: string | null;
   uploaderId: string;
   createdAt: Date | string;
 };
 
-// "오늘의 사진" 피드(PRD.md §3.4). 균등한 그리드 대신 가장 최근 한 장만 크게,
+// "오늘의 사진" 피드(PRD.md §3.4) - 사진과 영상(PRD §3.5)이 한 줄에 섞인다. 균등한 그리드 대신 가장 최근 한 장만 크게,
 // 나머지는 2:1 비율 줄로(DESIGN.md §10 크기 대비, 승인 목업 ④).
 export function MomentFeed() {
   const trpc = useTRPC();
@@ -116,16 +122,37 @@ function MomentTile({
     <figure
       className={`group relative overflow-hidden rounded-lg ${large ? "aspect-4/3" : "h-40"}`}
     >
-      <Image
-        src={moment.mediaUrl}
-        alt={moment.caption ?? t("altDefault")}
-        width={large ? 720 : 360}
-        height={large ? 540 : 240}
-        unoptimized
-        className="size-full object-cover"
-      />
+      {moment.mediaKind === "video" ? (
+        // 첫 프레임만 받아 칸을 채우고(preload=metadata), 누르면 기본 컨트롤로 재생한다.
+        // 휴대폰에서 전체 화면으로 튀지 않게 playsInline.
+        <video
+          src={moment.mediaUrl}
+          aria-label={moment.caption ?? t("videoLabel")}
+          controls
+          playsInline
+          preload="metadata"
+          className="size-full bg-zinc-900 object-cover"
+        />
+      ) : (
+        <Image
+          src={moment.mediaUrl}
+          alt={moment.caption ?? t("altDefault")}
+          width={large ? 720 : 360}
+          height={large ? 540 : 240}
+          unoptimized
+          className="size-full object-cover"
+        />
+      )}
       {large && (
-        <figcaption className="absolute inset-x-0 bottom-0 bg-linear-to-t from-zinc-900/60 to-transparent px-3 pt-8 pb-2.5 text-sm font-medium text-zinc-50">
+        // 영상은 아래에 재생 컨트롤이 있어 글은 위로 올린다. 오른쪽 위 삭제 버튼과
+        // 겹치지 않게 오른쪽 여백을 둔다.
+        <figcaption
+          className={`pointer-events-none absolute inset-x-0 px-3 text-sm font-medium text-zinc-50 ${
+            moment.mediaKind === "video"
+              ? "top-0 bg-linear-to-b from-zinc-900/60 to-transparent pt-2.5 pr-12 pb-8"
+              : "bottom-0 bg-linear-to-t from-zinc-900/60 to-transparent pt-8 pb-2.5"
+          }`}
+        >
           {who}
           {moment.caption && ` · ${moment.caption}`}
         </figcaption>
@@ -161,20 +188,23 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
     e.target.value = "";
     if (!file) return;
 
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type as AllowedImageType)) {
-      toast.error(t("imageTypes"));
+    const kind = mediaKindOf(file.type);
+    if (!kind) {
+      toast.error(t("mediaTypes"));
       return;
     }
 
-    if (file.size > MAX_UPLOAD_BYTES.image) {
-      toast.error(t("imageTooLarge", { mb: MAX_UPLOAD_MB.image }));
+    if (file.size > MAX_UPLOAD_BYTES[kind]) {
+      toast.error(
+        t(kind === "video" ? "videoTooLarge" : "imageTooLarge", { mb: MAX_UPLOAD_MB[kind] }),
+      );
       return;
     }
 
     setUploading(true);
     try {
       const { uploadUrl, key } = await createUploadUrlMutation.mutateAsync({
-        contentType: file.type as AllowedImageType,
+        contentType: file.type as ImageType | VideoType,
         size: file.size,
       });
       const res = await fetch(uploadUrl, {
@@ -201,7 +231,7 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
       <input
         ref={fileInputRef}
         type="file"
-        accept={ALLOWED_IMAGE_TYPES.join(",")}
+        accept={[...IMAGE_TYPES, ...VIDEO_TYPES].join(",")}
         className="hidden"
         onChange={handleFileSelect}
       />

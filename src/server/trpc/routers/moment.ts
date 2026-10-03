@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { type Db, FREE_TIER_LIMITS, isPremiumSpace } from "@/lib/plan";
+import { type Db, FREE_TIER_LIMITS, isPremiumOpen, isPremiumSpace } from "@/lib/plan";
 import { createDownloadUrl, createUploadUrl, deleteUpload, promoteUpload } from "@/lib/r2";
-import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+import { IMAGE_TYPES, MAX_UPLOAD_BYTES, VIDEO_TYPES, mediaKindOf } from "@/lib/upload-limits";
 import { consumeOrThrow } from "@/server/rate-limit";
 import { uploadUrlCheck } from "@/server/request-limits";
 import { assertStorageAvailable } from "@/server/storage-quota";
@@ -11,7 +11,7 @@ import { newUploadKey, verifyUpload, withUploadRegistrationLock } from "@/server
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
 
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+const ALLOWED_TYPES = [...IMAGE_TYPES, ...VIDEO_TYPES] as const;
 
 // 무료 티어 사진 개수 한도. 업로드 주소 발급과 등록 두 곳에서 본다 - 발급 때만
 // 보면 주소만 여러 개 받아 두고 나중에 한꺼번에 등록하는 식으로 넘길 수 있다.
@@ -25,22 +25,32 @@ async function assertMomentQuota(
   if (count >= FREE_TIER_LIMITS.moments) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: translator(locale)("errors.momentLimit", { limit: FREE_TIER_LIMITS.moments }),
+      message: translator(locale)(
+        isPremiumOpen() ? "errors.momentLimit" : "errors.momentLimitSoon",
+        {
+          limit: FREE_TIER_LIMITS.moments,
+        },
+      ),
     });
   }
 }
 
 export const momentRouter = router({
   // R2에 직접 업로드할 presigned PUT URL 발급 - chat.createImageUploadUrl과
-  // 동일한 패턴(서버는 파일 바이트를 거치지 않는다). 무료 티어는 사진 개수를
-  // 제한한다(PRD.md §3.5 "무제한 사진/영상 저장"이 프리미엄 혜택) - 업로드
+  // 동일한 패턴(서버는 파일 바이트를 거치지 않는다). 무료 티어는 사진·영상을 합친
+  // 개수를 제한한다(PRD.md §3.5 "무제한 사진/영상 저장"이 프리미엄 혜택) - 업로드
   // 자체를 여기서 막아야 "업로드는 됐는데 저장은 안 됨" 혼란이 없다.
   createUploadUrl: spaceProcedure
     .input(
-      z.object({
-        contentType: z.enum(ALLOWED_IMAGE_TYPES),
-        size: z.number().int().positive().max(MAX_UPLOAD_BYTES.image),
-      }),
+      z
+        .object({
+          contentType: z.enum(ALLOWED_TYPES),
+          size: z.number().int().positive(),
+        })
+        // 상한은 종류마다 다르다(사진 10MB, 영상 100MB).
+        .refine((v) => v.size <= MAX_UPLOAD_BYTES[mediaKindOf(v.contentType)!], {
+          path: ["size"],
+        }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertMomentQuota(ctx.space.id, ctx.locale);
@@ -57,13 +67,16 @@ export const momentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const moment = await withUploadRegistrationLock(ctx.space.id, async (tx) => {
         await assertMomentQuota(ctx.space.id, ctx.locale, tx);
-        const { size, finalKey } = await verifyUpload(input.key, {
+        const { size, contentType, finalKey } = await verifyUpload(input.key, {
           folder: "moments",
           spaceId: ctx.space.id,
-          allowedTypes: ALLOWED_IMAGE_TYPES,
+          allowedTypes: ALLOWED_TYPES,
           locale: ctx.locale,
         });
         await assertStorageAvailable(ctx.space.id, size, ctx.locale, tx);
+        // 신고한 형식이 아니라 실제로 올라간 형식으로 정한다 - verifyUpload가 허용
+        // 목록 안인 것을 확인했으므로 null이 아니다.
+        const mediaKind = mediaKindOf(contentType)!;
         await promoteUpload(input.key, finalKey);
 
         return tx.moment.create({
@@ -71,6 +84,7 @@ export const momentRouter = router({
             spaceId: ctx.space.id,
             uploaderId: ctx.session.user.id,
             mediaUrl: finalKey,
+            mediaKind,
             mediaSize: size,
             caption: input.caption,
           },

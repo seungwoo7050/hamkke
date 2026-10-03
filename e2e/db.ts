@@ -101,7 +101,10 @@ export async function cleanup(userIds: string[]) {
 
 /** 위치공유를 켜고 지금 시각의 위치 하나를 둔다(위치 시트 지도를 바로 그리기 위해). */
 export async function shareLocation(userId: string, latitude: number, longitude: number) {
-  await pool.query(`UPDATE "User" SET "locationSharingEnabled" = true WHERE id = $1`, [userId]);
+  await pool.query(
+    `UPDATE "User" SET "locationSharingEnabled" = true, "locationConsentAt" = now() WHERE id = $1`,
+    [userId],
+  );
   await pool.query(
     `INSERT INTO "LocationPing" (id, "userId", lat, lng, "capturedAt") VALUES ($1, $2, $3, $4, now())`,
     [id(), userId, latitude, longitude],

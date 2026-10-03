@@ -20,6 +20,16 @@ export const STORAGE_LIMIT_BYTES = {
   premium: 20 * 1024 * 1024 * 1024,
 } as const;
 
+/**
+ * 유료 플랜을 팔고 있는지(2026-10-04 결정: 결제는 만들어 두되 닫은 채 출시한다).
+ * 닫혀 있으면 결제 시작을 거절하고, 무료 한도는 그대로 두되 "프리미엄으로 늘리세요"
+ * 대신 "곧 열려요"로 안내한다. 이미 구독 중인 스페이스의 혜택은 이 값과 상관없다.
+ * 운영에서 열 때는 환경변수 PREMIUM_OPEN=1(.env.example).
+ */
+export function isPremiumOpen() {
+  return process.env.PREMIUM_OPEN === "1";
+}
+
 export async function isPremiumSpace(spaceId: string, db: Db = prisma) {
   const subscription = await db.subscription.findUnique({ where: { spaceId } });
   return subscription?.status === "active";
