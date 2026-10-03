@@ -72,7 +72,8 @@ test("영어를 고른 사람의 화면엔 한국어가 없다(일반·가짜 �
     }
 
     await page.keyboard.press("Escape"); // 설정 시트가 열려 있으면 나머지가 가려진다
-    const nav = await page.getByRole("navigation").innerText();
+    // 하단 탭(우리 탭 링크가 있는 nav) - 설정 시트에도 정책 링크 nav가 있다.
+    const nav = await page.locator("nav:has(a[href='/home'])").innerText();
     if (pseudo) expect(nav).toContain("[Ūš");
     else expect(nav).toContain("Us");
     await context.close();
