@@ -285,6 +285,17 @@
     "languageSub": "Only changes the app for you. {name} keeps theirs",
     "languageFailed": "Couldn't change the language"
   },
+  "notifications": {
+    "title": "Notifications",
+    "default": "Get notified when a touch or message arrives",
+    "granted": "On",
+    "denied": "Allow notifications for this site in your browser settings",
+    "homeScreen": "On iPhone, add Hamkke to your Home Screen to get notifications",
+    "homeScreenHow": "In Safari, tap Share → Add to Home Screen, then open Hamkke from your Home Screen",
+    "unsupported": "This browser can't receive notifications",
+    "enable": "Turn on",
+    "failed": "Couldn't turn on notifications. Try again in a moment."
+  },
   "account": {
     "delete": "Delete account",
     "confirmTitle": "Delete your account?",

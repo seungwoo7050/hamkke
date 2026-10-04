@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { onAnyForegroundMessage, requestAnyPushToken } from "@/lib/push-client";
+import { onAnyForegroundMessage, registerAnyPushOnOpen } from "@/lib/push-client";
 import { matchAcceptLanguage } from "@/i18n/config";
 import { useTRPC } from "@/trpc/client";
 import { useSpaceBroadcast } from "./realtime-context";
@@ -33,7 +33,7 @@ export function AppEffects({ currentUserId }: { currentUserId: string }) {
   useEffect(() => {
     let unsubscribeForeground: (() => void) | undefined;
 
-    requestAnyPushToken()
+    registerAnyPushOnOpen()
       .then((token) => {
         if (token) registerPushTokenMutation.mutate({ token });
       })

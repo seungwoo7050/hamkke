@@ -36,15 +36,15 @@ function getMessagingIfSupported() {
 }
 
 /**
- * 알림 권한을 요청하고, 허용되면 FCM 토큰을 발급받아 반환한다.
- * 거부되거나 브라우저가 지원하지 않으면 null을 반환한다.
+ * 이미 알림을 허용한 브라우저에서 FCM 토큰을 받는다. 권한을 묻지 않는다 - 권한
+ * 요청은 사용자가 버튼을 눌렀을 때만(requestPushPermission). 아이폰은 사용자 동작
+ * 밖의 요청을 거절하고, 다른 브라우저도 갑작스러운 요청을 조용히 막는다.
+ * 허용 전이거나 브라우저가 지원하지 않으면 null.
  */
-export async function requestPushToken(): Promise<string | null> {
+export async function getGrantedPushToken(): Promise<string | null> {
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return null;
   const messaging = await getMessagingIfSupported();
   if (!messaging) return null;
-
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") return null;
 
   await navigator.serviceWorker.register("/firebase-messaging-sw.js");
   // register()는 등록을 접수하자마자 돌아온다. 처음 방문이면 서비스워커가 아직
@@ -56,6 +56,14 @@ export async function requestPushToken(): Promise<string | null> {
     vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
     serviceWorkerRegistration: registration,
   });
+}
+
+/**
+ * 버튼을 눌렀을 때 알림 권한을 묻는다. 클릭 핸들러에서 다른 await보다 먼저 불러야
+ * 한다 - 사파리는 그 사이에 사용자 동작이 끝난 것으로 보고 요청을 거절한다.
+ */
+export function requestPushPermission(): Promise<NotificationPermission> {
+  return Notification.requestPermission();
 }
 
 /** 앱이 포그라운드일 때 도착한 푸시를 처리한다(브라우저 기본 알림은 백그라운드에서만 뜬다). */
