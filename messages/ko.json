@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "Hamkke (함께)",
+    "shortName": "함께",
     "description": "장거리 연애 커플을 위한 2인 전용 프라이빗 공간"
   },
   "common": {
@@ -283,6 +284,17 @@
     "language": "언어",
     "languageSub": "나에게만 바뀌어요. {name}의 화면은 그대로예요",
     "languageFailed": "언어를 바꾸지 못했어요"
+  },
+  "notifications": {
+    "title": "알림",
+    "default": "터치와 메시지가 오면 알려 줘요",
+    "granted": "켜져 있어요",
+    "denied": "브라우저 설정에서 이 사이트의 알림을 허용해 주세요",
+    "homeScreen": "아이폰은 홈 화면에 추가해야 알림을 받을 수 있어요",
+    "homeScreenHow": "Safari 공유 버튼 → 홈 화면에 추가 → 홈 화면의 함께로 열기",
+    "unsupported": "이 브라우저에서는 알림을 받을 수 없어요",
+    "enable": "켜기",
+    "failed": "알림을 켜지 못했어요. 잠시 뒤 다시 시도해 주세요."
   },
   "account": {
     "delete": "계정 삭제",

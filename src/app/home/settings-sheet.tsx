@@ -22,6 +22,7 @@ import { DeleteAccountSection } from "./delete-account-section";
 import { GeofenceManager } from "./geofence-manager";
 import { LanguageSection } from "./language-section";
 import { useLocationSharing } from "./location-context";
+import { NotificationSection } from "./notification-section";
 import { PersonAvatar } from "./person-avatar";
 import { displayName, usePartnerName, useSpace } from "./space-context";
 
@@ -76,6 +77,7 @@ export function SettingsSheet() {
               />
             </label>
             <GeofenceManager />
+            <NotificationSection />
             <LanguageSection />
             <BillingSection />
             <form action={signOutAction} className="py-2">

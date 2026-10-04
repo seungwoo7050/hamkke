@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Gaegu } from "next/font/google";
 import { LucideProvider } from "lucide-react";
 import { NextIntlClientProvider } from "next-intl";
@@ -17,8 +17,21 @@ const gaegu = Gaegu({
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
-  return { title: t("title"), description: t("description") };
+  return {
+    title: t("title"),
+    description: t("description"),
+    // 아이폰 홈 화면에 추가하면 Safari 주소창 없이 열리는 웹 앱으로(manifest.ts와 짝).
+    appleWebApp: { capable: true, title: t("shortName"), statusBarStyle: "default" },
+  };
 }
+
+// 상태 표시줄·브라우저 바 색을 화면 배경(globals.css --background: zinc-50 / zinc-900)에 맞춘다.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#18181b" },
+  ],
+};
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // <html lang>은 언어별 폰트 토큰(globals.css :lang())과 스크린 리더 발음의 기준이다.
