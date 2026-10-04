@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hasR2 } from "@/test/services";
 import { prisma } from "@/lib/prisma";
 import { headUpload } from "@/lib/r2";
 import { createCallerFactory } from "../init";
@@ -63,38 +64,41 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     await prisma.space.delete({ where: { id: spaceId } });
   });
 
-  it("업로드 URL로 실제 R2에 올리고, create/list가 접근 가능한 signed URL을 돌려준다", async () => {
-    const caller = await callerFor(userAId);
+  it.skipIf(!hasR2)(
+    "업로드 URL로 실제 R2에 올리고, create/list가 접근 가능한 signed URL을 돌려준다",
+    async () => {
+      const caller = await callerFor(userAId);
 
-    const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
-    const { uploadUrl, key } = await caller.moment.createUploadUrl({
-      contentType: "image/png",
-      size: fakeImageBytes.length,
-    });
+      const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
+      const { uploadUrl, key } = await caller.moment.createUploadUrl({
+        contentType: "image/png",
+        size: fakeImageBytes.length,
+      });
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "image/png" },
-      body: fakeImageBytes,
-    });
-    expect(uploadRes.ok).toBe(true);
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "image/png" },
+        body: fakeImageBytes,
+      });
+      expect(uploadRes.ok).toBe(true);
 
-    const moment = await caller.moment.create({ key, caption: "오늘의 하늘" });
-    expect(moment.caption).toBe("오늘의 하늘");
-    expect(moment.mediaUrl).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+      const moment = await caller.moment.create({ key, caption: "오늘의 하늘" });
+      expect(moment.caption).toBe("오늘의 하늘");
+      expect(moment.mediaUrl).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
 
-    const downloadRes = await fetch(moment.mediaUrl);
-    expect(downloadRes.ok).toBe(true);
-    expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeImageBytes);
+      const downloadRes = await fetch(moment.mediaUrl);
+      expect(downloadRes.ok).toBe(true);
+      expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeImageBytes);
 
-    const { moments } = await caller.moment.list({});
-    const listed = moments.find((m) => m.id === moment.id)!;
-    expect(listed.mediaUrl).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+      const { moments } = await caller.moment.list({});
+      const listed = moments.find((m) => m.id === moment.id)!;
+      expect(listed.mediaUrl).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
 
-    await deleteR2Object(key);
-  });
+      await deleteR2Object(key);
+    },
+  );
 
-  it("영상도 올려 등록하면 실제로 올라간 형식으로 영상(video)이 된다", async () => {
+  it.skipIf(!hasR2)("영상도 올려 등록하면 실제로 올라간 형식으로 영상(video)이 된다", async () => {
     const caller = await callerFor(userAId);
     const bytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
     const { uploadUrl, key } = await caller.moment.createUploadUrl({
@@ -130,7 +134,7 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  it("cursor 페이지네이션이 동작한다", async () => {
+  it.skipIf(!hasR2)("cursor 페이지네이션이 동작한다", async () => {
     const caller = await callerFor(userAId);
     const keys: string[] = [];
     for (let i = 0; i < 3; i++) {
@@ -157,7 +161,7 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     await Promise.all(keys.map(deleteR2Object));
   });
 
-  it("삭제하면 목록에서 사라진다", async () => {
+  it.skipIf(!hasR2)("삭제하면 목록에서 사라진다", async () => {
     const caller = await callerFor(userAId);
     const { uploadUrl, key } = await caller.moment.createUploadUrl({
       contentType: "image/png",
@@ -278,17 +282,20 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     await prisma.subscription.deleteMany({ where: { spaceId } });
   });
 
-  it("올리지 않은 파일이나 다른 스페이스의 파일로는 사진을 등록할 수 없다", async () => {
-    const caller = await callerFor(userAId);
-    const { key } = await caller.moment.createUploadUrl({ contentType: "image/png", size: 1 });
-    await expect(caller.moment.create({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    await expect(
-      caller.moment.create({ key: `moments/other-space/${randomUUID()}` }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    expect(await prisma.moment.count({ where: { spaceId } })).toBe(0);
-  });
+  it.skipIf(!hasR2)(
+    "올리지 않은 파일이나 다른 스페이스의 파일로는 사진을 등록할 수 없다",
+    async () => {
+      const caller = await callerFor(userAId);
+      const { key } = await caller.moment.createUploadUrl({ contentType: "image/png", size: 1 });
+      await expect(caller.moment.create({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      await expect(
+        caller.moment.create({ key: `moments/other-space/${randomUUID()}` }),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      expect(await prisma.moment.count({ where: { spaceId } })).toBe(0);
+    },
+  );
 
-  it("업로드 주소를 미리 받아 두어도 한도에 이르면 등록을 거부한다", async () => {
+  it.skipIf(!hasR2)("업로드 주소를 미리 받아 두어도 한도에 이르면 등록을 거부한다", async () => {
     const caller = await callerFor(userAId);
     const { uploadUrl, key } = await caller.moment.createUploadUrl({
       contentType: "image/png",
@@ -311,7 +318,7 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     await deleteR2Object(key);
   });
 
-  it("업로드는 임시 경로에 올라가고, 등록하면 정식 경로로 옮겨진다", async () => {
+  it.skipIf(!hasR2)("업로드는 임시 경로에 올라가고, 등록하면 정식 경로로 옮겨진다", async () => {
     const caller = await callerFor(userAId);
     const { uploadUrl, key } = await caller.moment.createUploadUrl({
       contentType: "image/png",
@@ -352,7 +359,7 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     return key;
   }
 
-  it("한도 직전에 여러 장을 동시에 등록해도 한도를 넘지 않는다", async () => {
+  it.skipIf(!hasR2)("한도 직전에 여러 장을 동시에 등록해도 한도를 넘지 않는다", async () => {
     const caller = await callerFor(userAId);
     const keys = await Promise.all([1, 2, 3, 4, 5].map(() => uploadPending(caller)));
     await prisma.moment.createMany({
@@ -370,7 +377,7 @@ describe("moment 라우터 (통합)", { timeout: 30_000 }, () => {
     for (const key of keys) await deleteR2Object(key);
   });
 
-  it("같은 임시 키를 동시에 여러 번 등록해도 사진은 하나만 생긴다", async () => {
+  it.skipIf(!hasR2)("같은 임시 키를 동시에 여러 번 등록해도 사진은 하나만 생긴다", async () => {
     const caller = await callerFor(userAId);
     const key = await uploadPending(caller);
 

@@ -2,6 +2,7 @@
 // 그대로 태운다(constructEvent가 진짜로 통과해야 한다).
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { hasStripe } from "@/test/services";
 import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
@@ -254,55 +255,59 @@ describe("POST /api/webhooks/stripe", () => {
   });
 
   // 실제 Stripe(테스트 모드)에 결제된 구독 두 개를 만들어 중복 상황을 재현한다.
-  it("활성 구독이 있는 스페이스에 두 번째 활성 구독이 들어오면 그 구독을 해지하고 환불한다", async () => {
-    const customer = await stripe.customers.create({
-      payment_method: "pm_card_visa",
-      invoice_settings: { default_payment_method: "pm_card_visa" },
-    });
-    try {
-      const create = () =>
-        stripe.subscriptions.create({
-          customer: customer.id,
-          items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID! }],
-          metadata: { spaceId },
+  it.skipIf(!hasStripe)(
+    "활성 구독이 있는 스페이스에 두 번째 활성 구독이 들어오면 그 구독을 해지하고 환불한다",
+    async () => {
+      const customer = await stripe.customers.create({
+        payment_method: "pm_card_visa",
+        invoice_settings: { default_payment_method: "pm_card_visa" },
+      });
+      try {
+        const create = () =>
+          stripe.subscriptions.create({
+            customer: customer.id,
+            items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID! }],
+            metadata: { spaceId },
+          });
+        const kept = await create();
+        const duplicate = await create();
+        expect([kept.status, duplicate.status]).toEqual(["active", "active"]);
+
+        await postSignedEvent({
+          ...subscriptionEvent("customer.subscription.created"),
+          data: { object: kept },
         });
-      const kept = await create();
-      const duplicate = await create();
-      expect([kept.status, duplicate.status]).toEqual(["active", "active"]);
+        const res = await postSignedEvent({
+          ...subscriptionEvent("customer.subscription.created"),
+          data: { object: duplicate },
+        });
+        expect(res.status).toBe(200);
 
-      await postSignedEvent({
-        ...subscriptionEvent("customer.subscription.created"),
-        data: { object: kept },
-      });
-      const res = await postSignedEvent({
-        ...subscriptionEvent("customer.subscription.created"),
-        data: { object: duplicate },
-      });
-      expect(res.status).toBe(200);
+        const stored = await prisma.subscription.findUnique({ where: { spaceId } });
+        expect(stored?.stripeSubscriptionId).toBe(kept.id);
+        expect(stored?.status).toBe("active");
 
-      const stored = await prisma.subscription.findUnique({ where: { spaceId } });
-      expect(stored?.stripeSubscriptionId).toBe(kept.id);
-      expect(stored?.status).toBe("active");
+        expect((await stripe.subscriptions.retrieve(kept.id)).status).toBe("active");
+        expect((await stripe.subscriptions.retrieve(duplicate.id)).status).toBe("canceled");
 
-      expect((await stripe.subscriptions.retrieve(kept.id)).status).toBe("active");
-      expect((await stripe.subscriptions.retrieve(duplicate.id)).status).toBe("canceled");
+        const payments = await stripe.invoicePayments.list({
+          invoice: duplicate.latest_invoice as string,
+          expand: ["data.payment.payment_intent.latest_charge"],
+        });
+        const intent = payments.data[0].payment.payment_intent as Stripe.PaymentIntent;
+        const charge = intent.latest_charge as Stripe.Charge;
+        expect(charge.refunded).toBe(true);
 
-      const payments = await stripe.invoicePayments.list({
-        invoice: duplicate.latest_invoice as string,
-        expand: ["data.payment.payment_intent.latest_charge"],
-      });
-      const intent = payments.data[0].payment.payment_intent as Stripe.PaymentIntent;
-      const charge = intent.latest_charge as Stripe.Charge;
-      expect(charge.refunded).toBe(true);
-
-      // 같은 이벤트가 재전송돼도(웹훅 재시도) 오류 없이 넘어간다.
-      const retry = await postSignedEvent({
-        ...subscriptionEvent("customer.subscription.updated"),
-        data: { object: duplicate },
-      });
-      expect(retry.status).toBe(200);
-    } finally {
-      await stripe.customers.del(customer.id);
-    }
-  }, 60_000);
+        // 같은 이벤트가 재전송돼도(웹훅 재시도) 오류 없이 넘어간다.
+        const retry = await postSignedEvent({
+          ...subscriptionEvent("customer.subscription.updated"),
+          data: { object: duplicate },
+        });
+        expect(retry.status).toBe(200);
+      } finally {
+        await stripe.customers.del(customer.id);
+      }
+    },
+    60_000,
+  );
 });

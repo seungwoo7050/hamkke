@@ -1,6 +1,7 @@
 // 실제 Stripe API(테스트 모드)에 왕복한다.
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hasStripe } from "@/test/services";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { createCallerFactory } from "../init";
@@ -53,44 +54,50 @@ describe("billing 라우터 (통합)", () => {
     await prisma.space.delete({ where: { id: spaceId } });
   });
 
-  it("구독 전이면 status는 null이고, 실제 Stripe Checkout Session URL을 발급받는다", async () => {
-    const caller = await callerFor(userAId);
+  it.skipIf(!hasStripe)(
+    "구독 전이면 status는 null이고, 실제 Stripe Checkout Session URL을 발급받는다",
+    async () => {
+      const caller = await callerFor(userAId);
 
-    expect(await caller.billing.status()).toBeNull();
+      expect(await caller.billing.status()).toBeNull();
 
-    const { url } = await caller.billing.createCheckoutSession();
-    expect(url).toMatch(/^https:\/\/checkout\.stripe\.com\//);
+      const { url } = await caller.billing.createCheckoutSession();
+      expect(url).toMatch(/^https:\/\/checkout\.stripe\.com\//);
 
-    // 방금 만든 Customer를 정리하기 위해 Checkout Session에서 역추적한다.
-    const sessionId = new URL(url).pathname.split("/").pop()!.split("#")[0];
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    createdCustomerIds.push(session.customer as string);
-  });
-
-  it("두 사람이 동시에 결제를 시작해도 같은 Customer의 같은 Checkout 세션을 받는다", async () => {
-    const b = await prisma.user.create({
-      data: { email: `test-billing-b-${randomUUID()}@example.com`, spaceId },
-    });
-    try {
-      const [callerA, callerB] = await Promise.all([callerFor(userAId), callerFor(b.id)]);
-      const [first, second] = await Promise.all([
-        callerA.billing.createCheckoutSession(),
-        callerB.billing.createCheckoutSession(),
-      ]);
-
-      const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
-      if (space.stripeCustomerId) createdCustomerIds.push(space.stripeCustomerId);
-
-      expect(second.url).toBe(first.url);
-      const sessionId = new URL(first.url).pathname.split("/").pop()!.split("#")[0];
+      // 방금 만든 Customer를 정리하기 위해 Checkout Session에서 역추적한다.
+      const sessionId = new URL(url).pathname.split("/").pop()!.split("#")[0];
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-      expect(session.customer).toBe(space.stripeCustomerId);
-    } finally {
-      await prisma.user.delete({ where: { id: b.id } });
-    }
-  });
+      createdCustomerIds.push(session.customer as string);
+    },
+  );
 
-  it("결제 화면을 다시 열면 아직 열려 있는 세션을 재사용한다", async () => {
+  it.skipIf(!hasStripe)(
+    "두 사람이 동시에 결제를 시작해도 같은 Customer의 같은 Checkout 세션을 받는다",
+    async () => {
+      const b = await prisma.user.create({
+        data: { email: `test-billing-b-${randomUUID()}@example.com`, spaceId },
+      });
+      try {
+        const [callerA, callerB] = await Promise.all([callerFor(userAId), callerFor(b.id)]);
+        const [first, second] = await Promise.all([
+          callerA.billing.createCheckoutSession(),
+          callerB.billing.createCheckoutSession(),
+        ]);
+
+        const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
+        if (space.stripeCustomerId) createdCustomerIds.push(space.stripeCustomerId);
+
+        expect(second.url).toBe(first.url);
+        const sessionId = new URL(first.url).pathname.split("/").pop()!.split("#")[0];
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        expect(session.customer).toBe(space.stripeCustomerId);
+      } finally {
+        await prisma.user.delete({ where: { id: b.id } });
+      }
+    },
+  );
+
+  it.skipIf(!hasStripe)("결제 화면을 다시 열면 아직 열려 있는 세션을 재사용한다", async () => {
     const caller = await callerFor(userAId);
     const first = await caller.billing.createCheckoutSession();
     const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
@@ -100,24 +107,29 @@ describe("billing 라우터 (통합)", () => {
     expect(again.url).toBe(first.url);
   });
 
-  it("Play 앱의 거래 토큰은 세션 metadata에 실리고, 다른 거래의 열린 세션은 만료시킨다", async () => {
-    const caller = await callerFor(userAId);
-    const sessionOf = (url: string) =>
-      stripe.checkout.sessions.retrieve(new URL(url).pathname.split("/").pop()!.split("#")[0]);
+  it.skipIf(!hasStripe)(
+    "Play 앱의 거래 토큰은 세션 metadata에 실리고, 다른 거래의 열린 세션은 만료시킨다",
+    async () => {
+      const caller = await callerFor(userAId);
+      const sessionOf = (url: string) =>
+        stripe.checkout.sessions.retrieve(new URL(url).pathname.split("/").pop()!.split("#")[0]);
 
-    const web = await caller.billing.createCheckoutSession();
-    const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
-    createdCustomerIds.push(space.stripeCustomerId!);
+      const web = await caller.billing.createCheckoutSession();
+      const space = await prisma.space.findUniqueOrThrow({ where: { id: spaceId } });
+      createdCustomerIds.push(space.stripeCustomerId!);
 
-    const app = await caller.billing.createCheckoutSession({ externalTransactionToken: "tok-1" });
-    expect(app.url).not.toBe(web.url);
-    expect((await sessionOf(app.url)).metadata).toMatchObject({ spaceId, playToken: "tok-1" });
-    expect((await sessionOf(web.url)).status).toBe("expired");
+      const app = await caller.billing.createCheckoutSession({ externalTransactionToken: "tok-1" });
+      expect(app.url).not.toBe(web.url);
+      expect((await sessionOf(app.url)).metadata).toMatchObject({ spaceId, playToken: "tok-1" });
+      expect((await sessionOf(web.url)).status).toBe("expired");
 
-    // 같은 거래(같은 토큰)로 다시 열면 그 세션을 그대로 쓴다.
-    const again = await caller.billing.createCheckoutSession({ externalTransactionToken: "tok-1" });
-    expect(again.url).toBe(app.url);
-  });
+      // 같은 거래(같은 토큰)로 다시 열면 그 세션을 그대로 쓴다.
+      const again = await caller.billing.createCheckoutSession({
+        externalTransactionToken: "tok-1",
+      });
+      expect(again.url).toBe(app.url);
+    },
+  );
 
   it("이미 활성 구독이 있으면 새 Checkout Session을 만들 수 없다", async () => {
     await prisma.subscription.create({
@@ -144,25 +156,28 @@ describe("billing 라우터 (통합)", () => {
     });
   });
 
-  it("구독 중이면 실제 Stripe Customer Portal Session URL을 발급받는다", async () => {
-    const customer = await stripe.customers.create({ metadata: { spaceId } });
-    createdCustomerIds.push(customer.id);
+  it.skipIf(!hasStripe)(
+    "구독 중이면 실제 Stripe Customer Portal Session URL을 발급받는다",
+    async () => {
+      const customer = await stripe.customers.create({ metadata: { spaceId } });
+      createdCustomerIds.push(customer.id);
 
-    await prisma.subscription.create({
-      data: {
-        spaceId,
-        stripeCustomerId: customer.id,
-        stripeSubscriptionId: `sub_fake_${randomUUID()}`,
-        plan: "premium",
-        status: "active",
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-    });
+      await prisma.subscription.create({
+        data: {
+          spaceId,
+          stripeCustomerId: customer.id,
+          stripeSubscriptionId: `sub_fake_${randomUUID()}`,
+          plan: "premium",
+          status: "active",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
 
-    const caller = await callerFor(userAId);
-    const { url } = await caller.billing.createPortalSession();
-    expect(url).toMatch(/^https:\/\/billing\.stripe\.com\//);
-  });
+      const caller = await callerFor(userAId);
+      const { url } = await caller.billing.createPortalSession();
+      expect(url).toMatch(/^https:\/\/billing\.stripe\.com\//);
+    },
+  );
 
   it("스페이스 멤버가 아니면 호출할 수 없다(spaceProcedure)", async () => {
     const outsider = await prisma.user.create({
