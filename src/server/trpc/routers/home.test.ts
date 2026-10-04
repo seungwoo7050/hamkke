@@ -181,6 +181,9 @@ describe("home 라우터 (통합)", () => {
     });
     expect(Number.isInteger(widget.distanceKm)).toBe(true);
     expect(fetchWeather).not.toHaveBeenCalled();
+    // 상대(B) 위치로 계산한 거리가 나(A)에게 갔다 - 위치 제공 사실 확인자료(위치정보법 §16②).
+    const provisions = await prisma.locationProvision.findMany({ where: { subjectId: userBId } });
+    expect(provisions.map((p) => [p.recipientId, p.kind])).toEqual([[userAId, "derived"]]);
   });
 
   it("위젯도 위치공유가 꺼져 있으면 거리를 드러내지 않는다", async () => {
@@ -193,5 +196,6 @@ describe("home 라우터 (통합)", () => {
     const widget = await (await callerFor(userAId)).home.widget();
     expect(widget.distanceKm).toBeNull();
     expect(widget.lastTouchReceivedAt).toBeNull();
+    expect(await prisma.locationProvision.count({ where: { subjectId: userBId } })).toBe(0);
   });
 });

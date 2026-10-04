@@ -107,11 +107,18 @@ export const homeRouter = router({
       partner ? latestPing(partner.id, partner.locationSharingEnabled) : null,
     ]);
 
+    // 위젯의 거리도 상대 위치로 계산해 나에게 주는 것이라 제공 사실을 남긴다(위치정보법
+    // §16② - summary의 거리·날씨와 같은 derived).
+    const distance = myPing && partnerPing ? Math.round(distanceKm(myPing, partnerPing)) : null;
+    if (partner && distance !== null) {
+      await recordLocationProvision(partner.id, myId, "derived");
+    }
+
     return {
       myTimezone: validTimeZoneOrNull(me.timezone),
       partnerName: partner?.name?.trim() || null,
       partnerTimezone: validTimeZoneOrNull(partner?.timezone),
-      distanceKm: myPing && partnerPing ? Math.round(distanceKm(myPing, partnerPing)) : null,
+      distanceKm: distance,
       lastTouchReceivedAt: lastTouch?.createdAt.toISOString() ?? null,
     };
   }),
