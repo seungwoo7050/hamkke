@@ -1,5 +1,8 @@
 # 검사: lint·typecheck·format·Vitest·build는 항상, e2e(Playwright)는 시크릿이 있을 때만.
-# 배포: main push·수동 실행에서 검사가 모두 통과하면 운영 DB 마이그레이션 → Vercel 운영 배포.
+# 배포: main push·수동 실행에서 검사가 모두 통과하면
+#   빌드 → 운영 DB 마이그레이션 → 도메인 없이 운영 배포 → 스모크 테스트 → 도메인 넘기기(promote).
+# 스모크가 실패하면 도메인은 이전 배포에 그대로 남는다. 마이그레이션은 이미 적용됐으므로
+# 이전 코드도 새 스키마에서 돌아야 한다(열 지우기·이름 바꾸기는 다음 배포로 나눈다).
 #
 # 저장소 시크릿(Settings → Secrets and variables → Actions). 없으면 그 단계를 건너뛴다.
 #   STRIPE_TEST_SECRET_KEY      e2e - Stripe 테스트 모드 비밀 키(sk_test_...). 이게 있어야 e2e가 돈다.
@@ -10,7 +13,14 @@
 #   VERCEL_TOKEN                배포 - Vercel 계정 토큰.
 #   VERCEL_ORG_ID               배포 - `vercel link` 뒤 .vercel/project.json의 orgId.
 #   VERCEL_PROJECT_ID           배포 - 같은 파일의 projectId.
-# 배포 시크릿이 하나라도 없으면 deploy job 전체를 건너뛴다.
+#   VERCEL_AUTOMATION_BYPASS_SECRET  배포(선택) - Vercel 배포 보호가 켜져 있으면 스모크 테스트가
+#                               배포 주소에 401을 받는다. Project Settings → Deployment Protection →
+#                               Protection Bypass for Automation의 값.
+# 배포 시크릿(선택 제외)이 하나라도 없으면 deploy job 전체를 건너뛴다.
+#
+# 저장소 변수(같은 화면의 Variables 탭, 선택).
+#   PRODUCTION_URL              운영 공개 주소(예: https://hamkke.app). 있으면 도메인을 넘긴 뒤
+#                               그 주소로 한 번 더 확인하고, Environments 화면의 링크로 쓴다.
 #
 # Vercel의 Git 자동 배포는 vercel.json에서 끈다 - 켜 두면 이 워크플로와 따로 배포돼
 # "마이그레이션이 코드보다 먼저"가 깨진다.
@@ -22,6 +32,8 @@ name: CI
 
 on:
   push:
+    # 문서만 바뀐 push는 검사·배포하지 않는다.
+    paths-ignore: ["**/*.md"]
   workflow_dispatch:
 
 concurrency:
@@ -163,10 +175,14 @@ jobs:
     concurrency:
       group: deploy-production
       cancel-in-progress: false
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL || steps.deploy.outputs.url }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       # 버전을 고정한다 - CLI가 바뀌어 배포가 달라지지 않게.
       VERCEL_CLI: vercel@62.2.0
     steps:
@@ -177,10 +193,24 @@ jobs:
           cache: npm
       - run: npm ci
       # 빌드를 먼저 해 둔다 - 빌드가 깨지면 운영 DB를 건드리지 않고 멈춘다.
+      # npm run build가 prisma generate를 먼저 돌린다(DATABASE_URL은 pull한 운영 환경 변수).
       - run: npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="$VERCEL_TOKEN"
       - run: npx --yes "$VERCEL_CLI" build --prod --token="$VERCEL_TOKEN"
       - name: 운영 DB 마이그레이션(코드보다 먼저)
         run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-      - run: npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+      - name: 운영 배포 만들기(도메인은 아직 이전 배포에)
+        id: deploy
+        run: |
+          # stdout에는 배포 주소만 나온다(진행 상황은 stderr).
+          url=$(npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --skip-domain --token="$VERCEL_TOKEN" | tail -n 1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "새 배포: $url"
+      - name: 스모크 테스트(새 배포 주소)
+        run: scripts/smoke-deploy.sh "${{ steps.deploy.outputs.url }}"
+      - name: 도메인 넘기기
+        run: npx --yes "$VERCEL_CLI" promote "${{ steps.deploy.outputs.url }}" --yes --token="$VERCEL_TOKEN"
+      - name: 공개 주소로 확인
+        if: vars.PRODUCTION_URL != ''
+        run: scripts/smoke-deploy.sh "${{ vars.PRODUCTION_URL }}"
