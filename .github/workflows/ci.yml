@@ -1,0 +1,127 @@
+# 검사: lint·typecheck·format·Vitest·build는 항상, e2e(Playwright)는 시크릿이 있을 때만.
+#
+# 저장소 시크릿(Settings → Secrets and variables → Actions). 없으면 그 단계를 건너뛴다.
+#   STRIPE_TEST_SECRET_KEY      e2e - Stripe 테스트 모드 비밀 키(sk_test_...). 이게 있어야 e2e가 돈다.
+#   STRIPE_TEST_WEBHOOK_SECRET  e2e - 웹훅 서명 비밀값(whsec_...). e2e가 직접 서명해 보낸다.
+#   STRIPE_TEST_PRICE_ID        e2e - 테스트 모드 프리미엄 가격 ID(price_...).
+#
+# Vitest는 시크릿 없이 돈다 - R2·Stripe·Realtime에 실제로 왕복하는 테스트는
+# src/test/services.ts가 건너뛰고, 나머지는 서비스 컨테이너의 Postgres를 쓴다.
+# next build는 import할 때 키가 없으면 터지는 모듈(src/lib/stripe.ts)에 자리표시자를 준다.
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  # 서비스 컨테이너의 로컬 Postgres. e2e/db.ts는 로컬 호스트가 아니면 실행을 거부한다.
+  DATABASE_URL: postgresql://hamkke:hamkke@localhost:5432/hamkke
+
+jobs:
+  # 시크릿은 job의 if에서 직접 읽을 수 없어 여기서 있는지만 output으로 내보낸다.
+  secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      e2e: ${{ steps.check.outputs.e2e }}
+    steps:
+      - id: check
+        env:
+          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+          STRIPE_TEST_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
+          STRIPE_TEST_PRICE_ID: ${{ secrets.STRIPE_TEST_PRICE_ID }}
+        run: |
+          if [ -n "$STRIPE_TEST_SECRET_KEY" ] && [ -n "$STRIPE_TEST_WEBHOOK_SECRET" ] && [ -n "$STRIPE_TEST_PRICE_ID" ]; then
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "e2e=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Stripe 테스트 시크릿이 없어 e2e를 건너뜁니다."
+          fi
+
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hamkke
+          POSTGRES_PASSWORD: hamkke
+          POSTGRES_DB: hamkke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hamkke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npx prisma migrate deploy
+      - run: npm test
+      - run: npm run build
+        env:
+          STRIPE_SECRET_KEY: sk_test_placeholder
+
+  e2e:
+    needs: [secrets, check]
+    if: needs.secrets.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hamkke
+          POSTGRES_PASSWORD: hamkke
+          POSTGRES_DB: hamkke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hamkke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
+      STRIPE_PREMIUM_PRICE_ID: ${{ secrets.STRIPE_TEST_PRICE_ID }}
+      # Realtime·R2는 e2e가 쓰지 않는다(상대 화면은 새로 열어 확인) - 클라이언트가 만들어지게만.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.invalid
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
+      SUPABASE_SECRET_KEY: placeholder
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx playwright install --with-deps chromium
+      - name: AUTH_SECRET(이 실행에서만 쓰는 값)
+        run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - run: npm run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
