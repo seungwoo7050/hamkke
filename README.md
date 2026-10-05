@@ -114,9 +114,11 @@ npm run dev:seed-couple
 | `npm run dev`                                                 | 개발 서버                                                                                                                                                             |
 | `npm run build` / `npm start`                                 | 프로덕션 빌드 / 실행                                                                                                                                                  |
 | `npm run lint` · `npm run typecheck` · `npm run format:check` | ESLint · 타입 검사 · Prettier                                                                                                                                         |
-| `npm test`                                                    | Vitest - 라우터 통합 테스트는 **실제 DB**에 쓰고 지운다(로컬 DB로)                                                                                                    |
+| `npm test`                                                    | Vitest - 라우터 통합 테스트는 **실제 DB**에 쓰고 지운다(로컬 DB로). R2·Stripe·Realtime 키가 없으면 그 서비스에 실제로 왕복하는 테스트만 건너뛴다                      |
 | `npm run test:e2e`                                            | Playwright 핵심 플로우(페어링 → 채팅 → 위치 공유 → 구독)와 영어·가짜 언어 화면(한국어 0자). 서버와 같은 **로컬** `DATABASE_URL`이 필요하고, 원격 DB면 실행을 거부한다 |
 | `npm run dev:seed-couple`                                     | 페어링된 개발용 커플 계정                                                                                                                                             |
+
+push마다 GitHub Actions(`.github/workflows/ci.yml`)가 lint·타입 검사·Prettier·Vitest(서비스 컨테이너 Postgres)·빌드를 돌린다. e2e는 Stripe 테스트 모드 시크릿이 있을 때만 돈다(필요한 시크릿은 파일 맨 위 주석).
 
 ## Android
 
@@ -143,11 +145,12 @@ cd android && ./gradlew bundleRelease         # app/build/outputs/bundle/release
 
 - **마이그레이션을 코드보다 먼저** 운영 DB에 적용한다: `DATABASE_URL=<운영 direct 연결> npx prisma migrate deploy`(Supabase는 포트 5432 direct 연결만 쓴다 - `.env.example` 주석).
 - 운영에서는 `APP_URL`을 반드시 넣는다. 유료 플랜은 `PREMIUM_OPEN=1`일 때만 열린다.
+- `GET /api/health`는 DB까지 닿는지만 보는 헬스 체크다(200 `ok` / 503). 오류는 `NEXT_PUBLIC_SENTRY_DSN`이 있을 때만 Sentry로 간다.
 
 ## 폴더
 
 ```
-src/app/            라우트 - login, onboarding, home(우리·대화·기억 + 시트), legal, account, api(auth·trpc·widget·webhooks)
+src/app/            라우트 - login, onboarding, home(우리·대화·기억 + 시트), legal, account, api(auth·trpc·widget·webhooks·health)
 src/server/         tRPC 라우터와 서버 전용 로직(요청 제한, 계정 삭제, 위치 제공 기록, Play 보고)
 src/lib/            순수 로직(시간·거리·요금제·상황 카드·비행…)과 외부 서비스 클라이언트
 src/components/     ui(shadcn 기반) · brand(심볼·로고·장면 그림)
