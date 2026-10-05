@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hasR2 } from "@/test/services";
 import { prisma } from "@/lib/prisma";
 import { createCallerFactory } from "../init";
 import { appRouter } from "./_app";
@@ -172,110 +173,122 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     expect(await callerA.chat.unreadCount()).toBe(0);
   });
 
-  it("이미지 업로드 URL로 실제 R2에 업로드하고, sendImage/list가 접근 가능한 signed URL을 돌려준다", async () => {
-    const caller = await callerFor(userAId);
+  it.skipIf(!hasR2)(
+    "이미지 업로드 URL로 실제 R2에 업로드하고, sendImage/list가 접근 가능한 signed URL을 돌려준다",
+    async () => {
+      const caller = await callerFor(userAId);
 
-    const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
-    const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
-      contentType: "image/png",
-      size: fakeImageBytes.length,
-    });
+      const fakeImageBytes = new Uint8Array([1, 2, 3, 4]);
+      const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
+        contentType: "image/png",
+        size: fakeImageBytes.length,
+      });
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "image/png" },
-      body: fakeImageBytes,
-    });
-    expect(uploadRes.ok).toBe(true);
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "image/png" },
+        body: fakeImageBytes,
+      });
+      expect(uploadRes.ok).toBe(true);
 
-    const message = await caller.chat.sendImage({ key });
-    expect(message.type).toBe("image");
-    // content가 R2 키가 아니라 실제로 열리는 signed URL로 바뀌어 있어야 한다.
-    expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+      const message = await caller.chat.sendImage({ key });
+      expect(message.type).toBe("image");
+      // content가 R2 키가 아니라 실제로 열리는 signed URL로 바뀌어 있어야 한다.
+      expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
 
-    const downloadRes = await fetch(message.content);
-    expect(downloadRes.ok).toBe(true);
-    expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeImageBytes);
+      const downloadRes = await fetch(message.content);
+      expect(downloadRes.ok).toBe(true);
+      expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeImageBytes);
 
-    const { messages } = await caller.chat.list({});
-    const listed = messages.find((m) => m.id === message.id)!;
-    expect(listed.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+      const { messages } = await caller.chat.list({});
+      const listed = messages.find((m) => m.id === message.id)!;
+      expect(listed.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
 
-    await deleteR2Object(key);
-  });
+      await deleteR2Object(key);
+    },
+  );
 
-  it("음성 업로드 URL로 실제 R2에 업로드하고, sendVoice/list가 접근 가능한 signed URL을 돌려준다", async () => {
-    const caller = await callerFor(userAId);
+  it.skipIf(!hasR2)(
+    "음성 업로드 URL로 실제 R2에 업로드하고, sendVoice/list가 접근 가능한 signed URL을 돌려준다",
+    async () => {
+      const caller = await callerFor(userAId);
 
-    const fakeAudioBytes = new Uint8Array([9, 8, 7, 6, 5]);
-    const { uploadUrl, key } = await caller.chat.createVoiceUploadUrl({
-      contentType: "audio/webm",
-      size: fakeAudioBytes.length,
-    });
+      const fakeAudioBytes = new Uint8Array([9, 8, 7, 6, 5]);
+      const { uploadUrl, key } = await caller.chat.createVoiceUploadUrl({
+        contentType: "audio/webm",
+        size: fakeAudioBytes.length,
+      });
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "audio/webm" },
-      body: fakeAudioBytes,
-    });
-    expect(uploadRes.ok).toBe(true);
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "audio/webm" },
+        body: fakeAudioBytes,
+      });
+      expect(uploadRes.ok).toBe(true);
 
-    const message = await caller.chat.sendVoice({ key });
-    expect(message.type).toBe("voice");
-    expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+      const message = await caller.chat.sendVoice({ key });
+      expect(message.type).toBe("voice");
+      expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
 
-    const downloadRes = await fetch(message.content);
-    expect(downloadRes.ok).toBe(true);
-    expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeAudioBytes);
+      const downloadRes = await fetch(message.content);
+      expect(downloadRes.ok).toBe(true);
+      expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeAudioBytes);
 
-    await deleteR2Object(key);
-  });
+      await deleteR2Object(key);
+    },
+  );
 
-  it("영상 업로드 URL로 실제 R2에 업로드하고, sendVideo/list가 접근 가능한 signed URL을 돌려준다", async () => {
-    const caller = await callerFor(userAId);
+  it.skipIf(!hasR2)(
+    "영상 업로드 URL로 실제 R2에 업로드하고, sendVideo/list가 접근 가능한 signed URL을 돌려준다",
+    async () => {
+      const caller = await callerFor(userAId);
 
-    const fakeVideoBytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
-    const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
-      contentType: "video/mp4",
-      size: fakeVideoBytes.length,
-    });
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "video/mp4" },
-      body: fakeVideoBytes,
-    });
-    expect(uploadRes.ok).toBe(true);
+      const fakeVideoBytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
+      const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
+        contentType: "video/mp4",
+        size: fakeVideoBytes.length,
+      });
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "video/mp4" },
+        body: fakeVideoBytes,
+      });
+      expect(uploadRes.ok).toBe(true);
 
-    const message = await caller.chat.sendVideo({ key });
-    expect(message.type).toBe("video");
-    expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
-    const downloadRes = await fetch(message.content);
-    expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeVideoBytes);
+      const message = await caller.chat.sendVideo({ key });
+      expect(message.type).toBe("video");
+      expect(message.content).toMatch(/^https:\/\/.*\.r2\.cloudflarestorage\.com\//);
+      const downloadRes = await fetch(message.content);
+      expect(new Uint8Array(await downloadRes.arrayBuffer())).toEqual(fakeVideoBytes);
 
-    const { messages } = await caller.chat.list({});
-    expect(messages.find((m) => m.id === message.id)?.type).toBe("video");
+      const { messages } = await caller.chat.list({});
+      expect(messages.find((m) => m.id === message.id)?.type).toBe("video");
 
-    await deleteR2Object(key);
-  });
+      await deleteR2Object(key);
+    },
+  );
 
-  it("영상으로 올린 파일을 사진 메시지로 등록할 수 없다(실제 형식으로 종류를 본다)", async () => {
-    const caller = await callerFor(userAId);
-    const bytes = new Uint8Array([1, 2, 3]);
-    const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
-      contentType: "video/mp4",
-      size: bytes.length,
-    });
-    await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "video/mp4" },
-      body: bytes,
-    });
+  it.skipIf(!hasR2)(
+    "영상으로 올린 파일을 사진 메시지로 등록할 수 없다(실제 형식으로 종류를 본다)",
+    async () => {
+      const caller = await callerFor(userAId);
+      const bytes = new Uint8Array([1, 2, 3]);
+      const { uploadUrl, key } = await caller.chat.createVideoUploadUrl({
+        contentType: "video/mp4",
+        size: bytes.length,
+      });
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "video/mp4" },
+        body: bytes,
+      });
 
-    await expect(caller.chat.sendImage({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
+      await expect(caller.chat.sendImage({ key })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
 
-    await deleteR2Object(key);
-  });
+      await deleteR2Object(key);
+    },
+  );
 
   it("크기 상한을 넘는 업로드 주소는 발급하지 않는다", async () => {
     const caller = await callerFor(userAId);
@@ -290,7 +303,7 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  it("신고한 크기보다 큰 파일을 올리면 R2가 거절한다", async () => {
+  it.skipIf(!hasR2)("신고한 크기보다 큰 파일을 올리면 R2가 거절한다", async () => {
     const caller = await callerFor(userAId);
     const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
       contentType: "image/png",
@@ -307,27 +320,30 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     await deleteR2Object(key);
   });
 
-  it("다른 스페이스의 파일이나 올리지 않은 파일로는 메시지를 만들 수 없다", async () => {
-    const caller = await callerFor(userAId);
+  it.skipIf(!hasR2)(
+    "다른 스페이스의 파일이나 올리지 않은 파일로는 메시지를 만들 수 없다",
+    async () => {
+      const caller = await callerFor(userAId);
 
-    // 올리지 않은 키(업로드 주소만 받음)
-    const { key: notUploaded } = await caller.chat.createImageUploadUrl({
-      contentType: "image/png",
-      size: 1,
-    });
-    await expect(caller.chat.sendImage({ key: notUploaded })).rejects.toMatchObject({
-      code: "BAD_REQUEST",
-    });
+      // 올리지 않은 키(업로드 주소만 받음)
+      const { key: notUploaded } = await caller.chat.createImageUploadUrl({
+        contentType: "image/png",
+        size: 1,
+      });
+      await expect(caller.chat.sendImage({ key: notUploaded })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
 
-    // 남의 스페이스 경로
-    await expect(
-      caller.chat.sendImage({ key: `messages/other-space/${randomUUID()}` }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      // 남의 스페이스 경로
+      await expect(
+        caller.chat.sendImage({ key: `messages/other-space/${randomUUID()}` }),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
-    expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
-  });
+      expect(await prisma.message.count({ where: { spaceId } })).toBe(0);
+    },
+  );
 
-  it("같은 임시 키로 동시에 여러 번 보내도 메시지는 하나만 생긴다", async () => {
+  it.skipIf(!hasR2)("같은 임시 키로 동시에 여러 번 보내도 메시지는 하나만 생긴다", async () => {
     const caller = await callerFor(userAId);
     const bytes = new Uint8Array([1]);
     const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
@@ -347,7 +363,7 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
     await deleteR2Object(key);
   });
 
-  it("서명에 묶이지 않은 Content-Type을 바꿔 올린 파일은 거절한다", async () => {
+  it.skipIf(!hasR2)("서명에 묶이지 않은 Content-Type을 바꿔 올린 파일은 거절한다", async () => {
     const caller = await callerFor(userAId);
     const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
       contentType: "image/png",
@@ -391,7 +407,7 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
       await prisma.subscription.deleteMany({ where: { spaceId } });
     });
 
-    it("등록하면 실제 파일 크기가 기록된다", async () => {
+    it.skipIf(!hasR2)("등록하면 실제 파일 크기가 기록된다", async () => {
       const caller = await callerFor(userAId);
       const bytes = new Uint8Array(7);
       const { uploadUrl, key } = await caller.chat.createImageUploadUrl({
@@ -421,7 +437,7 @@ describe("chat 라우터 (통합)", { timeout: 30_000 }, () => {
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
     });
 
-    it("주소를 미리 받아 두어도 등록 시점에 상한을 넘기면 거부한다", async () => {
+    it.skipIf(!hasR2)("주소를 미리 받아 두어도 등록 시점에 상한을 넘기면 거부한다", async () => {
       const caller = await callerFor(userAId);
       const { uploadUrl, key } = await caller.chat.createVoiceUploadUrl({
         contentType: "audio/webm",

@@ -2,10 +2,11 @@
 // 테스트. NEXT_PUBLIC_SUPABASE_URL 등이 .env에 있어야 통과한다.
 import { createClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
+import { hasRealtime } from "@/test/services";
 import { broadcastToSpace } from "./broadcast";
 import { spaceChannelName } from "./channels";
 
-describe("Supabase Realtime broadcast", () => {
+describe.skipIf(!hasRealtime)("Supabase Realtime broadcast", () => {
   it("서버(secret key)가 보낸 브로드캐스트를 구독자(publishable key)가 실제로 받는다", async () => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;

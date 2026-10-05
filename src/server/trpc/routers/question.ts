@@ -13,6 +13,7 @@ import { sendPushToSpacePartner } from "@/lib/push";
 import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import { translator } from "@/i18n/server";
+import { reportError } from "@/lib/report-error";
 
 // 질문 문장은 요청자의 언어로 붙여 보낸다(두 사람이 각자의 언어로 같은 질문을 본다).
 function withText(question: DailyQuestion, locale?: string) {
@@ -73,7 +74,7 @@ export const questionRouter = router({
         dateKey,
       });
 
-      // 질문 답변 알림(PRD §3.6). 알림 실패가 답변 저장을 막으면 안 되므로 삼킨다.
+      // 질문 답변 알림(PRD §3.6). 알림 실패가 답변 저장을 막으면 안 되므로 남기기만 하고 넘어간다.
       const me = await prisma.user.findUnique({
         where: { id: ctx.session.user.id },
         select: { name: true },
@@ -88,7 +89,7 @@ export const questionRouter = router({
             nameSubj: josa(name, "이/가"),
           }),
         };
-      }).catch(() => {});
+      }).catch(reportError("push.questionAnswered"));
 
       return answer;
     }),

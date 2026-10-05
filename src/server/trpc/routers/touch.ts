@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
+import { reportError } from "@/lib/report-error";
 
 export const touchRouter = router({
   send: spaceProcedure.mutation(async ({ ctx }) => {
@@ -13,11 +14,11 @@ export const touchRouter = router({
     await broadcastToSpace(ctx.space.id, "touch", touch);
 
     // 상대가 탭을 닫아뒀거나 백그라운드에 있어도 받을 수 있도록 푸시도 시도한다.
-    // 푸시 발송 실패가 터치 자체의 성공을 막으면 안 되므로 에러는 삼킨다.
+    // 푸시 발송 실패가 터치 자체의 성공을 막으면 안 되므로 남기기만 하고 넘어간다.
     await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
       title: "Hamkke",
       body: t("push.touch"),
-    })).catch(() => {});
+    })).catch(reportError("push.touch"));
 
     return touch;
   }),

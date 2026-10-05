@@ -1,0 +1,186 @@
+# 검사: lint·typecheck·format·Vitest·build는 항상, e2e(Playwright)는 시크릿이 있을 때만.
+# 배포: main push·수동 실행에서 검사가 모두 통과하면 운영 DB 마이그레이션 → Vercel 운영 배포.
+#
+# 저장소 시크릿(Settings → Secrets and variables → Actions). 없으면 그 단계를 건너뛴다.
+#   STRIPE_TEST_SECRET_KEY      e2e - Stripe 테스트 모드 비밀 키(sk_test_...). 이게 있어야 e2e가 돈다.
+#   STRIPE_TEST_WEBHOOK_SECRET  e2e - 웹훅 서명 비밀값(whsec_...). e2e가 직접 서명해 보낸다.
+#   STRIPE_TEST_PRICE_ID        e2e - 테스트 모드 프리미엄 가격 ID(price_...).
+#   PRODUCTION_DATABASE_URL     배포 - 운영 DB. GitHub 러너는 IPv6로 나가지 못하므로 Supabase의
+#                               direct 연결(IPv6 전용)이 아니라 IPv4로 닿는 Session pooler 주소.
+#   VERCEL_TOKEN                배포 - Vercel 계정 토큰.
+#   VERCEL_ORG_ID               배포 - `vercel link` 뒤 .vercel/project.json의 orgId.
+#   VERCEL_PROJECT_ID           배포 - 같은 파일의 projectId.
+# 배포 시크릿이 하나라도 없으면 deploy job 전체를 건너뛴다.
+#
+# Vercel의 Git 자동 배포는 vercel.json에서 끈다 - 켜 두면 이 워크플로와 따로 배포돼
+# "마이그레이션이 코드보다 먼저"가 깨진다.
+#
+# Vitest는 시크릿 없이 돈다 - R2·Stripe·Realtime에 실제로 왕복하는 테스트는
+# src/test/services.ts가 건너뛰고, 나머지는 서비스 컨테이너의 Postgres를 쓴다.
+# next build는 import할 때 키가 없으면 터지는 모듈(src/lib/stripe.ts)에 자리표시자를 준다.
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  # 서비스 컨테이너의 로컬 Postgres. e2e/db.ts는 로컬 호스트가 아니면 실행을 거부한다.
+  DATABASE_URL: postgresql://hamkke:hamkke@localhost:5432/hamkke
+
+jobs:
+  # 시크릿은 job의 if에서 직접 읽을 수 없어 여기서 있는지만 output으로 내보낸다.
+  secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      e2e: ${{ steps.check.outputs.e2e }}
+      deploy: ${{ steps.check.outputs.deploy }}
+    steps:
+      - id: check
+        env:
+          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+          STRIPE_TEST_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
+          STRIPE_TEST_PRICE_ID: ${{ secrets.STRIPE_TEST_PRICE_ID }}
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "$STRIPE_TEST_SECRET_KEY" ] && [ -n "$STRIPE_TEST_WEBHOOK_SECRET" ] && [ -n "$STRIPE_TEST_PRICE_ID" ]; then
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "e2e=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Stripe 테스트 시크릿이 없어 e2e를 건너뜁니다."
+          fi
+          if [ -n "$PRODUCTION_DATABASE_URL" ] && [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::배포 시크릿이 없어 운영 배포를 건너뜁니다."
+          fi
+
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hamkke
+          POSTGRES_PASSWORD: hamkke
+          POSTGRES_DB: hamkke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hamkke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npx prisma migrate deploy
+      - run: npm test
+      - run: npm run build
+        env:
+          STRIPE_SECRET_KEY: sk_test_placeholder
+
+  e2e:
+    needs: [secrets, check]
+    if: needs.secrets.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hamkke
+          POSTGRES_PASSWORD: hamkke
+          POSTGRES_DB: hamkke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hamkke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
+      STRIPE_PREMIUM_PRICE_ID: ${{ secrets.STRIPE_TEST_PRICE_ID }}
+      # Realtime·R2는 e2e가 쓰지 않는다(상대 화면은 새로 열어 확인) - 클라이언트가 만들어지게만.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.invalid
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
+      SUPABASE_SECRET_KEY: placeholder
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx playwright install --with-deps chromium
+      - name: AUTH_SECRET(이 실행에서만 쓰는 값)
+        run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - run: npm run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+
+  deploy:
+    needs: [secrets, check, e2e]
+    # e2e는 시크릿이 없으면 건너뛰므로 skipped도 통과로 본다(건너뛴 job에 기대면 기본값으로는
+    # 이 job도 건너뛴다).
+    if: >-
+      !cancelled()
+      && github.ref == 'refs/heads/main'
+      && needs.secrets.outputs.deploy == 'true'
+      && needs.check.result == 'success'
+      && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # 운영 배포는 한 번에 하나씩, 진행 중인 배포는 끊지 않는다.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # 버전을 고정한다 - CLI가 바뀌어 배포가 달라지지 않게.
+      VERCEL_CLI: vercel@62.2.0
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      # 빌드를 먼저 해 둔다 - 빌드가 깨지면 운영 DB를 건드리지 않고 멈춘다.
+      - run: npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - run: npx --yes "$VERCEL_CLI" build --prod --token="$VERCEL_TOKEN"
+      - name: 운영 DB 마이그레이션(코드보다 먼저)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      - run: npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --token="$VERCEL_TOKEN"
