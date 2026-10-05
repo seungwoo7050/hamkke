@@ -2,6 +2,7 @@ import "server-only";
 import { getAdminMessaging } from "@/lib/firebase-admin";
 import { prisma } from "@/lib/prisma";
 import { translator } from "@/i18n/server";
+import { reportError } from "@/lib/report-error";
 
 export async function sendPushToUser(
   userId: string,
@@ -33,6 +34,12 @@ export async function sendPushToUser(
   if (staleTokenIds.length > 0) {
     await prisma.pushToken.deleteMany({ where: { id: { in: staleTokenIds } } });
   }
+  // 그 밖의 실패(FCM 설정·할당량·일시 오류)는 조용히 넘기지 않고 남긴다.
+  const failure = results.find(
+    (result, i): result is PromiseRejectedResult =>
+      result.status === "rejected" && !staleTokenIds.includes(tokens[i].id),
+  );
+  if (failure) reportError("push.send")(failure.reason);
 }
 
 /**

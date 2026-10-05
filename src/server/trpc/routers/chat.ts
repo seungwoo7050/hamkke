@@ -10,6 +10,7 @@ import { newUploadKey, verifyUpload, withUploadRegistrationLock } from "@/server
 import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
 import type { TRPCContext } from "../context";
+import { reportError } from "@/lib/report-error";
 
 const ALLOWED_AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/ogg", "audio/mpeg"] as const;
 
@@ -67,7 +68,7 @@ async function createAndBroadcastMediaMessage(ctx: SpaceCtx, type: MediaType, ke
   await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
     title: "Hamkke",
     body: t(MEDIA[type].push),
-  })).catch(() => {});
+  })).catch(reportError("push.chat"));
 
   return { ...message, content };
 }
@@ -92,7 +93,7 @@ export const chatRouter = router({
       await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, () => ({
         title: "Hamkke",
         body: input.content.length > 40 ? `${input.content.slice(0, 40)}…` : input.content,
-      })).catch(() => {});
+      })).catch(reportError("push.chat"));
 
       return message;
     }),

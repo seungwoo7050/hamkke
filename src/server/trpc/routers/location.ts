@@ -16,6 +16,7 @@ import {
   recordLocationProvision,
 } from "@/server/location-provision";
 import { LOCATION_PING_RETENTION_MS, locationSendCheck } from "@/server/request-limits";
+import { reportError } from "@/lib/report-error";
 
 type SpaceCtx = { space: { id: string }; session: NonNullable<TRPCContext["session"]> };
 
@@ -45,7 +46,7 @@ async function checkGeofenceArrivals(
     await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
       title: "Hamkke",
       body: t("push.geofence", { label: fence.label }),
-    })).catch(() => {});
+    })).catch(reportError("push.geofence"));
   }
 }
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToSpacePartner } from "@/lib/push";
 import { broadcastToSpace } from "@/lib/supabase/broadcast";
 import { router, spaceProcedure } from "../init";
+import { reportError } from "@/lib/report-error";
 
 export const touchRouter = router({
   send: spaceProcedure.mutation(async ({ ctx }) => {
@@ -17,7 +18,7 @@ export const touchRouter = router({
     await sendPushToSpacePartner(ctx.space.id, ctx.session.user.id, (t) => ({
       title: "Hamkke",
       body: t("push.touch"),
-    })).catch(() => {});
+    })).catch(reportError("push.touch"));
 
     return touch;
   }),

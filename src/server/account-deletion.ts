@@ -6,6 +6,7 @@ import { deletePrefix } from "@/lib/r2";
 import { stripe } from "@/lib/stripe";
 import { normalizeEmail } from "@/server/magic-link-limit";
 import { PENDING_PREFIX } from "@/server/uploads";
+import { reportError } from "@/lib/report-error";
 
 // 계정 삭제(Google Play 요건·개인정보 파기). 2026-09-30 결정: 한 사람이 탈퇴하면
 // 스페이스를 통째로 지운다 - 대화·사진·기억은 두 사람이 함께 만든 것이라 한쪽만
@@ -43,7 +44,7 @@ export async function deleteSpace(spaceId: string, deletedByUserId: string) {
   await sendPushToSpacePartner(spaceId, deletedByUserId, (t) => ({
     title: "Hamkke",
     body: t("push.spaceDeleted"),
-  })).catch(() => {});
+  })).catch(reportError("push.spaceDeleted"));
 
   // 위치 기록은 공간이 아니라 사람에게 묶여 있어 공간을 지워도 상대 것이 남는다. 이 공간
   // 안에서 나눈 위치라 두 사람 것을 함께 지우고, 상대의 위치 공유 동의도 이 관계에 대한
