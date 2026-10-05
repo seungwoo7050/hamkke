@@ -13,7 +13,7 @@ export const OPERATOR = {
   /** 사업자등록번호 */
   businessNumber: "",
   /** Sentry 데이터 저장 지역 - 계정을 만들 때 고른 것. "us"(미국) 또는 "de"(독일, EU) */
-  sentryRegion: "" as "" | "us" | "de",
+  sentryRegion: "us" as "" | "us" | "de",
   /** 문서 시행일(YYYY-MM-DD) */
   effectiveDate: "",
 };
