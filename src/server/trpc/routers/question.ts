@@ -74,7 +74,7 @@ export const questionRouter = router({
         dateKey,
       });
 
-      // 질문 답변 알림(PRD §3.6). 알림 실패가 답변 저장을 막으면 안 되므로 삼킨다.
+      // 질문 답변 알림(PRD §3.6). 알림 실패가 답변 저장을 막으면 안 되므로 남기기만 하고 넘어간다.
       const me = await prisma.user.findUnique({
         where: { id: ctx.session.user.id },
         select: { name: true },
