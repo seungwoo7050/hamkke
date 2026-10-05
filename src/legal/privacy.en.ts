@@ -1,5 +1,7 @@
 import { field, type LegalDocFactory } from "./types";
 
+const SENTRY_REGION = { us: "US", de: "Germany (EU)" } as const;
+
 // Privacy policy (English). The Korean version is authoritative; keep both in step.
 const privacyEn: LegalDocFactory = (op, missing) => ({
   title: "Privacy policy",
@@ -41,7 +43,7 @@ const privacyEn: LegalDocFactory = (op, missing) => ({
               ],
               [
                 "Device and settings (automatic)",
-                "Time zone, language setting, device language, push token, sign-in session cookie, IP address for abuse prevention",
+                "Time zone, language setting, device language, push token, sign-in session cookie, IP address for abuse prevention, error reports when something breaks (the error, device and browser type, the address requested, your member ID)",
               ],
               [
                 "Payments (once Premium is on sale and you subscribe)",
@@ -62,6 +64,7 @@ const privacyEn: LegalDocFactory = (op, missing) => ({
             "Location coordinates: deleted 7 days after we receive them, and right away when you turn sharing off.",
             "Records of when your location was shared: kept for 6 months as required by Korea's Location Information Act, then deleted. Deleted right away when you turn sharing off (withdrawing consent).",
             "Abuse-prevention records (such as IP addresses): deleted once the limit window (at most a day) has passed.",
+            "Error reports: deleted when our error-tracking provider's (Sentry) retention period (at most 90 days) ends.",
             "Payment records: 5 years under Korea's e-commerce consumer protection law, kept as our payment processor's (Stripe) records.",
           ],
         },
@@ -103,6 +106,12 @@ const privacyEn: LegalDocFactory = (op, missing) => ({
               ["Google", "Google sign-in", "US", "Sign-in details"],
               ["Resend", "Sign-in emails", "US", "Email address"],
               ["Stripe", "Payments (once Premium is on sale)", "US", "Payment details, email"],
+              [
+                "Sentry",
+                "Error tracking (finding what broke)",
+                op.sentryRegion ? SENTRY_REGION[op.sentryRegion] : missing,
+                "The error, device and browser type, the address requested, your member ID (names, emails, messages, location and IP addresses are removed before sending)",
+              ],
               [
                 "Open-Meteo",
                 "Local weather",
