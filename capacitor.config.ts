@@ -7,17 +7,22 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // Next.js 서버를 웹뷰에서 원격 로드한다 - capacitor-shell/index.html은
 // server.url 로딩 실패 시에만 잠깐 보이는 로컬 폴백일 뿐이다.
 //
-// 지금은 로컬 개발 서버를 가리킨다: 10.0.2.2는 Android 에뮬레이터에서
-// 호스트 macOS의 localhost를 가리키는 표준 별칭이다. 실제 기기로 테스트할
-// 때는 이 값을 Mac의 LAN IP(예: 192.168.x.x:3000)로 바꿔야 한다. 배포
-// 후에는 실제 프로덕션 도메인(https://...)으로 교체한다(Phase 8).
+// 주소는 `npx cap sync` 때 CAP_SERVER_URL로 정한다(sync가 이 값을 앱 안에
+// 굳혀 넣으므로 바꾸면 다시 sync·빌드한다). 위젯도 같은 주소를 쓴다.
+//   운영:    CAP_SERVER_URL=https://<프로젝트>.vercel.app npx cap sync android
+//   기본값:  로컬 개발 서버. 10.0.2.2는 Android 에뮬레이터에서 호스트 macOS의
+//            localhost를 가리키는 표준 별칭이다. 실제 기기로 테스트할 때는
+//            Mac의 LAN IP(예: http://192.168.x.x:3000)를 넣는다.
+const serverUrl = process.env.CAP_SERVER_URL ?? "http://10.0.2.2:3000";
+
 const config: CapacitorConfig = {
   appId: "com.hamkke.app",
   appName: "Hamkke",
   webDir: "capacitor-shell",
   server: {
-    url: "http://10.0.2.2:3000",
-    cleartext: true,
+    url: serverUrl,
+    // 평문 http는 로컬 개발 서버일 때만 허용한다.
+    cleartext: serverUrl.startsWith("http://"),
   },
 };
 
