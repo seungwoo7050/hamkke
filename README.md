@@ -156,7 +156,7 @@ Next.js 16(App Router) 코드베이스 하나로 동작하며, 따로 백엔드 
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | API       | tRPC v11 + TanStack Query, Zod. 공간 단위 권한은 `spaceProcedure` 한 곳에서 확인                                                                  |
 | DB        | Postgres(Supabase) + Prisma 7. 모든 테이블에 RLS를 켜고 Data API는 꺼서, 데이터는 서버의 Prisma로만 다룸                                          |
-| 인증      | Auth.js: 이메일 매직링크(Resend), Google                                                                                                          |
+| 인증      | Auth.js: Google, 이메일 매직링크(Resend, `AUTH_RESEND_KEY`가 있을 때만)                                                                           |
 | 실시간    | Supabase Realtime(Broadcast + Presence). 서명 키를 넣으면 공간 토큰으로 private 채널을 씀                                                         |
 | 미디어    | Cloudflare R2. 브라우저가 서명된 주소로 직접 올림(사진 10MB, 영상 100MB, 음성 5MB)                                                                |
 | 푸시      | Firebase Cloud Messaging(웹, Android)                                                                                                             |

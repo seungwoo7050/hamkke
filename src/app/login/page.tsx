@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth, signIn } from "@/auth";
+import { auth, emailLoginEnabled, signIn } from "@/auth";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,23 +54,27 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </Button>
       </form>
 
-      <div className="text-muted-foreground flex items-center gap-3 text-sm">
-        <span className="bg-border h-px flex-1" />
-        {t("or")}
-        <span className="bg-border h-px flex-1" />
-      </div>
+      {emailLoginEnabled && (
+        <>
+          <div className="text-muted-foreground flex items-center gap-3 text-sm">
+            <span className="bg-border h-px flex-1" />
+            {t("or")}
+            <span className="bg-border h-px flex-1" />
+          </div>
 
-      <form action={signInWithEmail} className="flex flex-col gap-3">
-        <Input type="email" name="email" placeholder={t("emailPlaceholder")} required />
-        {limitedMinutes > 0 && (
-          <p role="alert" className="text-destructive text-sm">
-            {t("rateLimited", { minutes: limitedMinutes })}
-          </p>
-        )}
-        <Button type="submit" className="w-full">
-          {t("emailSubmit")}
-        </Button>
-      </form>
+          <form action={signInWithEmail} className="flex flex-col gap-3">
+            <Input type="email" name="email" placeholder={t("emailPlaceholder")} required />
+            {limitedMinutes > 0 && (
+              <p role="alert" className="text-destructive text-sm">
+                {t("rateLimited", { minutes: limitedMinutes })}
+              </p>
+            )}
+            <Button type="submit" className="w-full">
+              {t("emailSubmit")}
+            </Button>
+          </form>
+        </>
+      )}
 
       <p className="text-muted-foreground text-xs break-keep">
         {t.rich("agree", {
