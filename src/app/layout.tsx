@@ -22,6 +22,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     // 아이폰 홈 화면에 추가하면 Safari 주소창 없이 열리는 웹 앱으로(manifest.ts와 짝).
     appleWebApp: { capable: true, title: t("shortName"), statusBarStyle: "default" },
+    // 둘만 쓰는 비공개 앱이라 어떤 페이지도 검색에 올리지 않는다(정책 문서도 앱 안 링크로만 연다).
+    robots: { index: false, follow: false },
   };
 }
 
