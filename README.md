@@ -98,7 +98,7 @@ CI(`.github/workflows/ci.yml`)는 push마다 린트 → 타입 검사 → Pretti
 
 ## 배포
 
-호스팅은 Vercel이고 DB는 Supabase Postgres입니다. Vercel의 Git 자동 배포는 `vercel.json`에서 꺼 두었고, 배포는 CI만 합니다. `main`에 push하면 이 순서로 진행합니다.
+호스팅은 Vercel이고 DB는 Supabase Postgres입니다. 직접 산 도메인 없이 Vercel이 주는 운영 주소(`https://<프로젝트>.vercel.app`)를 씁니다. Vercel의 Git 자동 배포는 `vercel.json`에서 꺼 두었고, 배포는 CI만 합니다. `main`에 push하면 이 순서로 진행합니다.
 
 1. `vercel pull`로 운영 환경 변수를 받고 `vercel build --prod`로 빌드합니다. 빌드가 깨지면 운영 DB를 건드리지 않고 멈춥니다.
 2. `prisma migrate deploy`로 운영 DB에 마이그레이션을 적용합니다. **마이그레이션이 코드보다 먼저**입니다.
@@ -121,7 +121,9 @@ npx --yes vercel@62.2.0 deploy --prebuilt --prod
 
 운영에서 기억할 것입니다.
 
-- `APP_URL`은 반드시 넣습니다. 유료 플랜은 `PREMIUM_OPEN=1`일 때만 열립니다.
+- `APP_URL`(운영 주소)은 반드시 넣습니다. 유료 플랜은 `PREMIUM_OPEN=1`일 때만 열립니다.
+- Vercel 운영 환경의 `DATABASE_URL`도 Supabase **Session pooler** 주소를 씁니다. Vercel 함수 역시 IPv6로 나가지 못합니다.
+- 모든 페이지에 `noindex`를 붙여 검색에 올리지 않습니다(`src/app/layout.tsx`).
 - GitHub 러너는 IPv6로 나가지 못하므로, CI의 `PRODUCTION_DATABASE_URL`에는 Supabase direct 연결(IPv6 전용) 대신 IPv4로 닿는 **Session pooler** 주소를 넣습니다.
 - `GET /api/health`는 DB까지 닿는지만 보는 헬스 체크입니다(200 `ok` / 503). 오류는 `NEXT_PUBLIC_SENTRY_DSN`이 있을 때만 Sentry로 보냅니다.
 
@@ -135,14 +137,14 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 ./gradlew testDebugUnitTest                   # 위젯 문구 단위 테스트
 ```
 
-앱은 `capacitor.config.ts`의 `server.url`을 웹뷰로 엽니다. 개발 기본값은 에뮬레이터용 `http://10.0.2.2:3000`이고, 운영 도메인은 아직 정하지 않았습니다. 홈 화면 위젯은 같은 주소의 `/api/widget`을 웹뷰 세션 쿠키로 부르므로 따로 토큰이 없습니다. 한국 대체 결제는 앱 안의 로컬 플러그인(`android/app/src/main/java/com/hamkke/app/billing/AlternativeBillingPlugin.kt`, 웹 쪽은 `src/lib/alternative-billing.ts`)이 맡습니다. iOS는 비용 문제로 보류 중입니다.
+앱은 `capacitor.config.ts`의 `server.url`을 웹뷰로 엽니다. 이 주소는 `npx cap sync` 때 환경 변수 `CAP_SERVER_URL`로 정하고, 없으면 에뮬레이터용 개발 서버(`http://10.0.2.2:3000`)를 씁니다. sync가 주소를 앱 안에 넣으므로, 바꾸면 다시 sync하고 빌드합니다. 홈 화면 위젯은 같은 주소의 `/api/widget`을 웹뷰 세션 쿠키로 부르므로 따로 토큰이 없습니다. 한국 대체 결제는 앱 안의 로컬 플러그인(`android/app/src/main/java/com/hamkke/app/billing/AlternativeBillingPlugin.kt`, 웹 쪽은 `src/lib/alternative-billing.ts`)이 맡습니다. iOS는 비용 문제로 보류 중입니다.
 
 ### 릴리스 빌드(Play 업로드)
 
 `android/keystore.properties`(gitignore)에 업로드 키의 경로와 비밀번호(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`)가 있으면 release 빌드가 그 키로 서명합니다. 없으면 서명 없이 빌드합니다. 키를 만들고 보관하는 방법은 운영 문서에 있습니다.
 
 ```bash
-npx cap sync android
+CAP_SERVER_URL=https://<프로젝트>.vercel.app npx cap sync android
 cd android && ./gradlew bundleRelease         # app/build/outputs/bundle/release/app-release.aab
 ```
 

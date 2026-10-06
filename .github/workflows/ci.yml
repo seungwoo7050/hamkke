@@ -19,7 +19,7 @@
 # 배포 시크릿(선택 제외)이 하나라도 없으면 deploy job 전체를 건너뛴다.
 #
 # 저장소 변수(같은 화면의 Variables 탭, 선택).
-#   PRODUCTION_URL              운영 공개 주소(예: https://hamkke.app). 있으면 도메인을 넘긴 뒤
+#   PRODUCTION_URL              운영 공개 주소(예: https://<프로젝트>.vercel.app). 있으면 도메인을 넘긴 뒤
 #                               그 주소로 한 번 더 확인하고, Environments 화면의 링크로 쓴다.
 #
 # Vercel의 Git 자동 배포는 vercel.json에서 끈다 - 켜 두면 이 워크플로와 따로 배포돼
