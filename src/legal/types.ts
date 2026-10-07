@@ -17,3 +17,8 @@ export type LegalDocFactory = (op: Operator, missing: string) => LegalDoc;
 export function field(value: string, missing: string) {
   return value.trim() || missing;
 }
+
+/** 없어도 되는 칸(주소·사업자등록번호) - 비어 있으면 목록에서 줄째로 뺀다. */
+export function optionalLine(label: string, value: string): string[] {
+  return value.trim() ? [`${label}: ${value.trim()}`] : [];
+}

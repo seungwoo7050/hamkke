@@ -3,19 +3,19 @@
 // 값은 문서에 "출시 전 입력"으로 보인다 - 빈칸이 조용히 나가지 않게.
 export const OPERATOR = {
   /** 상호(개인사업자면 사업자등록증의 상호) */
-  name: "",
+  name: "김승우",
   /** 대표자 = 개인정보 보호책임자·위치정보관리책임자 */
-  representative: "",
-  /** 사업장 주소 */
+  representative: "김승우",
+  /** 사업장 주소(선택 - 비우면 문서에서 그 줄을 뺀다) */
   address: "",
   /** 문의 이메일 */
-  email: "",
-  /** 사업자등록번호 */
+  email: "seungwoo7050@gmail.com",
+  /** 사업자등록번호(선택 - 사업자가 아니면 비운다. 비우면 문서에서 그 줄을 뺀다) */
   businessNumber: "",
   /** Sentry 데이터 저장 지역 - 계정을 만들 때 고른 것. "us"(미국) 또는 "de"(독일, EU) */
   sentryRegion: "us" as "" | "us" | "de",
   /** 문서 시행일(YYYY-MM-DD) */
-  effectiveDate: "",
+  effectiveDate: "2026-10-01",
 };
 
 export type Operator = typeof OPERATOR;

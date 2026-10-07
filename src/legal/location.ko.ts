@@ -1,4 +1,4 @@
-import { field, type LegalDocFactory } from "./types";
+import { field, optionalLine, type LegalDocFactory } from "./types";
 
 // 위치기반서비스 이용약관(한국어, 기준본). 위치정보의 보호 및 이용 등에 관한 법률
 // 제19조 제1항이 약관에 적도록 한 항목(사업자 연락처, 권리와 행사 방법, 서비스 내용,
@@ -84,8 +84,8 @@ const locationKo: LegalDocFactory = (op, missing) => ({
         {
           list: [
             `상호: ${field(op.name, missing)}`,
-            `주소: ${field(op.address, missing)}`,
-            `사업자등록번호: ${field(op.businessNumber, missing)}`,
+            ...optionalLine("주소", op.address),
+            ...optionalLine("사업자등록번호", op.businessNumber),
             `위치정보관리책임자: ${field(op.representative, missing)}`,
             `이메일: ${field(op.email, missing)}`,
           ],

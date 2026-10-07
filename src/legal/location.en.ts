@@ -1,4 +1,4 @@
-import { field, type LegalDocFactory } from "./types";
+import { field, optionalLine, type LegalDocFactory } from "./types";
 
 // Location-based service terms (English). The Korean version is authoritative; keep both
 // in step, and keep retention and notice rules in step with the location router.
@@ -82,8 +82,8 @@ const locationEn: LegalDocFactory = (op, missing) => ({
         {
           list: [
             `Business name: ${field(op.name, missing)}`,
-            `Address: ${field(op.address, missing)}`,
-            `Business registration number: ${field(op.businessNumber, missing)}`,
+            ...optionalLine("Address", op.address),
+            ...optionalLine("Business registration number", op.businessNumber),
             `Location information officer: ${field(op.representative, missing)}`,
             `Email: ${field(op.email, missing)}`,
           ],
