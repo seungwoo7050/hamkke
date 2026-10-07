@@ -52,7 +52,7 @@
 | 만남 지도 | 20곳 | 제한 없음 |
 | 저장 공간 | 1GB  | 20GB      |
 
-**지금은 유료 플랜을 닫아 두었습니다.** 결제 기능은 모두 만들어 두었지만 환경 변수 `PREMIUM_OPEN=1`일 때만 결제 버튼이 보입니다. 닫혀 있는 동안 무료 한도는 그대로이고 "프리미엄은 곧 열려요"라고 안내합니다. 열 때 할 일은 [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md) 8절에 있습니다.
+**지금은 유료 플랜을 닫아 두었습니다.** 결제 기능은 모두 만들어 두었지만 환경 변수 `PREMIUM_OPEN=1`일 때만 결제 버튼이 보입니다. 닫혀 있는 동안 무료 한도는 그대로이고 "프리미엄은 곧 열려요"라고 안내합니다.
 
 결제는 웹에서 Stripe로 받습니다. Android 앱에서는 Google Play **한국 대체 결제**(대체 결제 전용)를 씁니다. 앱이 Play의 안내를 보여 주고 거래 토큰을 받은 뒤 같은 Stripe 결제로 넘어가며, 서버가 결제·갱신·환불을 Play에 보고합니다. 대체 결제를 쓸 수 없는 앱 사용자에게는 결제 진입을 아예 보여 주지 않습니다. 앱 밖 결제로 안내하면 안 되기 때문입니다.
 
@@ -127,8 +127,6 @@ npx --yes vercel@62.2.0 deploy --prebuilt --prod
 - GitHub 러너는 IPv6로 나가지 못하므로, CI의 `PRODUCTION_DATABASE_URL`에는 Supabase direct 연결(IPv6 전용) 대신 IPv4로 닿는 **Session pooler** 주소를 넣습니다.
 - `GET /api/health`는 DB까지 닿는지만 보는 헬스 체크입니다(200 `ok` / 503). 오류는 `NEXT_PUBLIC_SENTRY_DSN`이 있을 때만 Sentry로 보냅니다.
 
-대시보드 설정(Vercel·Supabase·R2·Stripe), 스토어 등록, 유료 플랜 열기처럼 사람이 따라 하는 절차는 `docs` 브랜치의 [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md)에 있습니다.
-
 ## Android
 
 ```bash
@@ -141,7 +139,7 @@ cd android && ./gradlew assembleDebug         # app/build/outputs/apk/debug/app-
 
 ### 릴리스 빌드(Play 업로드)
 
-`android/keystore.properties`(gitignore)에 업로드 키의 경로와 비밀번호(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`)가 있으면 release 빌드가 그 키로 서명합니다. 없으면 서명 없이 빌드합니다. 키를 만들고 보관하는 방법은 운영 문서에 있습니다.
+`android/keystore.properties`(gitignore)에 업로드 키의 경로와 비밀번호(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`)가 있으면 release 빌드가 그 키로 서명합니다. 없으면 서명 없이 빌드합니다.
 
 ```bash
 CAP_SERVER_URL=https://<프로젝트>.vercel.app npx cap sync android
@@ -150,23 +148,23 @@ cd android && ./gradlew bundleRelease         # app/build/outputs/bundle/release
 
 ## 구성
 
-Next.js 16(App Router) 코드베이스 하나로 동작하며, 따로 백엔드 서버가 없습니다. 설계 이유는 [`docs/ARCHITECTURE.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/ARCHITECTURE.md)에 있습니다.
+Next.js 16(App Router) 코드베이스 하나로 동작하며, 따로 백엔드 서버가 없습니다.
 
-| 영역      | 쓰는 것                                                                                                                                           |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API       | tRPC v11 + TanStack Query, Zod. 공간 단위 권한은 `spaceProcedure` 한 곳에서 확인                                                                  |
-| DB        | Postgres(Supabase) + Prisma 7. 모든 테이블에 RLS를 켜고 Data API는 꺼서, 데이터는 서버의 Prisma로만 다룸                                          |
-| 인증      | Auth.js: Google, 이메일 매직링크(Resend, `AUTH_RESEND_KEY`가 있을 때만)                                                                           |
-| 실시간    | Supabase Realtime(Broadcast + Presence). 서명 키를 넣으면 공간 토큰으로 private 채널을 씀                                                         |
-| 미디어    | Cloudflare R2. 브라우저가 서명된 주소로 직접 올림(사진 10MB, 영상 100MB, 음성 5MB)                                                                |
-| 푸시      | Firebase Cloud Messaging(웹, Android)                                                                                                             |
-| 결제      | Stripe Checkout · Customer Portal · Webhook, Google Play 한국 대체 결제(Play Billing Library 9.1)                                                 |
-| UI        | Tailwind CSS v4, shadcn/ui(Radix), Vaul, Sonner, Motion. 토큰은 [`docs/DESIGN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/DESIGN.md) |
-| 지도·날씨 | react-leaflet + OpenStreetMap, Open-Meteo(지금은 API 키 없음, 유료 플랜을 열 때 상업용 키로 바꿈)                                                 |
-| 비행      | 공항 데이터 번들(mwgg/Airports, MIT), 탑승권 바코드(IATA BCBP) 스캔, 예정 시각 기반 진행과 대권 경로. API 키 없음                                 |
-| 언어      | next-intl. 문구는 `messages/ko.json`(기준)과 `en.json`. 새 언어는 파일 하나와 `src/i18n/config.ts` 한 줄로 추가                                   |
-| 모바일    | Capacitor(Android). 배포된 서버를 웹뷰로 엶. 위젯(Jetpack Glance)과 대체 결제 플러그인만 Kotlin                                                   |
-| 테스트    | Vitest(단위·통합, 실제 DB·R2·Stripe 테스트 모드), Playwright(e2e)                                                                                 |
+| 영역      | 쓰는 것                                                                                                           |
+| --------- | ----------------------------------------------------------------------------------------------------------------- |
+| API       | tRPC v11 + TanStack Query, Zod. 공간 단위 권한은 `spaceProcedure` 한 곳에서 확인                                  |
+| DB        | Postgres(Supabase) + Prisma 7. 모든 테이블에 RLS를 켜고 Data API는 꺼서, 데이터는 서버의 Prisma로만 다룸          |
+| 인증      | Auth.js: Google, 이메일 매직링크(Resend, `AUTH_RESEND_KEY`가 있을 때만)                                           |
+| 실시간    | Supabase Realtime(Broadcast + Presence). 서명 키를 넣으면 공간 토큰으로 private 채널을 씀                         |
+| 미디어    | Cloudflare R2. 브라우저가 서명된 주소로 직접 올림(사진 10MB, 영상 100MB, 음성 5MB)                                |
+| 푸시      | Firebase Cloud Messaging(웹, Android)                                                                             |
+| 결제      | Stripe Checkout · Customer Portal · Webhook, Google Play 한국 대체 결제(Play Billing Library 9.1)                 |
+| UI        | Tailwind CSS v4, shadcn/ui(Radix), Vaul, Sonner, Motion                                                           |
+| 지도·날씨 | react-leaflet + OpenStreetMap, Open-Meteo(지금은 API 키 없음, 유료 플랜을 열 때 상업용 키로 바꿈)                 |
+| 비행      | 공항 데이터 번들(mwgg/Airports, MIT), 탑승권 바코드(IATA BCBP) 스캔, 예정 시각 기반 진행과 대권 경로. API 키 없음 |
+| 언어      | next-intl. 문구는 `messages/ko.json`(기준)과 `en.json`. 새 언어는 파일 하나와 `src/i18n/config.ts` 한 줄로 추가   |
+| 모바일    | Capacitor(Android). 배포된 서버를 웹뷰로 엶. 위젯(Jetpack Glance)과 대체 결제 플러그인만 Kotlin                   |
+| 테스트    | Vitest(단위·통합, 실제 DB·R2·Stripe 테스트 모드), Playwright(e2e)                                                 |
 
 ```
 src/app/            라우트: login, onboarding, home(우리·대화·기억 + 시트), legal, account, api(auth·trpc·widget·webhooks·health)
@@ -182,22 +180,3 @@ e2e/                Playwright
 scripts/            시드, 공항 데이터 갱신, 운영 점검(R2 CORS·Realtime private), 배포 스모크 테스트
 assets/             브랜드 마스터(로고·심볼·Play 대표 이미지)와 README 스크린샷
 ```
-
-## 문서
-
-설계 문서와 진행 기록은 고아 브랜치 [`docs`](https://github.com/woopinbell/hamkke/tree/docs)에, 개발 기록은 [`devlog`](https://github.com/woopinbell/hamkke/tree/devlog)에 있습니다. 로컬에서는 워크트리로 붙여 씁니다.
-
-```bash
-git worktree add .docs docs && ln -sfn .docs/CLAUDE.md CLAUDE.md && ln -sfn .docs/docs docs
-git worktree add .devlog devlog && ln -sfn .devlog devlog
-printf '%s\n' .docs/ .devlog/ CLAUDE.md docs devlog >> .git/info/exclude
-```
-
-| 문서                                                                                                                                                                                | 내용                                     |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| [`docs/PRD.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/PRD.md)                                                                                                         | 기능 명세, 데이터 모델                   |
-| [`docs/ARCHITECTURE.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/ARCHITECTURE.md)                                                                                       | 스택, 실시간, 결제, 보안 설계            |
-| [`docs/DESIGN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/DESIGN.md)                                                                                                   | 디자인 철학 앵커와 토큰(임의 변경 금지)  |
-| [`docs/WORKFLOW.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/WORKFLOW.md) · [`docs/COMMIT_PLAN.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/COMMIT_PLAN.md) | 커밋 규칙과 진행 기록                    |
-| [`docs/OWNER_TASKS.md`](https://github.com/woopinbell/hamkke/blob/docs/docs/OWNER_TASKS.md)                                                                                         | 배포·운영 절차, 운영자가 직접 해야 할 일 |
-| [`CLAUDE.md`](https://github.com/woopinbell/hamkke/blob/docs/CLAUDE.md)                                                                                                             | 현재 상태와 고정 결정                    |
