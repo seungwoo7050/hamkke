@@ -1,6 +1,8 @@
 # 검사: lint·typecheck·format·Vitest·build는 항상, e2e(Playwright)는 시크릿이 있을 때만.
 # 배포: main push·수동 실행에서 검사가 모두 통과하면
-#   빌드 → 운영 DB 마이그레이션 → 도메인 없이 운영 배포 → 스모크 테스트 → 도메인 넘기기(promote).
+#   도메인 없이 운영 배포(Vercel이 빌드) → 운영 DB 마이그레이션 → 스모크 테스트 → 도메인 넘기기(promote).
+# 빌드는 러너가 아니라 Vercel에서 한다 - 운영 환경 변수는 기본이 Secret(쓰기 전용)이라
+# `vercel pull`로 받을 수 없고, 빈 값으로는 prisma generate와 next build가 실패한다.
 # 스모크가 실패하면 도메인은 이전 배포에 그대로 남는다. 마이그레이션은 이미 적용됐으므로
 # 이전 코드도 새 스키마에서 돌아야 한다(열 지우기·이름 바꾸기는 다음 배포로 나눈다).
 #
@@ -191,22 +193,21 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+      # prisma CLI(마이그레이션)만 쓴다. 빌드는 Vercel이 한다.
       - run: npm ci
-      # 빌드를 먼저 해 둔다 - 빌드가 깨지면 운영 DB를 건드리지 않고 멈춘다.
-      # npm run build가 prisma generate를 먼저 돌린다(DATABASE_URL은 pull한 운영 환경 변수).
-      - run: npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="$VERCEL_TOKEN"
-      - run: npx --yes "$VERCEL_CLI" build --prod --token="$VERCEL_TOKEN"
-      - name: 운영 DB 마이그레이션(코드보다 먼저)
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-      - name: 운영 배포 만들기(도메인은 아직 이전 배포에)
+      # 빌드가 먼저다 - 빌드가 깨지면 운영 DB를 건드리지 않고 멈춘다. --skip-domain이라
+      # 만들어진 배포는 아직 운영 주소로 트래픽을 받지 않는다.
+      - name: 운영 배포 만들기(Vercel에서 빌드, 도메인은 아직 이전 배포에)
         id: deploy
         run: |
           # stdout에는 배포 주소만 나온다(진행 상황은 stderr).
-          url=$(npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --skip-domain --token="$VERCEL_TOKEN" | tail -n 1)
+          url=$(npx --yes "$VERCEL_CLI" deploy --prod --skip-domain --token="$VERCEL_TOKEN" | tail -n 1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "새 배포: $url"
+      - name: 운영 DB 마이그레이션(도메인을 넘기기 전에)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       - name: 스모크 테스트(새 배포 주소)
         run: scripts/smoke-deploy.sh "${{ steps.deploy.outputs.url }}"
       - name: 도메인 넘기기

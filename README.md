@@ -100,11 +100,12 @@ CI(`.github/workflows/ci.yml`)는 push마다 린트 → 타입 검사 → Pretti
 
 호스팅은 Vercel이고 DB는 Supabase Postgres입니다. 직접 산 도메인 없이 Vercel이 주는 운영 주소(`https://<프로젝트>.vercel.app`)를 씁니다. Vercel의 Git 자동 배포는 `vercel.json`에서 꺼 두었고, 배포는 CI만 합니다. `main`에 push하면 이 순서로 진행합니다.
 
-1. `vercel pull`로 운영 환경 변수를 받고 `vercel build --prod`로 빌드합니다. 빌드가 깨지면 운영 DB를 건드리지 않고 멈춥니다.
-2. `prisma migrate deploy`로 운영 DB에 마이그레이션을 적용합니다. **마이그레이션이 코드보다 먼저**입니다.
-3. `vercel deploy --prebuilt --prod --skip-domain`으로 배포를 만듭니다. 운영 도메인은 아직 이전 배포를 가리킵니다.
-4. 새 배포 주소에 스모크 테스트(`scripts/smoke-deploy.sh`)를 돌립니다. `/api/health`(DB 연결), `/login`, `/legal/privacy`가 모두 200이어야 합니다.
-5. `vercel promote`로 운영 도메인을 새 배포로 넘기고, 공개 주소로 한 번 더 확인합니다.
+1. `vercel deploy --prod --skip-domain`으로 배포를 만듭니다. 빌드는 Vercel에서 하고, 운영 도메인은 아직 이전 배포를 가리킵니다. 빌드가 깨지면 운영 DB를 건드리지 않고 멈춥니다.
+2. `prisma migrate deploy`로 운영 DB에 마이그레이션을 적용합니다. **마이그레이션이 도메인을 넘기기보다 먼저**입니다.
+3. 새 배포 주소에 스모크 테스트(`scripts/smoke-deploy.sh`)를 돌립니다. `/api/health`(DB 연결), `/login`, `/legal/privacy`가 모두 200이어야 합니다.
+4. `vercel promote`로 운영 도메인을 새 배포로 넘기고, 공개 주소로 한 번 더 확인합니다.
+
+빌드를 러너가 아니라 Vercel에서 하는 이유가 있습니다. Vercel의 운영 환경 변수는 기본이 Secret(저장한 뒤에는 읽을 수 없음)이라 `vercel pull`로 받을 수 없고, 빈 값으로는 `prisma generate`와 `next build`가 실패합니다.
 
 스모크 테스트가 실패하면 도메인은 이전 배포에 그대로 남습니다. 다만 마이그레이션은 이미 적용된 상태이므로, 이전 코드도 새 스키마에서 돌아야 합니다. 열을 지우거나 이름을 바꾸는 변경은 두 번의 배포로 나눕니다.
 
@@ -113,10 +114,10 @@ CI가 쓰는 저장소 secrets와 variables는 워크플로 파일 맨 위 주�
 CI 없이 직접 배포할 때도 같은 순서를 지킵니다.
 
 ```bash
-npx --yes vercel@62.2.0 pull --yes --environment=production
-npx --yes vercel@62.2.0 build --prod
+npx --yes vercel@62.2.0 deploy --prod --skip-domain    # 마지막 줄의 배포 주소를 아래 <배포 주소>에
 DATABASE_URL=<운영 DB 주소> npx prisma migrate deploy
-npx --yes vercel@62.2.0 deploy --prebuilt --prod
+scripts/smoke-deploy.sh <배포 주소>
+npx --yes vercel@62.2.0 promote <배포 주소> --yes
 ```
 
 운영에서 기억할 것입니다.

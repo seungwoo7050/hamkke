@@ -1,0 +1,8 @@
+# vercel deploy가 올리는 소스에서 뺀다(CI는 깨끗한 체크아웃이라 상관없고, 노트북에서 직접 배포할 때를 막는다).
+# 로컬 비밀값 - Vercel 기본 제외 목록은 .env.local류만 빼고 .env는 올린다.
+.env*
+# 빌드가 다시 만드는 것과 웹 배포에 쓰지 않는 것
+src/generated
+test-results
+playwright-report
+android
