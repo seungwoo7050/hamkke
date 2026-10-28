@@ -199,6 +199,9 @@ jobs:
       # 만들어진 배포는 아직 운영 주소로 트래픽을 받지 않는다.
       - name: 운영 배포 만들기(Vercel에서 빌드, 도메인은 아직 이전 배포에)
         id: deploy
+        # 기본 셸(bash -e)에는 pipefail이 없어 deploy가 실패해도 tail의 종료 코드로 성공한다.
+        # shell: bash라야 -o pipefail이 붙어 빌드가 깨졌을 때 여기서 멈춘다.
+        shell: bash
         run: |
           # stdout에는 배포 주소만 나온다(진행 상황은 stderr).
           url=$(npx --yes "$VERCEL_CLI" deploy --prod --skip-domain --token="$VERCEL_TOKEN" | tail -n 1)
