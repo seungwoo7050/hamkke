@@ -49,3 +49,6 @@ next-env.d.ts
 # Playwright e2e 산출물
 /test-results/
 /playwright-report/
+
+# 하네스 실행 로그
+/.harness/

@@ -16,9 +16,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
+    "test:harness": "bash scripts/harness/test.sh",
     "dev:seed-couple": "tsx scripts/seed-dev-couple.mts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "verify:fast": "bash scripts/harness/verify.sh fast",
+    "verify": "bash scripts/harness/verify.sh full"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

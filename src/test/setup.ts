@@ -7,6 +7,7 @@ import { PLACEHOLDER } from "./services";
 // (src/lib/stripe.ts 등)이 터지면 그 모듈을 거치는 라우터 테스트가 전부 실패한다.
 // 실제로 서비스에 왕복하는 테스트는 src/test/services.ts의 hasXxx로 건너뛴다.
 const placeholders: Record<string, string> = {
+  DATABASE_URL: "postgresql://hamkke:hamkke@localhost:5432/hamkke",
   STRIPE_SECRET_KEY: `sk_test_${PLACEHOLDER}`,
   STRIPE_WEBHOOK_SECRET: `whsec_${PLACEHOLDER}`,
   STRIPE_PREMIUM_PRICE_ID: `price_${PLACEHOLDER}`,
