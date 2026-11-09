@@ -115,13 +115,25 @@ test("페어링 → 채팅 → 위치공유 → 구독", async ({ browser, baseU
     await pa.getByRole("button", { name: "설정 열기" }).click();
     await expect(pa.getByText("무료 플랜")).toBeVisible();
     await pa.getByRole("button", { name: "프리미엄", exact: true }).click();
-    // Stripe가 호스팅하는 결제 페이지 자체는 자동화하지 않는다(Stripe 권장).
-    await pa.waitForURL(/checkout\.stripe\.com/, { waitUntil: "commit" });
+    // Stripe가 호스팅하는 결제 페이지(또는 로컬 시뮬레이터 결제창) 자체는 자동화하지 않는다.
+    await pa.waitForURL(/checkout\.stripe\.com|\/c\/pay\//, { waitUntil: "commit" });
 
     // 결제 완료 후 Stripe가 보내는 서명된 웹훅을 서버에 보낸다. 서버는 본문이 아니라
     // Stripe에서 다시 읽은 구독을 쓰므로, 테스트 모드에 실제 구독을 만들어 그 객체를 싣는다.
     const space = await spaceOf(a.userId);
-    const stripe = new Stripe(secretKey);
+    const simUrl = process.env.STRIPE_SIMULATOR_URL
+      ? new URL(process.env.STRIPE_SIMULATOR_URL)
+      : null;
+    const stripe = new Stripe(
+      secretKey,
+      simUrl
+        ? {
+            protocol: simUrl.protocol === "https:" ? "https" : "http",
+            host: simUrl.hostname,
+            port: Number(simUrl.port) || 80,
+          }
+        : undefined,
+    );
     const customer = await stripe.customers.create({
       payment_method: "pm_card_visa",
       invoice_settings: { default_payment_method: "pm_card_visa" },

@@ -20,7 +20,7 @@
     "test:watch": "vitest",
     "test:harness": "bash scripts/harness/test.sh",
     "dev:seed-couple": "tsx scripts/seed-dev-couple.mts",
-    "test:e2e": "playwright test",
+    "test:e2e": "bash scripts/harness/with-e2e.sh npx playwright test",
     "verify:fast": "bash scripts/harness/verify.sh fast",
     "verify": "bash scripts/harness/verify.sh full"
   },
