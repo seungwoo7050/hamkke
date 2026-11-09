@@ -10,18 +10,11 @@ import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { type Formatters } from "@/i18n/format";
 import { useFormat } from "@/i18n/use-format";
-import { daysBetween, todayIn } from "@/lib/datetime";
+import { daysBetween, todayIn, toLocalInputValue } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
 import { useTRPC } from "@/trpc/client";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
-
-// datetime-local input은 "YYYY-MM-DDTHH:mm"를 로컬 시간 기준으로 받는다
-// (toISOString()은 UTC라 그대로 쓰면 시간대만큼 어긋난다).
-function toLocalInputValue(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 function hoursFromNow(h: number) {
   const d = new Date();

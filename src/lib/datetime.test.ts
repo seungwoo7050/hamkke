@@ -6,8 +6,11 @@ import {
   formatDayLabel,
   formatTime,
   formatYMD,
+  fromZonedLocal,
   nextOccurrence,
   todayIn,
+  toLocalInputValue,
+  toZonedLocal,
 } from "./datetime";
 
 // 2026-09-27T15:12Z = 서울 9/28(월) 00:12, 뉴욕 9/27(일) 11:12
@@ -92,5 +95,12 @@ describe("표기", () => {
     expect(formatDayLabel(new Date("2025-12-31T01:00:00Z"), "Asia/Seoul", now)).toBe(
       "2025년 12월 31일 (수)",
     );
+  });
+
+  it("fromZonedLocal / toZonedLocal / toLocalInputValue 왕복 변환", () => {
+    const utc = fromZonedLocal("2026-10-14T10:30", "Asia/Seoul");
+    expect(utc.toISOString()).toBe("2026-10-14T01:30:00.000Z");
+    expect(toZonedLocal(utc, "Asia/Seoul")).toBe("2026-10-14T10:30");
+    expect(toLocalInputValue(new Date(2026, 9, 14, 10, 30))).toBe("2026-10-14T10:30");
   });
 });

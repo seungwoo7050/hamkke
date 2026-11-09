@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { useFormat } from "@/i18n/use-format";
+import { toLocalInputValue } from "@/lib/datetime";
 import { bestTimes } from "@/lib/flight";
 import { SPRING } from "@/lib/motion";
 import { markCapsuleUnsealed, useUnsealedCapsules } from "@/lib/unsealed-capsules";
@@ -20,11 +21,6 @@ import { useFlights } from "./flights";
 import { EmptyRow, LoadingRow, Row, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 import { useMyTimeZone, usePartnerName, useSpace } from "./space-context";
-
-function toLocalInputValue(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 // 내일 같은 시각, 분은 시각 선택(10분 단위)에 맞춰 내림.
 function defaultDeliverAt() {
