@@ -1,4 +1,5 @@
-# 검사: lint·typecheck·format·Vitest·build는 항상, e2e(Playwright)는 시크릿이 있을 때만.
+# 검사: verify:fast(lint·typecheck·format·migrate·Vitest·harness)·build·e2e(Playwright)는 항상 돈다.
+# Stripe 테스트 시크릿이 없으면 with-e2e.sh가 로컬 Stripe 시뮬레이터(scripts/stripe-sim.mjs)를 띄워 구독까지 검증한다.
 # 배포: main push·수동 실행에서 검사가 모두 통과하면
 #   도메인 없이 운영 배포(Vercel이 빌드) → 운영 DB 마이그레이션 → 스모크 테스트 → 도메인 넘기기(promote).
 # 빌드는 러너가 아니라 Vercel에서 한다 - 운영 환경 변수는 기본이 Secret(쓰기 전용)이라
@@ -7,9 +8,9 @@
 # 이전 코드도 새 스키마에서 돌아야 한다(열 지우기·이름 바꾸기는 다음 배포로 나눈다).
 #
 # 저장소 시크릿(Settings → Secrets and variables → Actions). 없으면 그 단계를 건너뛴다.
-#   STRIPE_TEST_SECRET_KEY      e2e - Stripe 테스트 모드 비밀 키(sk_test_...). 이게 있어야 e2e가 돈다.
-#   STRIPE_TEST_WEBHOOK_SECRET  e2e - 웹훅 서명 비밀값(whsec_...). e2e가 직접 서명해 보낸다.
-#   STRIPE_TEST_PRICE_ID        e2e - 테스트 모드 프리미엄 가격 ID(price_...).
+#   STRIPE_TEST_SECRET_KEY      e2e(선택) - Stripe 테스트 모드 비밀 키(sk_test_...). 없으면 stripe-sim.mjs 대역을 쓴다.
+#   STRIPE_TEST_WEBHOOK_SECRET  e2e(선택) - 웹훅 서명 비밀값(whsec_...).
+#   STRIPE_TEST_PRICE_ID        e2e(선택) - 테스트 모드 프리미엄 가격 ID(price_...).
 #   PRODUCTION_DATABASE_URL     배포 - 운영 DB. GitHub 러너는 IPv6로 나가지 못하므로 Supabase의
 #                               direct 연결(IPv6 전용)이 아니라 IPv4로 닿는 Session pooler 주소.
 #   VERCEL_TOKEN                배포 - Vercel 계정 토큰.
@@ -29,13 +30,10 @@
 #
 # Vitest는 시크릿 없이 돈다 - R2·Stripe·Realtime에 실제로 왕복하는 테스트는
 # src/test/services.ts가 건너뛰고, 나머지는 서비스 컨테이너의 Postgres를 쓴다.
-# next build는 import할 때 키가 없으면 터지는 모듈(src/lib/stripe.ts)에 자리표시자를 준다.
 name: CI
 
 on:
   push:
-    # 문서만 바뀐 push는 검사·배포하지 않는다.
-    paths-ignore: ["**/*.md"]
   workflow_dispatch:
 
 concurrency:
@@ -54,25 +52,15 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     outputs:
-      e2e: ${{ steps.check.outputs.e2e }}
       deploy: ${{ steps.check.outputs.deploy }}
     steps:
       - id: check
         env:
-          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
-          STRIPE_TEST_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
-          STRIPE_TEST_PRICE_ID: ${{ secrets.STRIPE_TEST_PRICE_ID }}
           PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          if [ -n "$STRIPE_TEST_SECRET_KEY" ] && [ -n "$STRIPE_TEST_WEBHOOK_SECRET" ] && [ -n "$STRIPE_TEST_PRICE_ID" ]; then
-            echo "e2e=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "e2e=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Stripe 테스트 시크릿이 없어 e2e를 건너뜁니다."
-          fi
           if [ -n "$PRODUCTION_DATABASE_URL" ] && [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           else
@@ -104,19 +92,11 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - run: npx prisma generate
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run format:check
-      - run: npx prisma migrate deploy
-      - run: npm test
+      - run: npm run verify:fast
       - run: npm run build
-        env:
-          STRIPE_SECRET_KEY: sk_test_placeholder
 
   e2e:
-    needs: [secrets, check]
-    if: needs.secrets.outputs.e2e == 'true'
+    needs: [check]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -148,8 +128,6 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
       - run: npx playwright install --with-deps chromium
       - name: AUTH_SECRET(이 실행에서만 쓰는 값)
         run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
@@ -163,14 +141,12 @@ jobs:
 
   deploy:
     needs: [secrets, check, e2e]
-    # e2e는 시크릿이 없으면 건너뛰므로 skipped도 통과로 본다(건너뛴 job에 기대면 기본값으로는
-    # 이 job도 건너뛴다).
     if: >-
       !cancelled()
       && github.ref == 'refs/heads/main'
       && needs.secrets.outputs.deploy == 'true'
       && needs.check.result == 'success'
-      && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
+      && needs.e2e.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # 운영 배포는 한 번에 하나씩, 진행 중인 배포는 끊지 않는다.
