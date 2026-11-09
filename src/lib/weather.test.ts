@@ -21,4 +21,21 @@ describe("fetchWeather", () => {
     await expect(fetchWeather(37.5665, 126.978, { timeoutMs: 50 })).rejects.toThrow();
     expect(Date.now() - started).toBeLessThan(1000);
   });
+
+  it("일시적 429·503 응답은 p-retry로 재시도해 복구한다", async () => {
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => {
+      calls++;
+      if (calls === 1) return new Response("rate limit", { status: 429 });
+      return Response.json({ current: { temperature_2m: 18.5, weather_code: 0 } });
+    });
+
+    const weather = await fetchWeather(37.5665, 126.978, { retries: 1 });
+    expect(calls).toBe(2);
+    expect(weather).toEqual({
+      temperatureC: 18.5,
+      weatherCode: 0,
+      description: "맑음",
+    });
+  });
 });

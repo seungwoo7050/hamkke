@@ -1,5 +1,5 @@
 import "server-only";
-import { createSign } from "node:crypto";
+import { importPKCS8, SignJWT } from "jose";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
@@ -17,6 +17,7 @@ import { stripe } from "@/lib/stripe";
 
 const API = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications";
 const SCOPE = "https://www.googleapis.com/auth/androidpublisher";
+const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 // Stripe 금액은 소수점 없는 통화(원 등)면 그 단위, 아니면 1/100 단위다. Play는 백만분의 1.
 const ZERO_DECIMAL = new Set(["krw", "jpy", "vnd", "clp", "pyg", "ugx", "xaf", "xof"]);
@@ -40,26 +41,24 @@ function config() {
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
-// 서비스 계정 JWT(RS256)를 Google OAuth 토큰으로 바꾼다. 한 시간짜리라 만료 1분 전까지 재사용.
+// 서비스 계정 JWT(RS256)를 jose로 서명해 Google OAuth 토큰으로 바꾼다. 한 시간짜리라 만료 1분 전까지 재사용.
 async function accessToken() {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
   const { clientEmail, privateKey } = config();
-  const now = Math.floor(Date.now() / 1000);
-  const encode = (obj: object) => Buffer.from(JSON.stringify(obj)).toString("base64url");
-  const unsigned = `${encode({ alg: "RS256", typ: "JWT" })}.${encode({
-    iss: clientEmail,
-    scope: SCOPE,
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  })}`;
-  const signature = createSign("RSA-SHA256").update(unsigned).sign(privateKey, "base64url");
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+  const key = await importPKCS8(privateKey, "RS256");
+  const assertion = await new SignJWT({ scope: SCOPE })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setIssuer(clientEmail)
+    .setAudience(TOKEN_URL)
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(key);
+  const res = await fetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: `${unsigned}.${signature}`,
+      assertion,
     }),
   });
   if (!res.ok) throw new Error(`Google 토큰 발급 실패: ${res.status} ${await res.text()}`);

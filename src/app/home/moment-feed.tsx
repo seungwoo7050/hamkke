@@ -10,15 +10,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTRPC } from "@/trpc/client";
-import {
-  IMAGE_TYPES,
-  MAX_UPLOAD_BYTES,
-  MAX_UPLOAD_MB,
-  type ImageType,
-  type VideoType,
-  VIDEO_TYPES,
-  mediaKindOf,
-} from "@/lib/upload-limits";
+import { putToPresignedUrl, validateMediaFile } from "@/lib/upload-client";
+import { IMAGE_TYPES, VIDEO_TYPES } from "@/lib/upload-limits";
 import { EmptyRow, LoadingRow, LoadMore, Section } from "./memories/section";
 import { UpgradeHint } from "./upgrade-hint";
 import { usePartnerName, useSpace } from "./space-context";
@@ -188,15 +181,12 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
     e.target.value = "";
     if (!file) return;
 
-    const kind = mediaKindOf(file.type);
-    if (!kind) {
-      toast.error(t("mediaTypes"));
-      return;
-    }
-
-    if (file.size > MAX_UPLOAD_BYTES[kind]) {
+    const checked = validateMediaFile(file);
+    if (!checked.ok) {
       toast.error(
-        t(kind === "video" ? "videoTooLarge" : "imageTooLarge", { mb: MAX_UPLOAD_MB[kind] }),
+        checked.reason === "type"
+          ? t("mediaTypes")
+          : t(checked.kind === "video" ? "videoTooLarge" : "imageTooLarge", { mb: checked.maxMb }),
       );
       return;
     }
@@ -204,15 +194,10 @@ function MomentForm({ onDone, onCreated }: { onDone: () => void; onCreated: () =
     setUploading(true);
     try {
       const { uploadUrl, key } = await createUploadUrlMutation.mutateAsync({
-        contentType: file.type as ImageType | VideoType,
+        contentType: checked.contentType,
         size: file.size,
       });
-      const res = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
+      await putToPresignedUrl(uploadUrl, file, file.type);
       await createMutation.mutateAsync({ key, caption: caption.trim() || undefined });
       onCreated();
       onDone();

@@ -16,15 +16,12 @@ import { useFormat } from "@/i18n/use-format";
 import { groupPositions } from "@/lib/chat-grouping";
 import { daysBetween, todayIn } from "@/lib/datetime";
 import { useNow } from "@/lib/use-now";
+import { putToPresignedUrl, validateMediaFile } from "@/lib/upload-client";
 import {
   IMAGE_TYPES,
-  type ImageType,
   MAX_UPLOAD_BYTES,
-  MAX_UPLOAD_MB,
   MAX_VOICE_SECONDS,
-  mediaKindOf,
   VIDEO_TYPES,
-  type VideoType,
   VOICE_BITS_PER_SECOND,
 } from "@/lib/upload-limits";
 import type { AppRouter } from "@/server/trpc/routers/_app";
@@ -258,15 +255,12 @@ export function ChatView({
     e.target.value = "";
     if (!file) return;
 
-    const kind = mediaKindOf(file.type);
-    if (!kind) {
-      toast.error(t("imageTypes"));
-      return;
-    }
-
-    if (file.size > MAX_UPLOAD_BYTES[kind]) {
+    const checked = validateMediaFile(file);
+    if (!checked.ok) {
       toast.error(
-        t(kind === "video" ? "videoTooLarge" : "imageTooLarge", { mb: MAX_UPLOAD_MB[kind] }),
+        checked.reason === "type"
+          ? t("imageTypes")
+          : t(checked.kind === "video" ? "videoTooLarge" : "imageTooLarge", { mb: checked.maxMb }),
       );
       return;
     }
@@ -274,26 +268,21 @@ export function ChatView({
     setUploadingImage(true);
     try {
       const { uploadUrl, key } =
-        kind === "video"
+        checked.kind === "video"
           ? await createVideoUploadUrlMutation.mutateAsync({
-              contentType: file.type as VideoType,
+              contentType: checked.contentType,
               size: file.size,
             })
           : await createImageUploadUrlMutation.mutateAsync({
-              contentType: file.type as ImageType,
+              contentType: checked.contentType,
               size: file.size,
             });
-      const res = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
-      if (kind === "video") await sendVideoMutation.mutateAsync({ key });
+      await putToPresignedUrl(uploadUrl, file, file.type);
+      if (checked.kind === "video") await sendVideoMutation.mutateAsync({ key });
       else await sendImageMutation.mutateAsync({ key });
     } catch (err) {
       // 저장 공간 한도 같은 서버 안내는 그대로, 업로드 자체의 실패는 사람이 읽을 문구로.
-      const failed = kind === "video" ? t("videoFailed") : t("imageFailed");
+      const failed = checked.kind === "video" ? t("videoFailed") : t("imageFailed");
       toast.error(err instanceof TRPCClientError ? err.message : failed);
     } finally {
       setUploadingImage(false);
@@ -326,12 +315,7 @@ export function ChatView({
         contentType,
         size: blob.size,
       });
-      const res = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": contentType },
-        body: blob,
-      });
-      if (!res.ok) throw new Error(`R2 업로드 실패: ${res.status}`);
+      await putToPresignedUrl(uploadUrl, blob, contentType);
       await sendVoiceMutation.mutateAsync({ key });
     } catch (err) {
       toast.error(err instanceof TRPCClientError ? err.message : t("voiceFailed"));
