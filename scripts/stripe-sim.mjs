@@ -401,7 +401,8 @@ const server = createServer(async (req, res) => {
     if (!pi) {
       return json(res, 404, invalid(`No such payment_intent: '${m[1]}'`, "resource_missing").body);
     }
-    const { seq: _s, ...view } = pi;
+    const view = { ...pi };
+    delete view.seq;
     return json(res, 200, view);
   }
   if (req.method === "POST" && url.pathname === "/v1/refunds") {

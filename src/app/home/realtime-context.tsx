@@ -2,16 +2,16 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useStore } from "zustand";
+import { createRealtimeStore, type BroadcastHandler } from "@/lib/space-stores";
 import { ensureRealtimeAuth, getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spaceChannelName } from "@/lib/supabase/channels";
-
-type Handler = (payload: unknown) => void;
 
 // 메인 채널은 서버만 보낸다(src/lib/supabase/broadcast.ts) - 화면은 받기만 한다. 클라이언트가
 // 보내는 타이핑 신호는 Presence 채널(presence-context)로 간다.
 type SpaceRealtime = {
   /** 이벤트 핸들러를 등록하고 해제 함수를 돌려준다. */
-  listen: (event: string, handler: Handler) => () => void;
+  listen: (event: string, handler: BroadcastHandler) => () => void;
   /** 채널 구독이 성립했는지 - 재연결될 때마다 false→true로 바뀐다. */
   connected: boolean;
 };
@@ -33,12 +33,13 @@ export function SpaceRealtimeProvider({
   privateChannel: boolean;
   children: React.ReactNode;
 }) {
-  const handlers = useRef(new Map<string, Set<Handler>>());
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [store] = useState(createRealtimeStore);
+  const connected = useStore(store, (s) => s.connected);
+  const listen = useStore(store, (s) => s.listen);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
+    const { dispatch, setConnected } = store.getState();
     let channel: RealtimeChannel | null = null;
     let cancelled = false;
     // 토큰을 먼저 넣고 구독한다(private 채널의 첫 입장이 공개 키로 거절되지 않게).
@@ -46,32 +47,19 @@ export function SpaceRealtimeProvider({
       if (cancelled) return;
       channel = supabase
         .channel(spaceChannelName(spaceId), { config: { private: privateChannel } })
-        .on("broadcast", { event: "*" }, (msg) => {
-          handlers.current.get(msg.event)?.forEach((handler) => handler(msg.payload));
-        })
+        .on("broadcast", { event: "*" }, (msg) => dispatch(msg.event, msg.payload))
         .subscribe((status) => setConnected(status === "SUBSCRIBED"));
-      channelRef.current = channel;
     });
 
     return () => {
       cancelled = true;
-      channelRef.current = null;
       setConnected(false);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [spaceId, privateChannel]);
-
-  const [value] = useState<Omit<SpaceRealtime, "connected">>(() => ({
-    listen: (event, handler) => {
-      const set = handlers.current.get(event) ?? new Set<Handler>();
-      set.add(handler);
-      handlers.current.set(event, set);
-      return () => set.delete(handler);
-    },
-  }));
+  }, [spaceId, privateChannel, store]);
 
   return (
-    <RealtimeContext.Provider value={{ ...value, connected }}>{children}</RealtimeContext.Provider>
+    <RealtimeContext.Provider value={{ listen, connected }}>{children}</RealtimeContext.Provider>
   );
 }
 

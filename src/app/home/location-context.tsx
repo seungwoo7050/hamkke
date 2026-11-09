@@ -5,12 +5,14 @@ import { useMutation } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useStore } from "zustand";
 import { distanceKm, isMeetingSoon } from "@/lib/geo";
 import {
   isNativeLocation,
   startNativeLocationWatch,
   stopNativeLocationWatch,
 } from "@/lib/location-native";
+import { createLocationStore, type LocationBroadcastPayload, type Point } from "@/lib/space-stores";
 import type { AppRouter } from "@/server/trpc/routers/_app";
 import { useTRPC } from "@/trpc/client";
 import { LocationConsentSheet } from "./location-consent-sheet";
@@ -19,12 +21,6 @@ import { useSpace } from "./space-context";
 
 type PartnerStatus = inferRouterOutputs<AppRouter>["location"]["partnerStatus"];
 type PartnerLocation = NonNullable<PartnerStatus>["location"];
-type Point = { lat: number; lng: number };
-
-type LocationBroadcastPayload = { userId: string; capturedAt: string } & Omit<
-  NonNullable<PartnerLocation>,
-  "capturedAt"
->;
 
 // ARCHITECTURE.md §5: 포그라운드에서 수 초~수십 초 간격. 완전한 움직임 기반
 // adaptive 전송은 과해서, 고정 간격 스로틀로 단순화했다. 네이티브(Android)
@@ -62,20 +58,22 @@ export function LocationProvider({
 }) {
   const trpc = useTRPC();
   const t = useTranslations("location");
-  const [sharing, setSharing] = useState(initialSharing);
-  const [me, setMe] = useState<Point | null>(null);
-  const [partnerSharing, setPartnerSharing] = useState(initialPartnerStatus?.sharing ?? false);
-  const [partnerLocation, setPartnerLocation] = useState<PartnerLocation>(
-    initialPartnerStatus?.location ?? null,
+  const [store] = useState(() =>
+    createLocationStore({
+      sharing: initialSharing,
+      partnerSharing: initialPartnerStatus?.sharing ?? false,
+      partnerLocation: initialPartnerStatus?.location ?? null,
+    }),
   );
+  const { sharing, me, partnerSharing, partnerLocation, consentOpen } = useStore(store);
   const lastSentAt = useRef(0);
-  const [consentOpen, setConsentOpen] = useState(false);
 
   const setSharingMutation = useMutation(trpc.location.setSharing.mutationOptions());
   const sendMutation = useMutation(trpc.location.send.mutationOptions());
 
   useEffect(() => {
     if (!sharing) return;
+    const { setMe, disableSharing } = store.getState();
 
     function handlePosition(position: Point & { accuracy?: number }) {
       setMe({ lat: position.lat, lng: position.lng });
@@ -87,7 +85,7 @@ export function LocationProvider({
 
     function handleError() {
       toast.error(t("geoFailed"));
-      setSharing(false);
+      disableSharing();
       setSharingMutation.mutate({ enabled: false });
     }
 
@@ -116,17 +114,13 @@ export function LocationProvider({
   }, [sharing]);
 
   useSpaceBroadcast<LocationBroadcastPayload>("location", (payload) => {
-    if (payload.userId === currentUserId) return;
-    setPartnerLocation({ ...payload, capturedAt: new Date(payload.capturedAt) });
-    setPartnerSharing(true);
+    if (payload.userId !== currentUserId) store.getState().receivePartnerLocation(payload);
   });
 
   useSpaceBroadcast<{ userId: string; enabled: boolean }>(
     "location-sharing",
     ({ userId, enabled }) => {
-      if (userId === currentUserId) return;
-      setPartnerSharing(enabled);
-      if (!enabled) setPartnerLocation(null);
+      if (userId !== currentUserId) store.getState().receivePartnerSharing(enabled);
     },
   );
 
@@ -138,13 +132,12 @@ export function LocationProvider({
       return;
     }
     if (next) {
-      setConsentOpen(true);
+      store.getState().setConsentOpen(true);
       return;
     }
     try {
       await setSharingMutation.mutateAsync({ enabled: false });
-      setSharing(false);
-      setMe(null);
+      store.getState().disableSharing();
     } catch {
       toast.error(t("toggleFailed"));
     }
@@ -153,8 +146,7 @@ export function LocationProvider({
   async function agreeAndShare() {
     try {
       await setSharingMutation.mutateAsync({ enabled: true, consent: true });
-      setConsentOpen(false);
-      setSharing(true);
+      store.getState().enableSharing();
     } catch {
       toast.error(t("toggleFailed"));
     }
@@ -175,7 +167,7 @@ export function LocationProvider({
       <LocationConsentSheet
         open={consentOpen}
         pending={setSharingMutation.isPending}
-        onOpenChange={setConsentOpen}
+        onOpenChange={(open) => store.getState().setConsentOpen(open)}
         onAgree={() => void agreeAndShare()}
       />
     </LocationContext.Provider>

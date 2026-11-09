@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useStore } from "zustand";
 import { isPartnerPresent, type PresenceState } from "@/lib/presence";
+import { createPresenceStore, type TypingHandler } from "@/lib/space-stores";
 import { ensureRealtimeAuth, getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { spacePresenceChannelName } from "@/lib/supabase/channels";
-
-type TypingHandler = (userId: string) => void;
 
 type ClientChannel = {
   /** 상대가 지금 앱을 보고 있는지. */
@@ -40,12 +40,14 @@ export function PresenceProvider({
   privateChannel: boolean;
   children: React.ReactNode;
 }) {
-  const [partnerPresent, setPartnerPresent] = useState(false);
+  const [store] = useState(createPresenceStore);
+  const partnerPresent = useStore(store, (s) => s.partnerPresent);
+  const listenTyping = useStore(store, (s) => s.listenTyping);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const typingHandlers = useRef(new Set<TypingHandler>());
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
+    const { setPartnerPresent, notifyTyping } = store.getState();
     let channel: RealtimeChannel | null = null;
     let cancelled = false;
 
@@ -66,10 +68,9 @@ export function PresenceProvider({
       ch.on("presence", { event: "sync" }, () =>
         setPartnerPresent(isPartnerPresent(ch.presenceState() as PresenceState, currentUserId)),
       )
-        .on("broadcast", { event: "typing" }, ({ payload }) => {
-          const userId = (payload as { userId?: string }).userId;
-          if (userId) typingHandlers.current.forEach((handler) => handler(userId));
-        })
+        .on("broadcast", { event: "typing" }, ({ payload }) =>
+          notifyTyping((payload as { userId?: string }).userId),
+        )
         .subscribe((status) => {
           if (status === "SUBSCRIBED") trackVisibility();
         });
@@ -82,26 +83,18 @@ export function PresenceProvider({
       document.removeEventListener("visibilitychange", trackVisibility);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [spaceId, currentUserId, privateChannel]);
+  }, [spaceId, currentUserId, privateChannel, store]);
 
-  const [actions] = useState(() => ({
-    sendTyping: () => {
-      void channelRef.current?.send({
-        type: "broadcast",
-        event: "typing",
-        payload: { userId: currentUserId },
-      });
-    },
-    listenTyping: (handler: TypingHandler) => {
-      typingHandlers.current.add(handler);
-      return () => {
-        typingHandlers.current.delete(handler);
-      };
-    },
-  }));
+  const [sendTyping] = useState(() => () => {
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { userId: currentUserId },
+    });
+  });
 
   return (
-    <PresenceContext.Provider value={{ partnerPresent, ...actions }}>
+    <PresenceContext.Provider value={{ partnerPresent, sendTyping, listenTyping }}>
       {children}
     </PresenceContext.Provider>
   );
