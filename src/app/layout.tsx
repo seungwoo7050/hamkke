@@ -17,13 +17,27 @@ const gaegu = Gaegu({
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
+  const title = t("title");
+  const description = t("description");
   return {
-    title: t("title"),
-    description: t("description"),
+    title,
+    description,
     // 아이폰 홈 화면에 추가하면 Safari 주소창 없이 열리는 웹 앱으로(manifest.ts와 짝).
     appleWebApp: { capable: true, title: t("shortName"), statusBarStyle: "default" },
     // 둘만 쓰는 비공개 앱이라 어떤 페이지도 검색에 올리지 않는다(정책 문서도 앱 안 링크로만 연다).
     robots: { index: false, follow: false },
+    // 초대 링크를 메신저로 건넬 때 제목과 한 줄 설명만 카드 미리보기로 보여 준다.
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: t("shortName"),
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
   };
 }
 

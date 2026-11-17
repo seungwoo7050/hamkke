@@ -523,5 +523,17 @@
     "q028": "What's your favorite inside joke of ours?",
     "q029": "One thing you want to say to me today.",
     "q030": "How did you feel on the day we first started living apart?"
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "description": "If trying again doesn't help, please check back in a moment.",
+    "retry": "Try again",
+    "home": "Back to home",
+    "code": "Error ID: {digest}"
+  },
+  "notFoundPage": {
+    "title": "We couldn't find this page",
+    "description": "The link may have changed or been typed incorrectly.",
+    "home": "Back to home"
   }
 }
