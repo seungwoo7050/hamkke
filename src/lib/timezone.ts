@@ -1,4 +1,4 @@
-import { TZDate, tzOffset } from "@date-fns/tz";
+import { tzOffset } from "@date-fns/tz";
 
 const validTimeZones = new Map<string, boolean>();
 
@@ -41,6 +41,6 @@ const SLEEP_END_HOUR = 7;
 
 /** 단순 시간대 기반 추정 - 실제 수면 패턴을 학습하지 않는다(PRD.md §3.3). */
 export function isLikelySleeping(timeZone: string, date: Date = new Date()) {
-  const hour = new TZDate(date, timeZone).getHours();
+  const hour = new Date(date.getTime() + tzOffset(timeZone, date) * 60_000).getUTCHours();
   return hour >= SLEEP_START_HOUR || hour < SLEEP_END_HOUR;
 }

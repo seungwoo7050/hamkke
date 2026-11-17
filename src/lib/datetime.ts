@@ -3,11 +3,11 @@
 // 왜: Intl의 "ko-KR" 포맷은 실행 환경의 ICU 데이터에 따라 결과가 달라진다 -
 // 이 프로젝트의 서버(Node)는 "AM 12:08", 브라우저는 "오전 12:08"을 내서
 // 하이드레이션이 깨졌고, 그동안은 시각 문구를 하이드레이션 이후에만 그리는
-// 식으로 피해 왔다(첫 화면에서 시각이 한 박자 늦게 채워짐). 시간대 변환은
-// @date-fns/tz의 TZDate로, 달력 일수·윤년·포맷은 date-fns로 계산하고 항상
+// 식으로 피해 왔다(첫 화면에서 시각이 한 박자 늦게 채워짐). 시간대 오프셋은
+// @date-fns/tz의 tzOffset으로, 달력 일수·윤년·포맷은 date-fns로 계산하고 항상
 // 명시적인 시간대(사용자 프로필의 IANA 타임존)를 받아 서버(UTC)와 브라우저가
 // 같은 결과를 내게 한다.
-import { TZDate } from "@date-fns/tz";
+import { tzOffset } from "@date-fns/tz";
 import { differenceInCalendarDays, format, isLeapYear } from "date-fns";
 
 export type YMD = { y: number; m: number; d: number };
@@ -16,14 +16,14 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 /** 특정 시간대에서 본 그 순간의 달력·시계 값. */
 export function partsIn(date: Date, timeZone: string) {
-  const z = new TZDate(date, timeZone);
+  const shifted = new Date(date.getTime() + tzOffset(timeZone, date) * 60_000);
   return {
-    y: z.getFullYear(),
-    m: z.getMonth() + 1,
-    d: z.getDate(),
-    hour: z.getHours(),
-    minute: z.getMinutes(),
-    weekday: z.getDay(),
+    y: shifted.getUTCFullYear(),
+    m: shifted.getUTCMonth() + 1,
+    d: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+    minute: shifted.getUTCMinutes(),
+    weekday: shifted.getUTCDay(),
   };
 }
 
@@ -107,12 +107,15 @@ export function fromZonedLocal(value: string, timeZone: string): Date {
   const [datePart, timePart = "00:00"] = value.split("T");
   const [y, m, d] = datePart.split("-").map(Number);
   const [hh, mm] = timePart.split(":").map(Number);
-  return new Date(new TZDate(y, m - 1, d, hh, mm, timeZone).getTime());
+  const asUtc = Date.UTC(y, m - 1, d, hh, mm);
+  const guess = new Date(asUtc - tzOffset(timeZone, new Date(asUtc)) * 60_000);
+  return new Date(asUtc - tzOffset(timeZone, guess) * 60_000);
 }
 
 /** 그 시간대에서 본 "YYYY-MM-DDTHH:mm" - fromZonedLocal의 반대(수정 폼 채우기). */
 export function toZonedLocal(date: Date, timeZone: string): string {
-  return format(new TZDate(date, timeZone), "yyyy-MM-dd'T'HH:mm");
+  const { y, m, d, hour, minute } = partsIn(date, timeZone);
+  return format(new Date(y, m - 1, d, hour, minute), "yyyy-MM-dd'T'HH:mm");
 }
 
 /**
