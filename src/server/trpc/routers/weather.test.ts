@@ -1,6 +1,6 @@
-// 실제 Open-Meteo API를 호출한다(키 불필요). 네트워크가 필요하다.
+// Open-Meteo API 응답을 stub해 네트워크 의존 없이 날씨 조회 흐름을 검증한다.
 import { randomUUID } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { createCallerFactory } from "../init";
 import { appRouter } from "./_app";
@@ -43,6 +43,7 @@ describe("weather 라우터 (통합)", () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllGlobals();
     await prisma.locationPing.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
     await prisma.space.delete({ where: { id: spaceId } });
@@ -55,6 +56,11 @@ describe("weather 라우터 (통합)", () => {
   });
 
   it("위치공유가 켜진 쪽만 실제 좌표로 날씨를 조회해 돌려준다", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({ current: { temperature_2m: 14.2, weather_code: 0 } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
     await prisma.user.update({ where: { id: userAId }, data: { locationSharingEnabled: true } });
     await prisma.locationPing.create({
       data: { userId: userAId, lat: 37.5665, lng: 126.978 },
@@ -63,9 +69,12 @@ describe("weather 라우터 (통합)", () => {
     const caller = await callerFor(userAId);
     const result = await caller.weather.forSpace();
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.partner).toBeNull();
-    expect(result.me).not.toBeNull();
-    expect(typeof result.me?.temperatureC).toBe("number");
-    expect(typeof result.me?.description).toBe("string");
+    expect(result.me).toEqual({
+      temperatureC: 14.2,
+      weatherCode: 0,
+      description: "맑음",
+    });
   });
 });
