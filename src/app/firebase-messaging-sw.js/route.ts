@@ -1,8 +1,11 @@
+import { connection } from "next/server";
+
 // Next.js는 public/ 정적 파일에 빌드타임 env를 주입할 수 없고, 서비스워커는
 // 루트 스코프("/")로 서빙돼야 site-wide push를 받을 수 있다. 그래서 이 파일을
 // public/ 대신 라우트 핸들러로 만들어 /firebase-messaging-sw.js 경로에 직접
 // 응답한다 - env는 여기서 request 시점에 주입한다.
-export function GET() {
+export async function GET() {
+  await connection();
   const config = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,

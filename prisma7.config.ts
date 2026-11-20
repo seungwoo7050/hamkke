@@ -11,11 +11,11 @@ export default defineConfig({
   datasource: {
     // Prisma 7.10.0의 datasource 설정은 directUrl을 지원하지 않는다(문서에는
     // 있으나 실제 @prisma/config 타입엔 없음 - 빌드 시 TS2353로 확인).
-    // DATABASE_URL은 항상 Supabase direct 연결(포트 5432, pgbouncer 아님)을
-    // 쓴다: Supavisor 풀링(6543, ?pgbouncer=true)은 Prisma 7 schema-engine의
-    // CLI 연결 체크가 무한 대기하는 문제가 있었고(마이그레이션 관련),
-    // Hamkke는 2인 전용 앱이라 동접 규모가 원천적으로 작아(docs/ARCHITECTURE.md
-    // §8) 커넥션 풀링 자체가 실익이 크지 않다고 판단했다.
+    // 운영(Vercel)·CI 마이그레이션의 DATABASE_URL은 IPv4로 닿는 Supabase Session
+    // pooler(포트 5432)를 쓴다(direct 연결은 IPv6 전용). Transaction pooler(6543,
+    // ?pgbouncer=true)는 Prisma 7 schema-engine의 CLI 연결 체크가 무한 대기하는
+    // 문제가 있어 쓰지 않고, 대신 런타임 인스턴스당 pg 풀 상한(src/lib/prisma.ts의
+    // max: 5)으로 Free 티어 세션 한도 고갈을 막는다.
     // .env가 없는 환경(CI·새 워크트리)에서도 prisma generate와 로컬 compose 테스트가
     // 바로 돌도록 로컬 기본값을 둔다.
     url: process.env.DATABASE_URL || "postgresql://hamkke:hamkke@localhost:5432/hamkke",
