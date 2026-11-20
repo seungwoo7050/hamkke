@@ -27,7 +27,7 @@
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | **우리** | 두 사람의 지금을 한 장면으로 보여 줍니다. 서로의 현지 시각, 시간대에 따라 바뀌는 하늘, 날씨, 수면 추정("자고 있을 시간"), 둘 사이 거리 |
 | **대화** | 텍스트, 사진, 영상, 음성 메시지. 읽음 표시와 입력 중 표시가 있고, 터치가 대화 흐름 사이에 끼어듭니다                                   |
-| **기억** | 다가올 일(만남, 비행, 기념일, 공유 캘린더, 타임캡슐)과 지나온 일(사진, 영상, 만남 지도, 열린 캡슐, 지난 질문과 답)                      |
+| **기억** | 다가올 일(만남, 비행, 기념일, 공유 캘린더, 타임캡슐)과 지나온 일(사진, 영상, 만남 지도, 열린 캡슐, 지난 질문과 답)                     |
 | **시트** | 위치(지도, 옵트인 위치 공유, 도착하면 알려 주는 장소)와 설정(언어, 요금제와 사용량, 정책 문서, 탈퇴)                                   |
 
 - **생각하고 있어요**: 우리 탭의 주인공인 버튼 하나. 누르면 상대에게 터치가 가고, 받은 터치는 손글씨로 남습니다.
@@ -67,12 +67,12 @@
 
 구독 플랜은 개인이 아닌 **공간 단위**로 적용되어 한 명이 구독하면 두 명 모두 혜택을 받습니다.
 
-|           | 무료 | 프리미엄  |
-| --------- | ---- | --------- |
+|            | 무료 | 프리미엄  |
+| ---------- | ---- | --------- |
 | 사진, 영상 | 30개 | 제한 없음 |
-| 예약 캡슐 | 3개  | 제한 없음 |
-| 만남 지도 | 20곳 | 제한 없음 |
-| 저장 공간 | 1GB  | 20GB      |
+| 예약 캡슐  | 3개  | 제한 없음 |
+| 만남 지도  | 20곳 | 제한 없음 |
+| 저장 공간  | 1GB  | 20GB      |
 
 웹은 Stripe(Checkout, Customer Portal, Webhook)로 결제하며, Android 앱은 Google Play 한국 대체 결제를 사용합니다. Kotlin 로컬 플러그인이 Play Billing Library로 안내와 거래 토큰을 처리한 뒤 Stripe 결제로 연결하고, 서버가 결제, 갱신, 환불 내역을 Play 개발자 API에 보고합니다. 대체 결제를 지원하지 않는 기기에서는 결제 진입을 숨깁니다. 저장 용량 한도는 업로드 URL 발급 시점(신고 크기)과 등록 시점(실제 크기)에 이중 검증합니다([`storage-quota.ts`](src/server/storage-quota.ts)).
 
@@ -123,20 +123,20 @@ flowchart TB
   T & API --> EXT
 ```
 
-| 영역       | 쓰는 것                                                             |
-| ---------- | ------------------------------------------------------------------- |
-| 프레임워크 | Next.js 16(App Router), React 19, TypeScript                        |
-| API        | tRPC v11 + TanStack Query, Zod                                      |
-| DB         | Postgres(Supabase) + Prisma 7, 모델 22개, 마이그레이션 32개         |
-| 인증       | Auth.js(Google, 이메일 매직링크)                                    |
-| 실시간     | Supabase Realtime(Broadcast + Presence, private 채널)               |
-| 미디어     | Cloudflare R2(사진 10MB, 영상 100MB, 음성 5MB)                      |
-| 푸시       | Firebase Cloud Messaging(웹, Android)                               |
-| 결제       | Stripe, Google Play 한국 대체 결제(Play Billing Library 9.1)        |
-| UI         | Tailwind CSS v4, shadcn/ui(Radix), Vaul, Sonner, Motion             |
-| 지도, 날씨 | react-leaflet + OpenStreetMap, Open-Meteo                           |
-| 언어       | next-intl(`messages/ko.json`, `en.json`)                            |
-| 모바일     | Capacitor(Android), 홈 화면 위젯은 Jetpack Glance                   |
+| 영역       | 쓰는 것                                                              |
+| ---------- | -------------------------------------------------------------------- |
+| 프레임워크 | Next.js 16(App Router), React 19, TypeScript                         |
+| API        | tRPC v11 + TanStack Query, Zod                                       |
+| DB         | Postgres(Supabase) + Prisma 7, 모델 22개, 마이그레이션 32개          |
+| 인증       | Auth.js(Google, 이메일 매직링크)                                     |
+| 실시간     | Supabase Realtime(Broadcast + Presence, private 채널)                |
+| 미디어     | Cloudflare R2(사진 10MB, 영상 100MB, 음성 5MB)                       |
+| 푸시       | Firebase Cloud Messaging(웹, Android)                                |
+| 결제       | Stripe, Google Play 한국 대체 결제(Play Billing Library 9.1)         |
+| UI         | Tailwind CSS v4, shadcn/ui(Radix), Vaul, Sonner, Motion              |
+| 지도, 날씨 | react-leaflet + OpenStreetMap, Open-Meteo                            |
+| 언어       | next-intl(`messages/ko.json`, `en.json`)                             |
+| 모바일     | Capacitor(Android), 홈 화면 위젯은 Jetpack Glance                    |
 | 품질       | Vitest(단위, 통합, 실제 DB), Playwright(e2e), GitHub Actions, Sentry |
 
 ```
@@ -166,11 +166,11 @@ npm run dev:seed-couple       # 페어링된 테스트 커플 만들기(출력�
 
 지금은 `.env.example`의 키가 있으면 외부 연동까지 실제 테스트 모드로 돌고, Stripe 키가 없어도 `npm run verify`와 `npm run test:e2e`는 내장 시뮬레이터(`scripts/stripe-sim.mjs`)를 자동으로 띄워 구독 시나리오까지 건너뛰지 않고 검증합니다.
 
-| 명령                                          | 하는 일                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------ |
-| `npm run verify:fast`                         | 빠른 전체 검사(린트, 타입, 포맷, 마이그레이션, 단위, 정적 규칙 검사) |
-| `npm run verify`                              | `verify:fast` + Playwright e2e(포트 점유 확인, Stripe 시뮬레이터)  |
-| `npm test`                                    | Vitest(통합 테스트는 로컬 DB에 쓰고 지웁니다)                      |
-| `npm run test:e2e`                            | Playwright(로컬 DB에서만 실행됩니다)                               |
-| `npm run lint`, `typecheck`, `format:check` | ESLint, 타입 검사, Prettier                                      |
-| `cd android && ./gradlew assembleDebug`       | Android 디버그 APK(먼저 `npx cap sync android`)                    |
+| 명령                                        | 하는 일                                                              |
+| ------------------------------------------- | -------------------------------------------------------------------- |
+| `npm run verify:fast`                       | 빠른 전체 검사(린트, 타입, 포맷, 마이그레이션, 단위, 정적 규칙 검사) |
+| `npm run verify`                            | `verify:fast` + Playwright e2e(포트 점유 확인, Stripe 시뮬레이터)    |
+| `npm test`                                  | Vitest(통합 테스트는 로컬 DB에 쓰고 지웁니다)                        |
+| `npm run test:e2e`                          | Playwright(로컬 DB에서만 실행됩니다)                                 |
+| `npm run lint`, `typecheck`, `format:check` | ESLint, 타입 검사, Prettier                                          |
+| `cd android && ./gradlew assembleDebug`     | Android 디버그 APK(먼저 `npx cap sync android`)                      |
