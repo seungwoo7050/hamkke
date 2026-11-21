@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<p align="center">장거리 연애 커플을 위한 2인 전용 프라이빗 웹 및 Android 앱 (배포 전 지속 개발 중)</p>
+<p align="center">장거리 연애 커플을 위한 2인 전용 프라이빗 웹 및 Android 애플리케이션</p>
 
 <p align="center">
   Next.js 16 | TypeScript | tRPC | Prisma | Postgres(Supabase) | Capacitor | Stripe
